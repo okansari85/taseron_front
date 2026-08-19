@@ -6,7 +6,7 @@
     <div class="org-chart-wrap">
       <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
         <template #node-title="{ node }">
-          <div class="tenant-node-content">
+          <div class="tenant-node-content" :class="`tenant-node-${node.meta.type.toLowerCase()}`">
             <v-icon :icon="node.meta.icon" :color="node.meta.color" size="22" />
             <div class="tenant-node-name">{{ node.title }}</div>
             <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
@@ -127,106 +127,128 @@ const legend = [
 
 <style scoped>
 .org-chart-wrap {
-  min-height: 190px;
   width: 100%;
+  min-height: 205px;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 /* The installed library owns the hierarchy and connector geometry. */
 :deep(.tenant-org-chart) {
   --orgchart-line-color: #7864f7;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 :deep(.tenant-org-chart .orgchart) {
-  width: 100%;
-  background: transparent;
-  margin: 0;
-  padding: 0;
+  width: max-content;
+  max-width: 100%;
+  background: transparent !important;
+  margin: 0 auto;
+  padding: 0 !important;
 }
 
+/* Compact sizing so the two-child tree stays completely inside the preview panel. */
 :deep(.tenant-org-chart .orgchart .node) {
-  min-width: 160px;
-  border: 1px solid #e5deff;
-  border-radius: 10px;
-  box-shadow: none;
-  background: #f2efff;
-  padding: 0;
+  width: 140px !important;
+  min-width: 140px !important;
+  max-width: 140px !important;
+  border: 1px solid #e3dcff !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  background: #f4f1ff !important;
   color: #16213d;
+  overflow: hidden;
 }
 
 :deep(.tenant-org-chart .orgchart .node .title) {
   position: relative;
-  height: auto;
-  min-height: 58px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  padding: 9px 14px;
+  height: 66px !important;
+  min-height: 66px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: inherit !important;
+  padding: 8px 8px 7px !important;
+  box-sizing: border-box;
 }
 
 :deep(.tenant-org-chart .orgchart .node .content) {
-  border: 0;
-  height: auto;
-  min-height: 0;
-  background: transparent;
-  color: inherit;
-  padding: 0 8px 8px;
+  height: auto !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 8px 7px !important;
+  box-sizing: border-box;
 }
 
-:deep(.tenant-org-chart .orgchart .node .content.org-node-company) {
-  background: #f1fbf6;
-  border-radius: 10px;
+/* Color the whole node, not just the content slot. */
+:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-organization)) {
+  background: #f3efff !important;
+  border-color: #e2d9ff !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node .content.org-node-location) {
-  background: #fff8ed;
-  border-radius: 10px;
+:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-company)) {
+  background: #f1fbf5 !important;
+  border-color: #d5efdf !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node .content.org-node-root) {
-  background: #f2efff;
-  border-radius: 10px;
+:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-location)) {
+  background: #fff8ed !important;
+  border-color: #f5dfbd !important;
 }
 
-/* The chart library creates these connector elements. We only change their stroke style. */
+/* Keep the library's actual connector geometry, but make it look like the reference. */
 :deep(.tenant-org-chart .orgchart .lines .downLine),
 :deep(.tenant-org-chart .orgchart .lines .topLine),
 :deep(.tenant-org-chart .orgchart .lines .leftLine),
 :deep(.tenant-org-chart .orgchart .lines .rightLine) {
   border-color: #7864f7 !important;
   border-style: dashed !important;
+  border-width: 1px !important;
+}
+
+:deep(.tenant-org-chart .orgchart .lines) {
+  background: transparent !important;
 }
 
 .tenant-node-content {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 7px;
   width: 100%;
-  min-height: 40px;
-  padding-bottom: 12px;
+  height: 100%;
+  padding: 2px 1px 0;
+  box-sizing: border-box;
 }
 
 .tenant-node-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.2;
+  padding-top: 1px;
+  font-size: 12px;
+  line-height: 1.25;
   font-weight: 700;
   text-align: left;
   overflow-wrap: anywhere;
+  color: #26324b;
 }
 
 .tenant-node-type {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  font-size: 11px;
+  bottom: 1px;
+  font-size: 10px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
+  letter-spacing: 0.15px;
 }
 
 .text-primary { color: #6746f5 !important; }
@@ -240,11 +262,21 @@ const legend = [
   border-radius: 10px;
   background: #fff0d5;
   color: #777;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
-  .org-chart-wrap { min-height: 300px; }
+  .org-chart-wrap {
+    min-height: 205px;
+    overflow-x: auto;
+  }
+
+  :deep(.tenant-org-chart .orgchart .node) {
+    width: 132px !important;
+    min-width: 132px !important;
+    max-width: 132px !important;
+  }
 }
 </style>
