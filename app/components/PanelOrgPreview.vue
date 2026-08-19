@@ -6,8 +6,8 @@
     <div class="org-chart-wrap">
       <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
         <template #node-title="{ node }">
-          <div class="tenant-node-content" :class="`tenant-node-${node.meta.type.toLowerCase()}`">
-            <v-icon :icon="node.meta.icon" :color="node.meta.color" size="22" />
+          <div class="tenant-node-content">
+            <v-icon :icon="node.meta.icon" :color="node.meta.color" size="20" class="tenant-node-icon" />
             <div class="tenant-node-name">{{ node.title }}</div>
             <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
           </div>
@@ -77,7 +77,7 @@ const orgData = computed<PreviewNode>(() => {
     children.push({
       id: 'company',
       title: rootLabel.value,
-      contentClass: 'org-node-company',
+      titleClass: 'tenant-title-company',
       member: [],
       meta: {
         icon: 'mdi-domain',
@@ -91,7 +91,8 @@ const orgData = computed<PreviewNode>(() => {
       children.push({
         id: 'location',
         title: `${rootLabel.value} - Merkez`,
-        contentClass: 'org-node-location',
+        titleClass: 'tenant-title-location',
+        contentClass: 'tenant-content-location',
         member: [{ name: 'Otomatik', add: 'auto' }],
         meta: {
           icon: 'mdi-map-marker',
@@ -106,7 +107,7 @@ const orgData = computed<PreviewNode>(() => {
   return {
     id: 'organization',
     title: rootLabel.value,
-    contentClass: 'org-node-root',
+    titleClass: 'tenant-title-organization',
     member: [],
     children,
     meta: {
@@ -135,120 +136,150 @@ const legend = [
   align-items: flex-start;
 }
 
-/* The installed library owns the hierarchy and connector geometry. */
 :deep(.tenant-org-chart) {
-  --orgchart-line-color: #7864f7;
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-:deep(.tenant-org-chart .orgchart) {
-  width: max-content;
-  max-width: 100%;
-  background: transparent !important;
-  margin: 0 auto;
-  padding: 0 !important;
+/* organization-chart-vue3 uses real table/node classes. Style those classes directly. */
+:deep(.tenant-org-chart .org-table) {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin: 0 auto !important;
 }
 
-/* Compact sizing so the two-child tree stays completely inside the preview panel. */
-:deep(.tenant-org-chart .orgchart .node) {
-  width: 140px !important;
-  min-width: 140px !important;
-  max-width: 140px !important;
-  border: 1px solid #e3dcff !important;
+:deep(.tenant-org-chart .org-table td) {
+  padding: 0 0 34px 0 !important;
+  vertical-align: top;
+  text-align: center;
+}
+
+:deep(.tenant-org-chart .org-child-level) {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+:deep(.tenant-org-chart .org-node) {
+  margin: 0 4px !important;
+  box-sizing: border-box;
+}
+
+:deep(.tenant-org-chart .org-container) {
+  width: 132px !important;
+  min-width: 132px !important;
+  box-sizing: border-box;
+  border: 1px solid #ddd6ff !important;
   border-radius: 10px !important;
-  box-shadow: none !important;
-  background: #f4f1ff !important;
-  color: #16213d;
   overflow: hidden;
+  box-shadow: none !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node .title) {
-  position: relative;
-  height: 66px !important;
+:deep(.tenant-org-chart .org-title) {
+  width: 100% !important;
   min-height: 66px !important;
-  border: 0 !important;
-  border-radius: 10px !important;
-  background: transparent !important;
-  color: inherit !important;
   padding: 8px 8px 7px !important;
   box-sizing: border-box;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  white-space: normal !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node .content) {
-  height: auto !important;
-  min-height: 0 !important;
+:deep(.tenant-org-chart .tenant-title-organization) {
+  background: #f3efff !important;
+  border-color: #ddd3ff !important;
+}
+
+:deep(.tenant-org-chart .tenant-title-company) {
+  background: #effaf4 !important;
+  border-color: #cfead9 !important;
+}
+
+:deep(.tenant-org-chart .tenant-title-location) {
+  background: #fff7e9 !important;
+  border-color: #f2d9ad !important;
+}
+
+:deep(.tenant-org-chart .org-content) {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 0 7px !important;
+  box-sizing: border-box;
   border: 0 !important;
   background: transparent !important;
-  color: inherit !important;
-  padding: 0 8px 7px !important;
-  box-sizing: border-box;
+  white-space: normal !important;
+  text-align: center !important;
 }
 
-/* Color the whole node, not just the content slot. */
-:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-organization)) {
-  background: #f3efff !important;
-  border-color: #e2d9ff !important;
+:deep(.tenant-org-chart .tenant-content-location) {
+  background: #fff7e9 !important;
+  border: 0 !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-company)) {
-  background: #f1fbf5 !important;
-  border-color: #d5efdf !important;
+:deep(.tenant-org-chart .org-content .org-content-item) {
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 0 !important;
 }
 
-:deep(.tenant-org-chart .orgchart .node:has(.tenant-node-location)) {
-  background: #fff8ed !important;
-  border-color: #f5dfbd !important;
-}
-
-/* Keep the library's actual connector geometry, but make it look like the reference. */
-:deep(.tenant-org-chart .orgchart .lines .downLine),
-:deep(.tenant-org-chart .orgchart .lines .topLine),
-:deep(.tenant-org-chart .orgchart .lines .leftLine),
-:deep(.tenant-org-chart .orgchart .lines .rightLine) {
-  border-color: #7864f7 !important;
+/* The library owns the connector geometry; only its appearance is themed here. */
+:deep(.tenant-org-chart .org-child-level::before),
+:deep(.tenant-org-chart .org-child-level::after),
+:deep(.tenant-org-chart .org-extend::after) {
+  border-color: #7964f7 !important;
   border-style: dashed !important;
   border-width: 1px !important;
 }
 
-:deep(.tenant-org-chart .orgchart .lines) {
-  background: transparent !important;
+:deep(.tenant-org-chart .org-child-level:first-child::after),
+:deep(.tenant-org-chart .org-child-level:last-child::after) {
+  border-style: dashed !important;
+  border-color: #7964f7 !important;
+}
+
+:deep(.tenant-org-chart .org-child-level:first-child.org-child-level:last-child::after) {
+  border-left-style: dashed !important;
+  border-left-color: #7964f7 !important;
+}
+
+:deep(.tenant-org-chart .org-extend-arrow::before) {
+  border-color: #7964f7 #7964f7 transparent transparent !important;
 }
 
 .tenant-node-content {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 5px;
   width: 100%;
-  height: 100%;
-  padding: 2px 1px 0;
+  min-height: 48px;
   box-sizing: border-box;
 }
 
+.tenant-node-icon {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
 .tenant-node-name {
-  flex: 1;
   min-width: 0;
-  padding-top: 1px;
-  font-size: 12px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1.2;
   font-weight: 700;
-  text-align: left;
+  text-align: center;
   overflow-wrap: anywhere;
+  word-break: break-word;
   color: #26324b;
 }
 
 .tenant-node-type {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 1px;
-  font-size: 10px;
-  line-height: 1;
+  font-size: 9px;
+  line-height: 1.05;
   font-weight: 800;
   text-align: center;
-  letter-spacing: 0.15px;
+  letter-spacing: 0.1px;
 }
 
 .text-primary { color: #6746f5 !important; }
@@ -257,26 +288,23 @@ const legend = [
 
 .tree-auto {
   display: inline-block;
-  margin: 0 auto 3px;
   padding: 2px 8px;
   border-radius: 10px;
   background: #fff0d5;
   color: #777;
-  font-size: 10px;
-  line-height: 1.2;
+  font-size: 9px;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
 @media (max-width: 600px) {
   .org-chart-wrap {
-    min-height: 205px;
     overflow-x: auto;
   }
 
-  :deep(.tenant-org-chart .orgchart .node) {
-    width: 132px !important;
-    min-width: 132px !important;
-    max-width: 132px !important;
+  :deep(.tenant-org-chart .org-container) {
+    width: 124px !important;
+    min-width: 124px !important;
   }
 }
 </style>
