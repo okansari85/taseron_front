@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { Building2, Home, LayoutGrid } from '@lucide/vue'
+import { Home, LayoutGrid } from '@lucide/vue'
 
 const route = useRoute()
 const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
