@@ -6,10 +6,10 @@
     <div class="org-chart-wrap">
       <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
         <template #node-title="{ node }">
-          <div class="tenant-node-content" :class="node.contentClass">
-            <v-icon :icon="node.meta?.icon || 'mdi-domain'" :color="node.meta?.color || 'primary'" size="22" />
+          <div class="tenant-node-content">
+            <v-icon :icon="node.meta.icon" :color="node.meta.color" size="22" />
             <div class="tenant-node-name">{{ node.title }}</div>
-            <div class="tenant-node-type" :class="node.meta?.textClass">{{ node.meta?.type }}</div>
+            <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
           </div>
         </template>
 
@@ -42,6 +42,23 @@ import 'organization-chart-vue3/style.css'
 
 const props = defineProps<{ reviewMode?: boolean }>()
 
+type OrgMeta = {
+  icon: string
+  color: string
+  type: string
+  textClass: string
+}
+
+type PreviewNode = {
+  id: string
+  title: string
+  member: Array<{ name: string; add?: string }>
+  children?: PreviewNode[]
+  titleClass?: string
+  contentClass?: string
+  meta: OrgMeta
+}
+
 const form = useTenantForm()
 const rootLabel = computed(() => form.value.orgName || form.value.tenantName || 'Organizasyon adı')
 const isCompany = computed(() => form.value.orgType === 'company')
@@ -53,39 +70,38 @@ const description = computed(() =>
     : 'Bu adımla birlikte oluşturulacak yapı aşağıdaki gibidir.'
 )
 
-const orgData = computed(() => {
-  const children = isCompany.value
-    ? [
-        {
-          id: 'company',
-          title: rootLabel.value,
-          contentClass: 'org-node-company',
-          member: [],
-          meta: {
-            icon: 'mdi-domain',
-            color: 'success',
-            type: 'COMPANY',
-            textClass: 'text-success',
-          },
+const orgData = computed<PreviewNode>(() => {
+  const children: PreviewNode[] = []
+
+  if (isCompany.value) {
+    children.push({
+      id: 'company',
+      title: rootLabel.value,
+      contentClass: 'org-node-company',
+      member: [],
+      meta: {
+        icon: 'mdi-domain',
+        color: 'success',
+        type: 'COMPANY',
+        textClass: 'text-success',
+      },
+    })
+
+    if (isSahisSirketi.value) {
+      children.push({
+        id: 'location',
+        title: `${rootLabel.value} - Merkez`,
+        contentClass: 'org-node-location',
+        member: [{ name: 'Otomatik', add: 'auto' }],
+        meta: {
+          icon: 'mdi-map-marker',
+          color: 'warning',
+          type: 'LOCATION',
+          textClass: 'text-warning',
         },
-        ...(isSahisSirketi.value
-          ? [
-              {
-                id: 'location',
-                title: `${rootLabel.value} - Merkez`,
-                contentClass: 'org-node-location',
-                member: [{ name: 'Otomatik', add: 'auto' }],
-                meta: {
-                  icon: 'mdi-map-marker',
-                  color: 'warning',
-                  type: 'LOCATION',
-                  textClass: 'text-warning',
-                },
-              },
-            ]
-          : []),
-      ]
-    : []
+      })
+    }
+  }
 
   return {
     id: 'organization',
@@ -116,7 +132,7 @@ const legend = [
   overflow: hidden;
 }
 
-/* The library owns the hierarchy and connector geometry. We only skin its nodes. */
+/* The installed library owns the hierarchy and connector geometry. */
 :deep(.tenant-org-chart) {
   --orgchart-line-color: #7864f7;
 }
@@ -138,17 +154,8 @@ const legend = [
   color: #16213d;
 }
 
-:deep(.tenant-org-chart .orgchart .node.org-node-company) {
-  background: #f1fbf6;
-  border-color: #d5f0e1;
-}
-
-:deep(.tenant-org-chart .orgchart .node.org-node-location) {
-  background: #fff8ed;
-  border-color: #f6dfbd;
-}
-
 :deep(.tenant-org-chart .orgchart .node .title) {
+  position: relative;
   height: auto;
   min-height: 58px;
   border: 0;
@@ -167,6 +174,22 @@ const legend = [
   padding: 0 8px 8px;
 }
 
+:deep(.tenant-org-chart .orgchart .node .content.org-node-company) {
+  background: #f1fbf6;
+  border-radius: 10px;
+}
+
+:deep(.tenant-org-chart .orgchart .node .content.org-node-location) {
+  background: #fff8ed;
+  border-radius: 10px;
+}
+
+:deep(.tenant-org-chart .orgchart .node .content.org-node-root) {
+  background: #f2efff;
+  border-radius: 10px;
+}
+
+/* The chart library creates these connector elements. We only change their stroke style. */
 :deep(.tenant-org-chart .orgchart .lines .downLine),
 :deep(.tenant-org-chart .orgchart .lines .topLine),
 :deep(.tenant-org-chart .orgchart .lines .leftLine),
@@ -175,21 +198,14 @@ const legend = [
   border-style: dashed !important;
 }
 
-:deep(.tenant-org-chart .orgchart .lines .downLine) {
-  border-width: 0 1.5px 0 0 !important;
-}
-
-:deep(.tenant-org-chart .orgchart .lines .topLine),
-:deep(.tenant-org-chart .orgchart .lines .leftLine),
-:deep(.tenant-org-chart .orgchart .lines .rightLine) {
-  border-width: 1.5px 0 0 0 !important;
-}
-
 .tenant-node-content {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 40px;
+  padding-bottom: 12px;
 }
 
 .tenant-node-name {
@@ -206,7 +222,7 @@ const legend = [
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 7px;
+  bottom: 0;
   font-size: 11px;
   line-height: 1;
   font-weight: 700;
