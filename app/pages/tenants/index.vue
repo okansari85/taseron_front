@@ -14,9 +14,10 @@
 
       <v-btn
         color="primary"
-        rounded="lg"
+        rounded="md"
         prepend-icon="mdi-plus"
         class="text-none"
+        height="40"
         @click="goToCreate"
       >
         Yeni Tenant
@@ -25,13 +26,13 @@
 
     <!-- Filters -->
     <v-card
-      rounded="xl"
+      rounded="md"
       elevation="0"
       border
-      class="mb-5 pa-4"
+      class="tenant-filter-card mb-5"
     >
       <v-row align="center" dense>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="4" class="pa-2">
           <v-text-field
             v-model="search"
             placeholder="Tenant ara..."
@@ -43,7 +44,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-2">
           <v-select
             v-model="statusFilter"
             label="Durum"
@@ -55,7 +56,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-2">
           <v-select
             v-model="structureFilter"
             label="Kurumsal Yapı"
@@ -67,7 +68,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-2">
           <v-select
             v-model="dateFilter"
             label="Oluşturulma Tarihi"
@@ -80,14 +81,15 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-2">
           <v-btn
             block
+            height="48"
             variant="tonal"
             color="primary"
-            rounded="lg"
-            prepend-icon="mdi-filter-variant"
-            class="text-none"
+            rounded="md"
+            prepend-icon="mdi-filter-remove-outline"
+            class="text-none tenant-clear-button"
             :disabled="!hasFilters"
             @click="clearFilters"
           >
@@ -99,10 +101,10 @@
 
     <!-- Tenant table -->
     <v-card
-      rounded="xl"
+      rounded="md"
       elevation="0"
       border
-      class="overflow-hidden"
+      class="tenant-table-card overflow-hidden"
     >
       <v-table class="tenant-table" hover>
         <thead>
@@ -129,7 +131,7 @@
                   size="38"
                   :color="getAvatarColor(tenant.id)"
                   variant="tonal"
-                  rounded="lg"
+                  rounded="md"
                 >
                   <span class="font-weight-bold text-caption">
                     {{ getInitials(tenant.name) }}
@@ -242,31 +244,40 @@
       <v-divider />
 
       <!-- Table footer -->
-      <div class="tenant-table-footer">
-        <div class="text-caption text-medium-emphasis">
-          Toplam {{ totalTenantCount }} kayıt
-        </div>
+      <v-row
+        class="tenant-table-footer ma-0 px-4"
+        align="center"
+      >
+        <v-col cols="4" class="pa-0">
+          <span class="text-caption text-medium-emphasis">
+            Toplam {{ totalTenantCount }} kayıt
+          </span>
+        </v-col>
 
-        <v-pagination
-          v-model="page"
-          :length="pageCount"
-          :total-visible="5"
-          density="compact"
-          rounded="circle"
-        />
+        <v-col cols="4" class="pa-0 d-flex justify-center">
+          <v-pagination
+            v-model="page"
+            :length="pageCount"
+            :total-visible="5"
+            density="compact"
+            rounded="circle"
+          />
+        </v-col>
 
-        <v-select
-          v-model="itemsPerPage"
-          :items="pageSizeOptions"
-          item-title="title"
-          item-value="value"
-          variant="outlined"
-          density="compact"
-          hide-details
-          suffix="/ sayfa"
-          width="100"
-        />
-      </div>
+        <v-col cols="4" class="pa-0 d-flex justify-end">
+          <v-select
+            v-model="itemsPerPage"
+            :items="pageSizeOptions"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="compact"
+            hide-details
+            suffix="/ sayfa"
+            width="108"
+          />
+        </v-col>
+      </v-row>
     </v-card>
   </v-container>
 </template>
@@ -529,21 +540,52 @@ function toggleStatus(tenant: Tenant) {
   width: 100%;
 }
 
+.tenant-filter-card {
+  padding: 10px;
+}
+
+.tenant-filter-card .v-col {
+  padding: 6px !important;
+}
+
+.tenant-filter-card .v-field {
+  border-radius: 6px;
+}
+
+.tenant-filter-card .v-field__input {
+  min-height: 42px;
+  font-size: 13px;
+}
+
+.tenant-filter-card .v-label {
+  font-size: 12px;
+}
+
+.tenant-clear-button {
+  font-size: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.tenant-table-card {
+  border-radius: 8px !important;
+}
+
 .tenant-table {
   table-layout: fixed;
 }
 
 .tenant-table .v-table__wrapper > table > thead > tr {
-  height: 46px;
+  height: 44px;
 }
 
 .tenant-table .v-table__wrapper > table > tbody > tr {
-  height: 62px;
+  height: 58px;
 }
 
 .tenant-table .v-table__wrapper > table > tbody > tr > td,
 .tenant-table .v-table__wrapper > table > thead > tr > th {
-  padding-inline: 18px;
+  padding-inline: 16px;
 }
 
 .tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(1),
@@ -585,15 +627,7 @@ function toggleStatus(tenant: Tenant) {
 }
 
 .tenant-table-footer {
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  padding: 0 18px;
-}
-
-.tenant-table-footer .v-select {
-  justify-self: end;
+  min-height: 60px;
 }
 
 .tenant-table-footer .v-pagination {
@@ -617,18 +651,12 @@ function toggleStatus(tenant: Tenant) {
 
 @media (max-width: 700px) {
   .tenant-list-page {
-    padding-inline: 16px;
+    padding-inline: 12px;
   }
 
   .tenant-table-footer {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px 16px;
-  }
-
-  .tenant-table-footer .v-pagination,
-  .tenant-table-footer .v-select {
-    justify-self: center;
+    row-gap: 10px;
+    padding-block: 12px;
   }
 }
 </style>
