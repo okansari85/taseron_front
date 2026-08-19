@@ -11,8 +11,8 @@ export interface TenantFormState {
 
 export function useTenantForm() {
   return useState<TenantFormState>('tenant-form', () => ({
-    tenantName: 'Koç Holding',
-    slug: 'koc-holding',
+    tenantName: '',
+    slug: '',
     slugTouched: false,
     status: 'active',
     orgName: '',
