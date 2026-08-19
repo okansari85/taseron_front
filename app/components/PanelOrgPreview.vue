@@ -44,7 +44,7 @@
 
     <v-alert color="primary" variant="tonal" icon="mdi-information-outline" density="comfortable" class="mt-2">
       <div class="text-body-2 font-weight-bold">Bilgi</div>
-      <div class="text-caption mt-1">Company ve Location ayrı varlıklardır. Aralarındaki ilişki sistem tarafından yönetilecektir.</div>
+      <div class="text-caption mt-1">Seçtiğiniz kurumsal yapıya göre ilk yapılandırma burada gösterilir. Şahıs şirketinde merkez lokasyon otomatik oluşturulur.</div>
     </v-alert>
   </v-card>
 </template>
@@ -69,16 +69,38 @@ type PreviewNode = {
 
 const form = useTenantForm()
 const rootLabel = computed(() => form.value.orgName || form.value.tenantName || 'Organizasyon adı')
-const isCompany = computed(() => form.value.orgType === 'company')
+const onboardingType = computed(() => form.value.onboardingType)
+const isCompany = computed(() => onboardingType.value === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
+const selectedTypeLabel = computed(() => ORG_TYPES.find((type) => type.value === onboardingType.value)?.label ?? 'Organizasyon')
 const description = computed(() =>
   props.reviewMode
     ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.'
-    : 'Bu adımla birlikte oluşturulacak yapı aşağıdaki gibidir.',
+    : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`,
 )
 
 const orgData = computed<PreviewNode>(() => {
   const children: PreviewNode[] = []
+
+  if (onboardingType.value === 'holding') {
+    children.push({
+      id: 'holding',
+      title: rootLabel.value,
+      titleClass: 'tenant-title-holding',
+      member: [],
+      meta: { icon: 'mdi-bank-outline', color: 'primary', type: 'Holding', textClass: 'text-primary' },
+    })
+  }
+
+  if (onboardingType.value === 'group') {
+    children.push({
+      id: 'group',
+      title: rootLabel.value,
+      titleClass: 'tenant-title-group',
+      member: [],
+      meta: { icon: 'mdi-account-group-outline', color: 'primary', type: 'Grup', textClass: 'text-primary' },
+    })
+  }
 
   if (isCompany.value) {
     children.push({
@@ -86,7 +108,7 @@ const orgData = computed<PreviewNode>(() => {
       title: rootLabel.value,
       titleClass: 'tenant-title-company',
       member: [],
-      meta: { icon: 'mdi-domain', color: 'success', type: 'COMPANY', textClass: 'text-success' },
+      meta: { icon: 'mdi-domain', color: 'success', type: 'Şirket', textClass: 'text-success' },
     })
 
     if (isSahisSirketi.value) {
@@ -96,9 +118,19 @@ const orgData = computed<PreviewNode>(() => {
         titleClass: 'tenant-title-location',
         contentClass: 'tenant-content-location',
         member: [],
-        meta: { icon: 'mdi-map-marker', color: 'warning', type: 'LOCATION', textClass: 'text-warning', automatic: true },
+        meta: { icon: 'mdi-map-marker', color: 'warning', type: 'Lokasyon', textClass: 'text-warning', automatic: true },
       })
     }
+  }
+
+  if (onboardingType.value === 'brand') {
+    children.push({
+      id: 'brand',
+      title: rootLabel.value,
+      titleClass: 'tenant-title-brand',
+      member: [],
+      meta: { icon: 'mdi-tag-outline', color: 'info', type: 'Marka', textClass: 'text-info' },
+    })
   }
 
   return {
@@ -107,14 +139,15 @@ const orgData = computed<PreviewNode>(() => {
     titleClass: 'tenant-title-organization',
     member: [],
     children,
-    meta: { icon: 'mdi-domain', color: 'primary', type: 'ORGANIZATION', textClass: 'text-primary' },
+    meta: { icon: 'mdi-domain', color: 'primary', type: 'Organizasyon', textClass: 'text-primary' },
   }
 })
 
 const legend = [
-  { title: 'ORGANIZATION', icon: 'mdi-domain', color: 'primary', textClass: 'text-primary', desc: 'Hiyerarşi ağacında yer alan düğümdür.' },
-  { title: 'COMPANY', icon: 'mdi-domain', color: 'success', textClass: 'text-success', desc: 'Şirket bilgileri Company tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
-  { title: 'LOCATION', icon: 'mdi-map-marker', color: 'warning', textClass: 'text-warning', desc: 'Lokasyon bilgileri Locations tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
+  { title: 'Organizasyon', icon: 'mdi-domain', color: 'primary', textClass: 'text-primary', desc: 'Kurumsal yapının başlangıç düğümüdür.' },
+  { title: 'Şirket', icon: 'mdi-domain', color: 'success', textClass: 'text-success', desc: 'Şirket seçildiğinde ilk yapı altında şirket bilgileri oluşturulur.' },
+  { title: 'Marka', icon: 'mdi-tag-outline', color: 'info', textClass: 'text-info', desc: 'Marka seçildiğinde marka yapısı oluşturulur; bu aşamada şirket ve lokasyon oluşturulmaz.' },
+  { title: 'Lokasyon', icon: 'mdi-map-marker', color: 'warning', textClass: 'text-warning', desc: 'Şahıs şirketinde merkez lokasyon otomatik oluşturulur.' },
 ]
 
 const chartWrap = ref<HTMLElement | null>(null)
@@ -174,7 +207,7 @@ const zoomWithWheel = (event: WheelEvent) => {
   zoom.value = Math.min(1.5, Math.max(0.75, next))
 }
 
-watch([rootLabel, isCompany, isSahisSirketi], () => fitChart(), { immediate: true })
+watch([rootLabel, onboardingType, isSahisSirketi], () => fitChart(), { immediate: true })
 onMounted(() => fitChart())
 </script>
 
@@ -236,7 +269,9 @@ onMounted(() => fitChart())
 :deep(.tenant-org-chart .org-container) { width: 132px !important; min-width: 132px !important; box-sizing: border-box; border: 1px solid #ddd6ff !important; border-radius: 10px !important; overflow: hidden; box-shadow: none !important; background: transparent !important; }
 :deep(.tenant-org-chart .org-title) { width: 100% !important; min-height: 72px !important; padding: 8px 8px 7px !important; box-sizing: border-box; border: 0 !important; border-radius: 9px !important; background: transparent !important; white-space: normal !important; }
 :deep(.tenant-org-chart .tenant-title-organization) { background: #f3efff !important; }
+:deep(.tenant-org-chart .tenant-title-holding), :deep(.tenant-org-chart .tenant-title-group) { background: #f3efff !important; }
 :deep(.tenant-org-chart .tenant-title-company) { background: #effaf4 !important; }
+:deep(.tenant-org-chart .tenant-title-brand) { background: #eef7ff !important; }
 :deep(.tenant-org-chart .tenant-title-location) { background: #fff7e9 !important; }
 :deep(.tenant-org-chart .org-content) { width: 100% !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box; border: 0 !important; background: transparent !important; white-space: normal !important; text-align: center !important; }
 :deep(.tenant-org-chart .tenant-content-location) { background: #fff7e9 !important; border: 0 !important; }
@@ -249,6 +284,7 @@ onMounted(() => fitChart())
 .text-primary { color: #6746f5 !important; }
 .text-success { color: #00a968 !important; }
 .text-warning { color: #e98400 !important; }
+.text-info { color: #3b82f6 !important; }
 
 .tree-auto { grid-column: 1 / -1; justify-self: center; display: inline-block; margin-top: 2px; padding: 2px 8px; border-radius: 10px; background: #fff0d5; color: #777; font-size: 9px; line-height: 1.15; white-space: nowrap; }
 
