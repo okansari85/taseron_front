@@ -39,6 +39,7 @@
             density="compact"
             hide-details
             clearable
+            class="text-caption"
           />
         </v-col>
 
@@ -51,7 +52,11 @@
             density="compact"
             hide-details
             clearable
-          />
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
         </v-col>
 
         <v-col cols="12" sm="6" md="2" class="pa-1">
@@ -63,7 +68,11 @@
             density="compact"
             hide-details
             clearable
-          />
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
         </v-col>
 
         <v-col cols="12" sm="6" md="2" class="pa-1">
@@ -76,7 +85,11 @@
             density="compact"
             hide-details
             clearable
-          />
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
         </v-col>
 
         <v-col cols="12" sm="6" md="2" class="pa-1">
@@ -128,7 +141,7 @@
                   size="36"
                   :color="getAvatarColor(tenant.id)"
                   variant="tonal"
-                  rounded="md"
+                  rounded="0"
                 >
                   <span class="font-weight-bold text-caption">
                     {{ getInitials(tenant.name) }}
@@ -241,8 +254,13 @@
             density="compact"
             hide-details
             suffix="/ sayfa"
-            class="w-auto text-caption"
-          />
+            class="text-caption"
+            max-width="96"
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
         </v-col>
       </v-row>
     </v-card>
