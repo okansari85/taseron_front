@@ -16,23 +16,28 @@
         :class="isDragging ? 'cursor-grabbing duration-0' : 'cursor-grab'"
         :style="{ transform: `translateX(calc(-50% + ${pan.x}px)) translateY(${pan.y}px) scale(${zoom})` }"
       >
-        <div :class="nodeClass(rootTone)">
-          <div class="flex items-center justify-center text-base">{{ rootIcon }}</div>
-          <div class="mt-1 text-xs font-semibold text-gray-800 dark:text-white/90">{{ rootLabel }}</div>
-          <div :class="['mt-1 text-[10px] font-semibold', rootText]">{{ rootTypeLabel }}</div>
-        </div>
+        <TenantOrgNode
+          :title="rootNode.title"
+          :type="rootNode.type"
+          :icon="rootNode.icon"
+          :tone="rootNode.tone"
+          :text-class="rootNode.textClass"
+        />
 
         <template v-if="children.length">
           <div class="h-7 w-px border-l border-dashed border-brand-400" />
+
           <div class="flex items-start gap-4">
             <div v-for="child in children" :key="child.id" class="flex flex-col items-center">
               <div class="h-3 w-px border-l border-dashed border-brand-400" />
-              <div :class="nodeClass(child.tone)">
-                <div class="flex items-center justify-center text-base">{{ child.icon }}</div>
-                <div class="mt-1 text-xs font-semibold text-gray-800 dark:text-white/90">{{ child.title }}</div>
-                <div :class="['mt-1 text-[10px] font-semibold', child.text]">{{ child.type }}</div>
-                <div v-if="child.automatic" class="mt-1 inline-flex rounded-full bg-warning-50 px-2 py-0.5 text-[9px] font-medium text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">Otomatik</div>
-              </div>
+              <TenantOrgNode
+                :title="child.title"
+                :type="child.type"
+                :icon="child.icon"
+                :tone="child.tone"
+                :text-class="child.textClass"
+                :automatic="child.automatic"
+              />
             </div>
           </div>
         </template>
@@ -66,39 +71,81 @@
 const props = defineProps<{ reviewMode?: boolean }>()
 const form = useTenantForm()
 
-const orgName = computed(() => form.value.orgName || 'Organizasyon adı')
 const onboardingType = computed(() => form.value.onboardingType)
 const isCompany = computed(() => onboardingType.value === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
+const rootLabel = computed(() => form.value.orgName || 'Organizasyon adı')
 const selectedTypeLabel = computed(() => ORG_TYPES.find((type) => type.value === onboardingType.value)?.label ?? 'Organizasyon')
-const description = computed(() => props.reviewMode ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.' : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`)
+const description = computed(() =>
+  props.reviewMode
+    ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.'
+    : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`,
+)
 
-const rootLabel = computed(() => isCompany.value ? `${orgName.value} - Organizasyon` : orgName.value)
-const rootTypeLabel = computed(() => isCompany.value ? 'Organizasyon' : selectedTypeLabel.value)
+type OrgNode = {
+  id: string
+  title: string
+  type: string
+  icon: string
+  tone: 'purple' | 'green' | 'blue' | 'orange'
+  textClass: string
+  automatic?: boolean
+}
 
-const rootTone = computed(() => {
-  if (onboardingType.value === 'company') return 'purple'
-  if (onboardingType.value === 'brand') return 'blue'
-  return 'purple'
+const rootNode = computed<OrgNode>(() => {
+  if (onboardingType.value === 'company' || onboardingType.value === 'brand') {
+    return {
+      id: 'organization',
+      title: `${rootLabel.value} - Organizasyon`,
+      type: 'Organizasyon',
+      icon: '⌘',
+      tone: 'purple',
+      textClass: 'text-brand-500',
+    }
+  }
+
+  if (onboardingType.value === 'group') {
+    return {
+      id: 'group',
+      title: rootLabel.value,
+      type: 'Grup',
+      icon: '♧',
+      tone: 'purple',
+      textClass: 'text-brand-500',
+    }
+  }
+
+  return {
+    id: 'holding',
+    title: rootLabel.value,
+    type: 'Holding',
+    icon: '⌂',
+    tone: 'purple',
+    textClass: 'text-brand-500',
+  }
 })
 
-const rootIcon = computed(() => ({ holding: '⌂', group: '♧', company: '⌘', brand: '◆' }[onboardingType.value ?? 'holding']))
-const rootText = computed(() => rootTone.value === 'blue' ? 'text-blue-light-600' : 'text-brand-500')
-
-const children = computed(() => {
+const children = computed<OrgNode[]>(() => {
   if (onboardingType.value === 'company') {
-    const result: Array<{ id: string; title: string; type: string; icon: string; tone: string; text: string; automatic?: boolean }> = [
-      { id: 'company', title: orgName.value, type: 'Şirket', icon: '▣', tone: 'green', text: 'text-success-600' },
+    const result: OrgNode[] = [
+      {
+        id: 'company',
+        title: rootLabel.value,
+        type: 'Şirket',
+        icon: '▣',
+        tone: 'green',
+        textClass: 'text-success-600',
+      },
     ]
 
     if (isSahisSirketi.value) {
       result.push({
         id: 'location',
-        title: `${orgName.value} - Merkez`,
+        title: `${rootLabel.value} - Merkez`,
         type: 'Lokasyon',
         icon: '⌖',
         tone: 'orange',
-        text: 'text-warning-600',
+        textClass: 'text-warning-600',
         automatic: true,
       })
     }
@@ -106,7 +153,19 @@ const children = computed(() => {
     return result
   }
 
-  if (onboardingType.value === 'brand') return [{ id: 'brand', title: orgName.value, type: 'Marka', icon: '◆', tone: 'blue', text: 'text-blue-light-600' }]
+  if (onboardingType.value === 'brand') {
+    return [
+      {
+        id: 'brand',
+        title: rootLabel.value,
+        type: 'Marka',
+        icon: '◆',
+        tone: 'blue',
+        textClass: 'text-blue-light-600',
+      },
+    ]
+  }
+
   return []
 })
 
@@ -122,16 +181,6 @@ const pan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
 
-function nodeClass(tone: string) {
-  const toneClasses: Record<string, string> = {
-    purple: 'border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10',
-    green: 'border-success-200 bg-success-50 dark:border-success-500/30 dark:bg-success-500/10',
-    blue: 'border-blue-light-200 bg-blue-light-50 dark:border-blue-light-500/30 dark:bg-blue-light-500/10',
-    orange: 'border-warning-200 bg-warning-50 dark:border-warning-500/30 dark:bg-warning-500/10',
-  }
-  return `w-36 rounded-lg border px-3 py-3 text-center shadow-theme-xs ${toneClasses[tone] ?? toneClasses.purple}`
-}
-
 function zoomWithWheel(event: WheelEvent) {
   zoom.value = Math.min(1.5, Math.max(0.75, zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)))
 }
@@ -144,7 +193,10 @@ function startPan(event: MouseEvent) {
 
 function movePan(event: MouseEvent) {
   if (!isDragging.value) return
-  pan.value = { x: dragStart.value.panX + event.clientX - dragStart.value.x, y: dragStart.value.panY + event.clientY - dragStart.value.y }
+  pan.value = {
+    x: dragStart.value.panX + event.clientX - dragStart.value.x,
+    y: dragStart.value.panY + event.clientY - dragStart.value.y,
+  }
 }
 
 function endPan() {
