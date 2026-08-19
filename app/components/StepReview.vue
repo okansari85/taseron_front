@@ -1,118 +1,77 @@
 <template>
-  <div>
-    <div class="d-flex align-center mb-6">
-      <div class="icon-badge">
-        <v-icon icon="mdi-shield-check-outline" size="20" />
+  <section>
+    <div class="mb-6 flex items-start gap-3">
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+        <span class="text-lg">✓</span>
       </div>
-      <div class="ml-3">
-        <div class="text-subtitle-1 font-weight-bold">Bilgilerinizi Kontrol Edin</div>
-        <div class="text-body-2 text-medium-emphasis">
-          Oluşturulacak tenant ve organizasyon bilgilerinizi aşağıda inceleyebilirsiniz.
-        </div>
+      <div>
+        <h2 class="text-theme-xl font-semibold text-gray-800 dark:text-white/90">Bilgilerinizi Kontrol Edin</h2>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Oluşturulacak tenant ve organizasyon bilgilerinizi aşağıda inceleyebilirsiniz.</p>
       </div>
     </div>
 
-    <div class="text-body-2 font-weight-semibold text-primary-strong mb-2">Tenant Bilgileri</div>
-    <div class="review-block mb-5">
-      <div class="review-row">
-        <span class="text-medium-emphasis">Tenant Adı</span>
-        <span class="font-weight-medium">{{ form.tenantName || '—' }}</span>
+    <div class="space-y-6">
+      <section>
+        <h3 class="mb-2 text-sm font-semibold text-brand-500">Tenant Bilgileri</h3>
+        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+          <ReviewRow label="Tenant Adı" :value="form.tenantName || '—'" />
+          <ReviewRow label="Slug (Kısa Ad)" :value="form.slug || '—'" />
+          <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-gray-800">
+            <span class="text-gray-500 dark:text-gray-400">Durum</span>
+            <TailAdminBadge :tone="form.status === 'active' ? 'success' : 'gray'" dot>
+              {{ form.status === 'active' ? 'Aktif' : 'Pasif' }}
+            </TailAdminBadge>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="mb-2 text-sm font-semibold text-brand-500">İlk Organizasyon Bilgileri</h3>
+        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+          <ReviewRow label="Organizasyon Adı" :value="form.orgName || '—'" />
+          <ReviewRow label="Kurumsal Yapı" :value="selectedType?.label || '—'" />
+          <ReviewRow v-if="isCompany" label="Şirket Türü" :value="form.companyKind === 'sahis' ? 'Şahıs Şirketi' : 'Tüzel Şirket'" />
+          <ReviewRow v-if="isSahisSirketi" label="Merkez Lokasyon" value="Otomatik oluşturulacak" />
+        </div>
+      </section>
+
+      <div v-if="isSahisSirketi" class="rounded-lg border border-info-200 bg-info-50 px-4 py-3 dark:border-info-500/20 dark:bg-info-500/10">
+        <div class="flex gap-3">
+          <span class="mt-0.5 text-info-600">i</span>
+          <p class="text-theme-xs text-info-700 dark:text-info-400">Lokasyonun adres, NACE, SGK ve diğer işyeri bilgileri daha sonra Lokasyon Yönetimi üzerinden tamamlanabilir.</p>
+        </div>
       </div>
-      <v-divider />
-      <div class="review-row">
-        <span class="text-medium-emphasis">Slug (Kısa Ad)</span>
-        <span class="font-weight-medium">{{ form.slug || '—' }}</span>
-      </div>
-      <v-divider />
-      <div class="review-row">
-        <span class="text-medium-emphasis">Durum</span>
-        <v-chip size="small" color="success" variant="tonal">
-          {{ form.status === 'active' ? 'Aktif' : 'Pasif' }}
-        </v-chip>
+
+      <div v-if="submitted" class="rounded-lg border border-success-200 bg-success-50 px-4 py-3 dark:border-success-500/20 dark:bg-success-500/10">
+        <div class="flex gap-3">
+          <span class="mt-0.5 text-success-600">✓</span>
+          <p class="text-theme-xs font-medium text-success-700 dark:text-success-400">Tenant başarıyla oluşturuldu. Hazırlanan bilgiler tarayıcı konsoluna yazıldı.</p>
+        </div>
       </div>
     </div>
-
-    <div class="text-body-2 font-weight-semibold text-primary-strong mb-2">İlk Organizasyon Bilgileri</div>
-    <div class="review-block mb-5">
-      <div class="review-row">
-        <span class="text-medium-emphasis">Organizasyon Adı</span>
-        <span class="font-weight-medium">{{ form.orgName || '—' }}</span>
-      </div>
-      <v-divider />
-      <div class="review-row">
-        <span class="text-medium-emphasis">Kurumsal Yapı</span>
-        <span class="font-weight-medium">{{ selectedType?.label || '—' }}</span>
-      </div>
-      <template v-if="isCompany">
-        <v-divider />
-        <div class="review-row">
-          <span class="text-medium-emphasis">Şirket Türü</span>
-          <span class="font-weight-medium">{{ form.companyKind === 'sahis' ? 'Şahıs Şirketi' : 'Tüzel Şirket' }}</span>
-        </div>
-      </template>
-      <template v-if="isSahisSirketi">
-        <v-divider />
-        <div class="review-row">
-          <span class="text-medium-emphasis">Merkez Lokasyon</span>
-          <span class="font-weight-medium">Otomatik oluşturulacak</span>
-        </div>
-      </template>
-    </div>
-
-    <v-alert
-      v-if="isSahisSirketi"
-      type="info"
-      variant="tonal"
-      icon="mdi-information-outline"
-      density="comfortable"
-    >
-      Lokasyonun adres, NACE, SGK ve diğer işyeri bilgileri daha sonra Lokasyon Yönetimi üzerinden
-      tamamlanabilir.
-    </v-alert>
-
-    <v-alert
-      v-if="submitted"
-      type="success"
-      variant="tonal"
-      icon="mdi-check-circle-outline"
-      density="comfortable"
-      class="mt-4"
-    >
-      Tenant başarıyla oluşturuldu. Hazırlanan bilgiler tarayıcı konsoluna yazıldı.
-    </v-alert>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
+const props = defineProps<{ submitted?: boolean }>()
+
 const form = useTenantForm()
 const isCompany = computed(() => form.value.onboardingType === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
 const selectedType = computed(() => ORG_TYPES.find((type) => type.value === form.value.onboardingType))
-
-defineProps<{ submitted?: boolean }>()
+const submitted = computed(() => props.submitted ?? false)
 </script>
 
-<style scoped>
-.icon-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgb(var(--v-theme-primary) / 0.1);
-  color: rgb(var(--v-theme-primary));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+<script lang="ts">
+export default {
+  components: {
+    ReviewRow: {
+      props: {
+        label: { type: String, required: true },
+        value: { type: String, required: true },
+      },
+      template: `<div class="flex items-center justify-between px-4 py-3 text-sm"><span class="text-gray-500 dark:text-gray-400">{{ label }}</span><span class="font-medium text-gray-800 dark:text-white/90">{{ value }}</span></div>`,
+    },
+  },
 }
-.review-block {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
-  overflow: hidden;
-}
-.review-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  font-size: 0.875rem;
-}
-</style>
+</script>
