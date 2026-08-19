@@ -214,12 +214,13 @@ const renderConnectors = async () => {
     }
 
     const canvasRect = canvas.getBoundingClientRect()
+    const scale = Math.max(0.001, zoom.value)
     const rects = nodes.map((node) => {
       const rect = node.getBoundingClientRect()
       return {
-        top: rect.top - canvasRect.top,
-        bottom: rect.bottom - canvasRect.top,
-        centerX: rect.left - canvasRect.left + rect.width / 2,
+        top: (rect.top - canvasRect.top) / scale,
+        bottom: (rect.bottom - canvasRect.top) / scale,
+        centerX: (rect.left - canvasRect.left + rect.width / 2) / scale,
       }
     })
 
@@ -314,6 +315,7 @@ function endPan() {
 
 function zoomWithWheel(event: WheelEvent) {
   zoom.value = Math.min(1.5, Math.max(0.65, zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)))
+  scheduleConnectorRender()
 }
 
 watch(
@@ -412,8 +414,8 @@ onBeforeUnmount(() => {
 .tenant-org-chart .tenant-node-content--orange .tenant-node-icon { color: #f59e0b; }
 
 .tenant-org-chart .tenant-node-title {
-  display: block;
   width: 156px;
+  max-width: 156px;
   height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
