@@ -17,7 +17,9 @@
     "vuetify": "^3.7.6"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "nuxt": "^4.0.0",
+    "tailwindcss": "^4.0.0",
     "vuetify-nuxt-module": "^0.18.3"
   }
 }
