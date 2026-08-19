@@ -87,6 +87,7 @@ function goBack() {
 
 function submit() {
   const payload = {
+    onboarding_type: form.value.onboardingType,
     tenant: {
       name: form.value.tenantName,
       slug: form.value.slug,
@@ -94,12 +95,29 @@ function submit() {
     },
     organization: {
       name: form.value.orgName,
-      type: form.value.orgType,
-      parent_id: null,
-      ...(form.value.orgType === 'company' ? { company_kind: form.value.companyKind } : {}),
     },
+    ...(form.value.onboardingType === 'company'
+      ? {
+          company: {
+            name: form.value.orgName,
+            company_type: form.value.companyKind === 'sahis' ? 'individual' : 'corporate',
+          },
+          location:
+            form.value.companyKind === 'sahis'
+              ? { name: `${form.value.orgName} - Merkez` }
+              : null,
+        }
+      : {}),
+    ...(form.value.onboardingType === 'brand'
+      ? {
+          brand: {
+            name: form.value.orgName,
+          },
+        }
+      : {}),
   }
-  // TODO: kendi API endpoint'inize bağlayın
+
+  // TODO: mevcut tenant-onboarding API bağlantısına bu payload gönderilecek.
   // eslint-disable-next-line no-console
   console.log('Tenant payload', payload)
   submitted.value = true

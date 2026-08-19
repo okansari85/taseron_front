@@ -28,11 +28,11 @@
 
       <v-col cols="12" sm="6">
         <v-select
-          v-model="form.orgType"
+          v-model="form.onboardingType"
           :items="ORG_TYPES"
           item-title="label"
           item-value="value"
-          label="Organizasyon Tipi *"
+          label="Kurumsal Yapı *"
           variant="outlined"
           density="comfortable"
           hide-details="auto"
@@ -40,21 +40,17 @@
           <template #selection="{ item }">
             <v-icon :icon="item.raw.icon" size="16" color="success" class="mr-2" />
             {{ item.raw.label }}
-            <span class="text-medium-emphasis ml-1">({{ item.raw.suffix }})</span>
           </template>
           <template #item="{ item, props: itemProps }">
             <v-list-item v-bind="itemProps" :title="undefined">
               <template #prepend>
                 <v-icon :icon="item.raw.icon" size="16" color="primary" class="mr-2" />
               </template>
-              <v-list-item-title>
-                {{ item.raw.label }}
-                <span class="text-medium-emphasis">({{ item.raw.suffix }})</span>
-              </v-list-item-title>
+              <v-list-item-title>{{ item.raw.label }}</v-list-item-title>
             </v-list-item>
           </template>
         </v-select>
-        <p class="text-caption text-medium-emphasis mt-1">Organizasyonun türünü seçin.</p>
+        <p class="text-caption text-medium-emphasis mt-1">İşletmenizin sisteme hangi kurumsal yapıyla başlayacağını seçin.</p>
       </v-col>
     </v-row>
 
@@ -116,7 +112,7 @@
 
 <script setup lang="ts">
 const form = useTenantForm()
-const isCompany = computed(() => form.value.orgType === 'company')
+const isCompany = computed(() => form.value.onboardingType === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
 </script>
 

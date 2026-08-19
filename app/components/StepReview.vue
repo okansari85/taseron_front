@@ -40,8 +40,8 @@
       </div>
       <v-divider />
       <div class="review-row">
-        <span class="text-medium-emphasis">Organizasyon Tipi</span>
-        <span class="font-weight-medium">{{ selectedType?.label }} ({{ selectedType?.suffix }})</span>
+        <span class="text-medium-emphasis">Kurumsal Yapı</span>
+        <span class="font-weight-medium">{{ selectedType?.label || '—' }}</span>
       </div>
       <template v-if="isCompany">
         <v-divider />
@@ -78,16 +78,16 @@
       density="comfortable"
       class="mt-4"
     >
-      Tenant başarıyla oluşturuldu. Gönderilen payload tarayıcı konsoluna yazıldı.
+      Tenant başarıyla oluşturuldu. Hazırlanan bilgiler tarayıcı konsoluna yazıldı.
     </v-alert>
   </div>
 </template>
 
 <script setup lang="ts">
 const form = useTenantForm()
-const isCompany = computed(() => form.value.orgType === 'company')
+const isCompany = computed(() => form.value.onboardingType === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
-const selectedType = computed(() => ORG_TYPES.find((t) => t.value === form.value.orgType))
+const selectedType = computed(() => ORG_TYPES.find((type) => type.value === form.value.onboardingType))
 
 defineProps<{ submitted?: boolean }>()
 </script>
