@@ -68,7 +68,7 @@ type PreviewNode = {
 }
 
 const form = useTenantForm()
-const rootLabel = computed(() => form.value.orgName || form.value.tenantName || 'Organizasyon adı')
+const rootLabel = computed(() => form.value.orgName || 'Organizasyon adı')
 const onboardingType = computed(() => form.value.onboardingType)
 const isCompany = computed(() => onboardingType.value === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
@@ -81,26 +81,6 @@ const description = computed(() =>
 
 const orgData = computed<PreviewNode>(() => {
   const children: PreviewNode[] = []
-
-  if (onboardingType.value === 'holding') {
-    children.push({
-      id: 'holding',
-      title: rootLabel.value,
-      titleClass: 'tenant-title-holding',
-      member: [],
-      meta: { icon: 'mdi-bank-outline', color: 'primary', type: 'Holding', textClass: 'text-primary' },
-    })
-  }
-
-  if (onboardingType.value === 'group') {
-    children.push({
-      id: 'group',
-      title: rootLabel.value,
-      titleClass: 'tenant-title-group',
-      member: [],
-      meta: { icon: 'mdi-account-group-outline', color: 'primary', type: 'Grup', textClass: 'text-primary' },
-    })
-  }
 
   if (isCompany.value) {
     children.push({
@@ -131,6 +111,24 @@ const orgData = computed<PreviewNode>(() => {
       member: [],
       meta: { icon: 'mdi-tag-outline', color: 'info', type: 'Marka', textClass: 'text-info' },
     })
+  }
+
+  const isHolding = onboardingType.value === 'holding'
+  const isGroup = onboardingType.value === 'group'
+
+  if (isHolding || isGroup) {
+    return {
+      id: onboardingType.value,
+      title: rootLabel.value,
+      titleClass: isHolding ? 'tenant-title-holding' : 'tenant-title-group',
+      member: [],
+      meta: {
+        icon: isHolding ? 'mdi-bank-outline' : 'mdi-account-group-outline',
+        color: 'primary',
+        type: isHolding ? 'Holding' : 'Grup',
+        textClass: 'text-primary',
+      },
+    }
   }
 
   return {
@@ -284,7 +282,6 @@ onMounted(() => fitChart())
 .text-primary { color: #6746f5 !important; }
 .text-success { color: #00a968 !important; }
 .text-warning { color: #e98400 !important; }
-.text-info { color: #3b82f6 !important; }
 
 .tree-auto { grid-column: 1 / -1; justify-self: center; display: inline-block; margin-top: 2px; padding: 2px 8px; border-radius: 10px; background: #fff0d5; color: #777; font-size: 9px; line-height: 1.15; white-space: nowrap; }
 

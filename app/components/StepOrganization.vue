@@ -17,7 +17,6 @@
         <v-text-field
           v-model="form.orgName"
           label="Organizasyon Adı *"
-          placeholder="Örn. Koç Holding"
           variant="outlined"
           density="comfortable"
           hide-details="auto"
