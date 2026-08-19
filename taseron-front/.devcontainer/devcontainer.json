@@ -1,0 +1,17 @@
+{
+  "name": "Taseron Management (Nuxt 4 + Vuetify)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "postCreateCommand": "npm install --legacy-peer-deps",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Nuxt Dev Server",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["Vue.volar", "dbaeumer.vscode-eslint"]
+    }
+  }
+}

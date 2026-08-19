@@ -1,0 +1,16 @@
+html, body, #__nuxt {
+  height: 100%;
+}
+
+.border-card {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.sticky-panel {
+  position: sticky;
+  top: 88px;
+}
+
+.text-primary-strong {
+  color: rgb(var(--v-theme-primary));
+}
