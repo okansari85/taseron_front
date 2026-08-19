@@ -139,16 +139,19 @@ const fitChart = async () => {
 
     const contentWidth = chart.offsetWidth || 1
     const contentHeight = chart.offsetHeight || 1
-    const availableWidth = wrap.clientWidth - 12
-    const availableHeight = wrap.clientHeight - 12
+    const availableWidth = Math.max(1, wrap.clientWidth - 12)
+    const availableHeight = Math.max(1, wrap.clientHeight - 12)
     const widthScale = availableWidth / contentWidth
     const heightScale = availableHeight / contentHeight
-    const nextZoom = Math.min(1.12, Math.max(0.78, widthScale, heightScale))
 
-    zoom.value = Number(nextZoom.toFixed(3))
+    // Fit must use the smaller scale. Using the larger one can make one
+    // dimension overflow the canvas when the tree changes shape.
+    const nextZoom = Math.min(1.12, widthScale, heightScale)
+
+    zoom.value = Number(Math.max(0.65, nextZoom).toFixed(3))
     pan.value = {
       x: 0,
-      y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2 - 2),
+      y: (wrap.clientHeight - contentHeight * zoom.value) / 2,
     }
   })
 }
