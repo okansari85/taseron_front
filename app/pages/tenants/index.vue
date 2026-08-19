@@ -1,11 +1,13 @@
 <template>
   <v-container
-    class="tenant-list-page mx-auto px-0"
+    class="mx-auto px-0"
     style="max-width: 1120px; width: 100%;"
   >
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <div class="text-h5 font-weight-bold">Tenantlar</div>
+        <div class="text-h5 font-weight-bold">
+          Tenantlar
+        </div>
         <div class="text-body-2 text-medium-emphasis mt-1">
           Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
         </div>
@@ -24,7 +26,7 @@
     </div>
 
     <v-card
-      class="tenant-filter-card mb-5"
+      class="mb-5 pa-4"
       rounded="md"
       elevation="0"
       border
@@ -87,7 +89,7 @@
             color="primary"
             rounded="md"
             prepend-icon="mdi-filter-remove-outline"
-            class="text-none tenant-clear-button"
+            class="text-none"
             :disabled="!hasFilters"
             @click="clearFilters"
           >
@@ -98,20 +100,32 @@
     </v-card>
 
     <v-card
-      class="tenant-table-card overflow-hidden"
       rounded="md"
       elevation="0"
       border
+      class="overflow-hidden"
     >
-      <v-table class="tenant-table" hover>
-        <thead>
+      <v-table hover>
+        <thead class="bg-surface-variant">
           <tr>
-            <th>Tenant Adı</th>
-            <th>Slug</th>
-            <th>Kurumsal Yapı</th>
-            <th>Durum</th>
-            <th>Oluşturulma Tarihi</th>
-            <th class="text-center">İşlemler</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">
+              Tenant Adı
+            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">
+              Slug
+            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">
+              Kurumsal Yapı
+            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">
+              Durum
+            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">
+              Oluşturulma Tarihi
+            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis text-center">
+              İşlemler
+            </th>
           </tr>
         </thead>
 
@@ -119,7 +133,7 @@
           <tr
             v-for="tenant in paginatedTenants"
             :key="tenant.id"
-            class="tenant-row"
+            class="cursor-pointer"
             @click="openTenant(tenant)"
           >
             <td>
@@ -167,7 +181,7 @@
                 variant="tonal"
                 :color="tenant.status === 'active' ? 'success' : 'default'"
               >
-                <span class="status-dot mr-2" />
+                <span class="mr-2 rounded-circle bg-current" style="width: 6px; height: 6px;" />
                 {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
               </v-chip>
             </td>
@@ -219,19 +233,17 @@
           </tr>
 
           <tr v-if="paginatedTenants.length === 0">
-            <td colspan="6">
-              <div class="py-12 text-center">
-                <v-icon
-                  icon="mdi-domain-off"
-                  size="40"
-                  class="mb-3 text-medium-emphasis"
-                />
-                <div class="text-subtitle-1 font-weight-medium">
-                  Tenant bulunamadı
-                </div>
-                <div class="text-body-2 text-medium-emphasis mt-1">
-                  Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
-                </div>
+            <td colspan="6" class="py-12 text-center">
+              <v-icon
+                icon="mdi-domain-off"
+                size="40"
+                class="mb-3 text-medium-emphasis"
+              />
+              <div class="text-subtitle-1 font-weight-medium">
+                Tenant bulunamadı
+              </div>
+              <div class="text-body-2 text-medium-emphasis mt-1">
+                Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
               </div>
             </td>
           </tr>
@@ -241,7 +253,7 @@
       <v-divider />
 
       <v-row
-        class="tenant-table-footer ma-0 px-4"
+        class="ma-0 px-4"
         align="center"
       >
         <v-col cols="4" class="pa-0">
@@ -260,7 +272,7 @@
           />
         </v-col>
 
-        <v-col cols="4" class="pa-0 d-flex justify-end">
+        <v-col cols="4" class="pa-0 d-flex justify-end py-2">
           <v-select
             v-model="itemsPerPage"
             :items="pageSizeOptions"
@@ -387,9 +399,9 @@ const tenants = ref<Tenant[]>([
 const hasFilters = computed(() => {
   return Boolean(
     search.value ||
-    statusFilter.value ||
-    structureFilter.value ||
-    dateFilter.value,
+      statusFilter.value ||
+      structureFilter.value ||
+      dateFilter.value,
   )
 })
 
@@ -530,138 +542,3 @@ function toggleStatus(tenant: Tenant) {
   tenant.status = tenant.status === 'active' ? 'passive' : 'active'
 }
 </script>
-
-<style>
-.tenant-list-page {
-  width: 100%;
-}
-
-.tenant-filter-card {
-  padding: 16px;
-}
-
-.tenant-filter-card .v-col {
-  padding: 4px !important;
-}
-
-.tenant-filter-card .v-field {
-  border-radius: 6px;
-}
-
-.tenant-filter-card .v-field__input {
-  min-height: 42px;
-  font-size: 13px;
-}
-
-.tenant-filter-card .v-label {
-  font-size: 12px;
-}
-
-.tenant-clear-button {
-  font-size: 12px;
-  letter-spacing: 0;
-  white-space: nowrap;
-  font-weight: 600;
-}
-
-.tenant-table-card {
-  border-radius: 8px !important;
-}
-
-.tenant-table {
-  table-layout: fixed;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr {
-  height: 44px;
-  background: rgba(var(--v-theme-on-surface), 0.035);
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th {
-  color: rgba(var(--v-theme-on-surface), 0.68);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.tenant-table .v-table__wrapper > table > tbody > tr {
-  height: 58px;
-}
-
-.tenant-table .v-table__wrapper > table > tbody > tr > td,
-.tenant-table .v-table__wrapper > table > thead > tr > th {
-  padding-inline: 16px;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(1),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(1) {
-  width: 22%;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(2),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(2) {
-  width: 18%;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(3),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(3) {
-  width: 18%;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(4),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(4) {
-  width: 13%;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(5),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(5) {
-  width: 20%;
-}
-
-.tenant-table .v-table__wrapper > table > thead > tr > th:nth-child(6),
-.tenant-table .v-table__wrapper > table > tbody > tr > td:nth-child(6) {
-  width: 9%;
-}
-
-.tenant-row {
-  cursor: pointer;
-}
-
-.tenant-row:hover {
-  background: rgba(var(--v-theme-primary), 0.04);
-}
-
-.tenant-table-footer {
-  min-height: 60px;
-}
-
-.tenant-table-footer .v-pagination {
-  height: 38px;
-}
-
-.tenant-table-footer .v-pagination .v-btn {
-  min-width: 30px;
-  width: 30px;
-  height: 30px;
-  font-size: 12px;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  display: inline-block;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-@media (max-width: 700px) {
-  .tenant-list-page {
-    padding-inline: 12px;
-  }
-
-  .tenant-table-footer {
-    row-gap: 10px;
-    padding-block: 12px;
-  }
-}
-</style>
