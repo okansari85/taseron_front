@@ -19,7 +19,7 @@
         <div :class="nodeClass(rootTone)">
           <div class="flex items-center justify-center text-base">{{ rootIcon }}</div>
           <div class="mt-1 text-xs font-semibold text-gray-800 dark:text-white/90">{{ rootLabel }}</div>
-          <div :class="['mt-1 text-[10px] font-semibold', rootText]">{{ selectedTypeLabel }}</div>
+          <div :class="['mt-1 text-[10px] font-semibold', rootText]">{{ rootTypeLabel }}</div>
         </div>
 
         <template v-if="children.length">
@@ -66,32 +66,47 @@
 const props = defineProps<{ reviewMode?: boolean }>()
 const form = useTenantForm()
 
-const rootLabel = computed(() => form.value.orgName || 'Organizasyon adı')
+const orgName = computed(() => form.value.orgName || 'Organizasyon adı')
 const onboardingType = computed(() => form.value.onboardingType)
 const isCompany = computed(() => onboardingType.value === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
 const selectedTypeLabel = computed(() => ORG_TYPES.find((type) => type.value === onboardingType.value)?.label ?? 'Organizasyon')
 const description = computed(() => props.reviewMode ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.' : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`)
 
+const rootLabel = computed(() => isCompany.value ? `${orgName.value} - Organizasyon` : orgName.value)
+const rootTypeLabel = computed(() => isCompany.value ? 'Organizasyon' : selectedTypeLabel.value)
+
 const rootTone = computed(() => {
-  if (onboardingType.value === 'company') return 'green'
+  if (onboardingType.value === 'company') return 'purple'
   if (onboardingType.value === 'brand') return 'blue'
   return 'purple'
 })
 
-const rootIcon = computed(() => ({ holding: '⌂', group: '♧', company: '▣', brand: '◆' }[onboardingType.value ?? 'holding']))
-const rootText = computed(() => rootTone.value === 'green' ? 'text-success-600' : rootTone.value === 'blue' ? 'text-blue-light-600' : 'text-brand-500')
+const rootIcon = computed(() => ({ holding: '⌂', group: '♧', company: '⌘', brand: '◆' }[onboardingType.value ?? 'holding']))
+const rootText = computed(() => rootTone.value === 'blue' ? 'text-blue-light-600' : 'text-brand-500')
 
 const children = computed(() => {
   if (onboardingType.value === 'company') {
-    const result = [
-      { id: 'company', title: rootLabel.value, type: 'Şirket', icon: '▣', tone: 'green', text: 'text-success-600' },
+    const result: Array<{ id: string; title: string; type: string; icon: string; tone: string; text: string; automatic?: boolean }> = [
+      { id: 'company', title: orgName.value, type: 'Şirket', icon: '▣', tone: 'green', text: 'text-success-600' },
     ]
-    if (isSahisSirketi.value) result.push({ id: 'location', title: `${rootLabel.value} - Merkez`, type: 'Lokasyon', icon: '⌖', tone: 'orange', text: 'text-warning-600', automatic: true })
+
+    if (isSahisSirketi.value) {
+      result.push({
+        id: 'location',
+        title: `${orgName.value} - Merkez`,
+        type: 'Lokasyon',
+        icon: '⌖',
+        tone: 'orange',
+        text: 'text-warning-600',
+        automatic: true,
+      })
+    }
+
     return result
   }
 
-  if (onboardingType.value === 'brand') return [{ id: 'brand', title: rootLabel.value, type: 'Marka', icon: '◆', tone: 'blue', text: 'text-blue-light-600' }]
+  if (onboardingType.value === 'brand') return [{ id: 'brand', title: orgName.value, type: 'Marka', icon: '◆', tone: 'blue', text: 'text-blue-light-600' }]
   return []
 })
 
