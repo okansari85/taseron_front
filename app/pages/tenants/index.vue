@@ -109,7 +109,7 @@
                 variant="tonal"
                 :color="getStructureColor(tenant.onboarding_type)"
                 :prepend-icon="getStructureIcon(tenant.onboarding_type)"
-                class="text-body-2 px-2"
+                class="text-body-2 px-3 py-1"
               >
                 {{ getStructureLabel(tenant.onboarding_type) }}
               </v-chip>
@@ -121,7 +121,7 @@
                 rounded="lg"
                 variant="tonal"
                 :color="tenant.status === 'active' ? 'success' : 'default'"
-                class="text-body-2 px-2"
+                class="text-body-2 px-3 py-1"
               >
                 <span class="status-dot mr-2" />
                 {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
@@ -168,7 +168,7 @@
           v-model="page"
           :length="pageCount"
           :total-visible="5"
-          density="compact"
+          density="comfortable"
           rounded="circle"
         />
 
@@ -178,9 +178,9 @@
           item-title="title"
           item-value="value"
           variant="outlined"
-          density="compact"
+          density="comfortable"
           hide-details
-          max-width="120"
+          max-width="128"
           class="text-caption flex-grow-0"
         >
           <template #selection="{ item }"><span class="text-caption">{{ item.title }} / sayfa</span></template>
