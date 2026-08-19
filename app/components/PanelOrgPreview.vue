@@ -32,7 +32,7 @@
               <v-icon icon="mdi-map-marker" size="24" color="warning" />
               <div class="tree-child-name">{{ rootLabel }} - Merkez</div>
               <div class="text-caption font-weight-bold text-warning">LOCATION</div>
-              <div class="text-caption text-medium-emphasis">Otomatik</div>
+              <div class="text-caption text-medium-emphasis tree-auto">Otomatik</div>
             </div>
           </div>
         </div>
@@ -78,52 +78,74 @@ const legend = [
 </script>
 
 <style scoped>
+/* Locked tenant creation organization tree. Keep this component as the single source of truth for the preview. */
 .org-tree {
-  --tree-line: rgb(var(--v-theme-primary));
-  --root-w: 160px;
-  --child-gap: 28px;
+  --tree-purple: #6746f5;
+  --tree-purple-bg: #f2efff;
+  --tree-purple-border: #e5deff;
+  --tree-green: #00a968;
+  --tree-green-bg: #f1fbf6;
+  --tree-green-border: #d5f0e1;
+  --tree-amber: #f59a00;
+  --tree-amber-bg: #fff8ed;
+  --tree-amber-border: #f6dfbd;
+  --tree-line: #7864f7;
   position: relative;
   padding: 2px 0 0;
   min-height: 185px;
 }
 
 .tree-node {
-  border-radius: 9px;
-  border: 1px solid transparent;
+  border-radius: 10px;
+  border: 1px solid;
   box-sizing: border-box;
 }
 
-.tree-node--purple { background: rgb(var(--v-theme-primary) / 0.08); border-color: rgb(var(--v-theme-primary) / 0.12); }
-.tree-node--green { background: rgb(var(--v-theme-success) / 0.06); border-color: rgb(var(--v-theme-success) / 0.22); }
-.tree-node--amber { background: rgb(var(--v-theme-warning) / 0.07); border-color: rgb(var(--v-theme-warning) / 0.25); }
+.tree-node--purple {
+  background: var(--tree-purple-bg) !important;
+  border-color: var(--tree-purple-border) !important;
+}
+
+.tree-node--green {
+  background: var(--tree-green-bg) !important;
+  border-color: var(--tree-green-border) !important;
+}
+
+.tree-node--amber {
+  background: var(--tree-amber-bg) !important;
+  border-color: var(--tree-amber-border) !important;
+}
 
 .tree-root {
   position: relative;
   z-index: 3;
-  width: var(--root-w);
+  width: 160px;
   min-height: 58px;
   margin: 0 auto;
-  padding: 10px 14px;
+  padding: 9px 14px;
   display: flex;
   align-items: center;
 }
 
-/* These are explicit elements rather than pseudo-elements so the dashed tree is always visible. */
+.tree-root .v-icon {
+  color: var(--tree-purple) !important;
+}
+
 .tree-line {
   position: absolute;
   z-index: 1;
   pointer-events: none;
-  border-color: var(--tree-line);
-  border-style: dashed;
+  border-color: var(--tree-line) !important;
+  border-style: dashed !important;
   border-width: 0;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .tree-line--down {
   top: 60px;
   left: 50%;
   height: 30px;
-  border-left-width: 1.5px;
+  border-left-width: 1.5px !important;
   transform: translateX(-50%);
 }
 
@@ -131,14 +153,14 @@ const legend = [
   top: 90px;
   left: 25%;
   width: 50%;
-  border-top-width: 1.5px;
+  border-top-width: 1.5px !important;
 }
 
 .tree-line--left,
 .tree-line--right {
   top: 90px;
   height: 28px;
-  border-left-width: 1.5px;
+  border-left-width: 1.5px !important;
 }
 
 .tree-line--left { left: 25%; }
@@ -152,7 +174,7 @@ const legend = [
   right: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--child-gap);
+  gap: 28px;
 }
 
 .tree-branch { min-width: 0; }
@@ -167,20 +189,35 @@ const legend = [
   text-align: center;
 }
 
+.tree-node--child .v-icon { margin-bottom: 4px; }
+
+.tree-node--green .v-icon { color: var(--tree-green) !important; }
+.tree-node--amber .v-icon { color: var(--tree-amber) !important; }
+
 .tree-child-name {
-  margin-top: 5px;
+  margin-top: 3px;
   font-size: 13px;
   line-height: 1.25;
   font-weight: 700;
-  color: rgb(var(--v-theme-on-surface));
+  color: #16213d;
 }
 
-.tree-children:not(:has(+ *)) { }
+.tree-node--green .text-success { color: var(--tree-green) !important; }
+.tree-node--amber .text-warning { color: #e98400 !important; }
+.tree-node--purple .text-primary { color: var(--tree-purple) !important; }
+
+.tree-auto {
+  margin-top: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff0d5;
+  color: #777 !important;
+}
 
 @media (max-width: 600px) {
   .org-tree { min-height: 320px; }
   .tree-root { width: 100%; }
-  .tree-children { position: absolute; top: 118px; grid-template-columns: 1fr; gap: 12px; }
+  .tree-children { top: 118px; grid-template-columns: 1fr; gap: 12px; }
   .tree-line--horizontal { display: none; }
   .tree-line--left { left: 50%; }
   .tree-line--right { display: none; }
