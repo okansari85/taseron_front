@@ -14,13 +14,13 @@
       <section>
         <h3 class="mb-2 text-sm font-semibold text-brand-500">Tenant Bilgileri</h3>
         <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-          <ReviewRow label="Tenant Adı" :value="form.tenantName || '—'" />
-          <ReviewRow label="Slug (Kısa Ad)" :value="form.slug || '—'" />
+          <div v-for="row in tenantRows" :key="row.label" class="flex items-center justify-between border-b border-gray-200 px-4 py-3 text-sm last:border-b-0 dark:border-gray-800">
+            <span class="text-gray-500 dark:text-gray-400">{{ row.label }}</span>
+            <span class="font-medium text-gray-800 dark:text-white/90">{{ row.value }}</span>
+          </div>
           <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-gray-800">
             <span class="text-gray-500 dark:text-gray-400">Durum</span>
-            <TailAdminBadge :tone="form.status === 'active' ? 'success' : 'gray'" dot>
-              {{ form.status === 'active' ? 'Aktif' : 'Pasif' }}
-            </TailAdminBadge>
+            <TailAdminBadge :tone="form.status === 'active' ? 'success' : 'gray'" dot>{{ form.status === 'active' ? 'Aktif' : 'Pasif' }}</TailAdminBadge>
           </div>
         </div>
       </section>
@@ -28,10 +28,10 @@
       <section>
         <h3 class="mb-2 text-sm font-semibold text-brand-500">İlk Organizasyon Bilgileri</h3>
         <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-          <ReviewRow label="Organizasyon Adı" :value="form.orgName || '—'" />
-          <ReviewRow label="Kurumsal Yapı" :value="selectedType?.label || '—'" />
-          <ReviewRow v-if="isCompany" label="Şirket Türü" :value="form.companyKind === 'sahis' ? 'Şahıs Şirketi' : 'Tüzel Şirket'" />
-          <ReviewRow v-if="isSahisSirketi" label="Merkez Lokasyon" value="Otomatik oluşturulacak" />
+          <div v-for="row in organizationRows" :key="row.label" class="flex items-center justify-between border-b border-gray-200 px-4 py-3 text-sm last:border-b-0 dark:border-gray-800">
+            <span class="text-gray-500 dark:text-gray-400">{{ row.label }}</span>
+            <span class="font-medium text-gray-800 dark:text-white/90">{{ row.value }}</span>
+          </div>
         </div>
       </section>
 
@@ -54,24 +54,35 @@
 
 <script setup lang="ts">
 const props = defineProps<{ submitted?: boolean }>()
-
 const form = useTenantForm()
+
 const isCompany = computed(() => form.value.onboardingType === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
 const selectedType = computed(() => ORG_TYPES.find((type) => type.value === form.value.onboardingType))
 const submitted = computed(() => props.submitted ?? false)
-</script>
 
-<script lang="ts">
-export default {
-  components: {
-    ReviewRow: {
-      props: {
-        label: { type: String, required: true },
-        value: { type: String, required: true },
-      },
-      template: `<div class="flex items-center justify-between px-4 py-3 text-sm"><span class="text-gray-500 dark:text-gray-400">{{ label }}</span><span class="font-medium text-gray-800 dark:text-white/90">{{ value }}</span></div>`,
-    },
-  },
-}
+const tenantRows = computed(() => [
+  { label: 'Tenant Adı', value: form.value.tenantName || '—' },
+  { label: 'Slug (Kısa Ad)', value: form.value.slug || '—' },
+])
+
+const organizationRows = computed(() => {
+  const rows = [
+    { label: 'Organizasyon Adı', value: form.value.orgName || '—' },
+    { label: 'Kurumsal Yapı', value: selectedType.value?.label || '—' },
+  ]
+
+  if (isCompany.value) {
+    rows.push({
+      label: 'Şirket Türü',
+      value: form.value.companyKind === 'sahis' ? 'Şahıs Şirketi' : 'Tüzel Şirket',
+    })
+  }
+
+  if (isSahisSirketi.value) {
+    rows.push({ label: 'Merkez Lokasyon', value: 'Otomatik oluşturulacak' })
+  }
+
+  return rows
+})
 </script>
