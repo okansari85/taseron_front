@@ -20,11 +20,8 @@
               <v-icon :icon="node.meta.icon" :color="node.meta.color" size="20" class="tenant-node-icon" />
               <div class="tenant-node-name">{{ node.title }}</div>
               <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
+              <div v-if="node.meta.automatic" class="tree-auto">Otomatik</div>
             </div>
-          </template>
-
-          <template #member="{ member }">
-            <div v-if="member.add === 'auto'" class="tree-auto">Otomatik</div>
           </template>
         </OrganizationChart>
       </div>
@@ -59,7 +56,7 @@ import 'organization-chart-vue3/style.css'
 
 const props = defineProps<{ reviewMode?: boolean }>()
 
-type OrgMeta = { icon: string; color: string; type: string; textClass: string }
+type OrgMeta = { icon: string; color: string; type: string; textClass: string; automatic?: boolean }
 type PreviewNode = {
   id: string
   title: string
@@ -98,8 +95,8 @@ const orgData = computed<PreviewNode>(() => {
         title: `${rootLabel.value} - Merkez`,
         titleClass: 'tenant-title-location',
         contentClass: 'tenant-content-location',
-        member: [{ name: 'Otomatik', add: 'auto' }],
-        meta: { icon: 'mdi-map-marker', color: 'warning', type: 'LOCATION', textClass: 'text-warning' },
+        member: [],
+        meta: { icon: 'mdi-map-marker', color: 'warning', type: 'LOCATION', textClass: 'text-warning', automatic: true },
       })
     }
   }
@@ -143,9 +140,6 @@ const fitChart = async () => {
     const availableHeight = Math.max(1, wrap.clientHeight - 12)
     const widthScale = availableWidth / contentWidth
     const heightScale = availableHeight / contentHeight
-
-    // Fit must use the smaller scale. Using the larger one can make one
-    // dimension overflow the canvas when the tree changes shape.
     const nextZoom = Math.min(1.12, widthScale, heightScale)
 
     zoom.value = Number(Math.max(0.65, nextZoom).toFixed(3))
@@ -230,11 +224,9 @@ onMounted(() => fitChart())
 :deep(.tenant-org-chart .org-table) { border-collapse: separate !important; border-spacing: 0 !important; margin: 0 auto !important; }
 :deep(.tenant-org-chart .org-table td) { vertical-align: top; text-align: center; padding: 0 0 30px 0 !important; position: relative; }
 :deep(.tenant-org-chart .org-child-level) { padding-left: 4px !important; padding-right: 4px !important; background: transparent !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; }
-
 :deep(.tenant-org-chart .org-child-level::before) { border-left: 1px dashed #8a73ff !important; height: 15px !important; background: transparent !important; }
 :deep(.tenant-org-chart .org-child-level::after) { border-top: 1px dashed #8a73ff !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-child-level:first-child::before),
-:deep(.tenant-org-chart .org-child-level:last-child::before) { display: none !important; }
+:deep(.tenant-org-chart .org-child-level:first-child::before), :deep(.tenant-org-chart .org-child-level:last-child::before) { display: none !important; }
 :deep(.tenant-org-chart .org-child-level:first-child::after) { border: 1px dashed transparent !important; border-color: #8a73ff transparent transparent #8a73ff !important; height: 13px !important; background: transparent !important; }
 :deep(.tenant-org-chart .org-child-level:last-child::after) { border: 1px dashed #8a73ff !important; border-color: #8a73ff #8a73ff transparent transparent !important; height: 13px !important; background: transparent !important; }
 :deep(.tenant-org-chart .org-child-level:first-child:last-child::after) { border: 0 !important; border-left: 1px dashed #8a73ff !important; left: 50% !important; right: auto !important; height: 15px !important; }
@@ -242,15 +234,15 @@ onMounted(() => fitChart())
 :deep(.tenant-org-chart .org-extend-arrow::before) { border-color: #8a73ff #8a73ff transparent transparent !important; }
 :deep(.tenant-org-chart .org-node) { margin: 0 4px !important; box-sizing: border-box; background: transparent !important; border: 0 !important; }
 :deep(.tenant-org-chart .org-container) { width: 132px !important; min-width: 132px !important; box-sizing: border-box; border: 1px solid #ddd6ff !important; border-radius: 10px !important; overflow: hidden; box-shadow: none !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-title) { width: 100% !important; min-height: 66px !important; padding: 8px 8px 7px !important; box-sizing: border-box; border: 0 !important; border-radius: 9px !important; background: transparent !important; white-space: normal !important; }
+:deep(.tenant-org-chart .org-title) { width: 100% !important; min-height: 72px !important; padding: 8px 8px 7px !important; box-sizing: border-box; border: 0 !important; border-radius: 9px !important; background: transparent !important; white-space: normal !important; }
 :deep(.tenant-org-chart .tenant-title-organization) { background: #f3efff !important; }
 :deep(.tenant-org-chart .tenant-title-company) { background: #effaf4 !important; }
 :deep(.tenant-org-chart .tenant-title-location) { background: #fff7e9 !important; }
-:deep(.tenant-org-chart .org-content) { width: 100% !important; margin: 0 !important; padding: 0 0 7px !important; box-sizing: border-box; border: 0 !important; background: transparent !important; white-space: normal !important; text-align: center !important; }
+:deep(.tenant-org-chart .org-content) { width: 100% !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box; border: 0 !important; background: transparent !important; white-space: normal !important; text-align: center !important; }
 :deep(.tenant-org-chart .tenant-content-location) { background: #fff7e9 !important; border: 0 !important; }
 :deep(.tenant-org-chart .org-content .org-content-item) { justify-content: center !important; padding: 0 !important; border: 0 !important; }
 
-.tenant-node-content { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 5px; width: 100%; min-height: 48px; box-sizing: border-box; }
+.tenant-node-content { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: auto auto auto; align-items: center; column-gap: 5px; width: 100%; min-height: 56px; box-sizing: border-box; }
 .tenant-node-icon { grid-row: 1 / span 2; align-self: center; }
 .tenant-node-name { min-width: 0; font-size: 11px; line-height: 1.2; font-weight: 700; text-align: center; overflow-wrap: anywhere; word-break: break-word; color: #26324b; }
 .tenant-node-type { font-size: 9px; line-height: 1.05; font-weight: 800; text-align: center; letter-spacing: 0.1px; }
@@ -258,7 +250,7 @@ onMounted(() => fitChart())
 .text-success { color: #00a968 !important; }
 .text-warning { color: #e98400 !important; }
 
-.tree-auto { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #fff0d5; color: #777; font-size: 9px; line-height: 1.15; white-space: nowrap; }
+.tree-auto { grid-column: 1 / -1; justify-self: center; display: inline-block; margin-top: 2px; padding: 2px 8px; border-radius: 10px; background: #fff0d5; color: #777; font-size: 9px; line-height: 1.15; white-space: nowrap; }
 
 @media (max-width: 600px) {
   .org-chart-wrap { height: 215px; }
