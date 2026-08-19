@@ -173,8 +173,8 @@
                     @click="toggleStatus(item.raw)"
                   />
                 </v-list>
-              </v-list>
-            </template>
+              </v-menu>
+            </div>
 
             <div class="d-flex align-center ga-3 mt-4 flex-wrap">
               <v-chip
