@@ -98,16 +98,6 @@ const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
 const items = [
   { title: 'Ana Sayfa', path: '/', icon: '⌂' },
   { title: 'Tenantlar', path: '/tenants', icon: '▦' },
-  { title: 'Organizasyon', path: '/organizations', icon: '⌘' },
-  { title: 'Lokasyonlar', path: '/locations', icon: '⌖' },
-  { title: 'Şirketler', path: '/companies', icon: '▣' },
-  { title: 'Taşeronlar', path: '/contractors', icon: '♙' },
-  { title: 'Kullanıcılar', path: '/users', icon: '◎' },
-  { title: 'Roller', path: '/roles', icon: '◈' },
-  { title: 'Sözleşmeler', path: '/contracts', icon: '▤' },
-  { title: 'Raporlar', path: '/reports', icon: '▥' },
-  { title: 'Bildirimler', path: '/notifications', icon: '◌' },
-  { title: 'Ayarlar', path: '/settings', icon: '⚙' },
 ]
 
 const isActive = (path: string) =>
