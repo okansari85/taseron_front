@@ -3,75 +3,58 @@
     class="tenant-list-page mx-auto px-0"
     style="max-width: 1120px; width: 100%;"
   >
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <div class="text-h5 font-weight-bold">Tenantlar</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
-          Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
-        </div>
+    <div class="mb-6">
+      <div class="text-h5 font-weight-bold">Tenantlar</div>
+      <div class="text-body-2 text-medium-emphasis mt-1">
+        Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
       </div>
-
-      <v-btn
-        color="primary"
-        rounded="md"
-        prepend-icon="mdi-plus"
-        class="text-body-2 text-none font-weight-medium"
-        height="40"
-        @click="goToCreate"
-      >
-        Yeni Tenant
-      </v-btn>
     </div>
 
-    <v-card class="tenant-filter-card mb-5 pa-4" rounded="md" elevation="0" border>
-      <v-row align="center" dense class="ma-0">
-        <v-col cols="12" md="4" class="pa-1">
-          <v-text-field
-            v-model="search"
-            placeholder="Tenant ara..."
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            density="compact"
-            hide-details
-            clearable
-          />
-        </v-col>
+    <v-row align="center" dense class="ma-0 mb-5">
+      <v-col cols="12" md="4" class="pa-1">
+        <v-text-field
+          v-model="search"
+          placeholder="Tenant ara..."
+          prepend-inner-icon="mdi-magnify"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+        />
+      </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-1">
-          <v-select v-model="statusFilter" label="Durum" :items="statusOptions" variant="outlined" density="compact" hide-details clearable>
-            <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-          </v-select>
-        </v-col>
+      <v-col cols="6" sm="4" md="2" class="pa-1">
+        <v-select v-model="statusFilter" label="Durum" :items="statusOptions" variant="outlined" density="compact" hide-details clearable>
+          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
+        </v-select>
+      </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-1">
-          <v-select v-model="structureFilter" label="Kurumsal Yapı" :items="structureOptions" variant="outlined" density="compact" hide-details clearable>
-            <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-          </v-select>
-        </v-col>
+      <v-col cols="6" sm="4" md="2" class="pa-1">
+        <v-select v-model="structureFilter" label="Kurumsal Yapı" :items="structureOptions" variant="outlined" density="compact" hide-details clearable>
+          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
+        </v-select>
+      </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-1">
-          <v-select v-model="dateFilter" label="Oluşturulma Tarihi" :items="dateOptions" prepend-inner-icon="mdi-calendar-outline" variant="outlined" density="compact" hide-details clearable>
-            <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-          </v-select>
-        </v-col>
+      <v-col cols="12" sm="4" md="2" class="pa-1">
+        <v-select v-model="dateFilter" label="Oluşturulma Tarihi" :items="dateOptions" prepend-inner-icon="mdi-calendar-outline" variant="outlined" density="compact" hide-details clearable>
+          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
+        </v-select>
+      </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-1">
-          <v-btn
-            block
-            height="40"
-            variant="tonal"
-            color="primary"
-            rounded="md"
-            prepend-icon="mdi-filter-remove-outline"
-            class="text-caption text-none font-weight-medium"
-            :disabled="!hasFilters"
-            @click="clearFilters"
-          >
-            Filtreleri Temizle
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-card>
+      <v-col cols="12" md="2" class="pa-1 d-flex justify-md-end">
+        <v-btn
+          color="primary"
+          rounded="md"
+          prepend-icon="mdi-plus"
+          class="text-body-2 text-none font-weight-medium"
+          height="40"
+          block
+          @click="goToCreate"
+        >
+          Yeni Tenant
+        </v-btn>
+      </v-col>
+    </v-row>
 
     <v-card rounded="md" elevation="0" border class="overflow-hidden">
       <v-table hover>
@@ -90,7 +73,7 @@
           <tr v-for="tenant in paginatedTenants" :key="tenant.id" class="tenant-row" @click="openTenant(tenant)">
             <td class="py-3">
               <div class="d-flex align-center ga-3">
-                <v-avatar size="36" :color="getAvatarColor(tenant.id)" variant="tonal" rounded="0">
+                <v-avatar size="36" :color="getAvatarColor(tenant.id)" variant="tonal" rounded="lg">
                   <span class="font-weight-bold text-caption">{{ getInitials(tenant.name) }}</span>
                 </v-avatar>
                 <div class="min-w-0">
@@ -245,7 +228,6 @@ const tenants = ref<Tenant[]>([
   { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
 ])
 
-const hasFilters = computed(() => Boolean(search.value || statusFilter.value || structureFilter.value || dateFilter.value))
 const filteredTenants = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('tr-TR')
   return tenants.value.filter((tenant) => {
@@ -255,6 +237,7 @@ const filteredTenants = computed(() => {
     return matchesSearch && matchesStatus && matchesStructure
   })
 })
+const hasFilters = computed(() => Boolean(search.value || statusFilter.value || structureFilter.value || dateFilter.value))
 const pageCount = computed(() => hasFilters.value ? Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value)) : 3)
 const paginatedTenants = computed(() => {
   const start = (page.value - 1) * itemsPerPage.value
@@ -263,13 +246,6 @@ const paginatedTenants = computed(() => {
 
 watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => { page.value = 1 })
 watch(pageCount, (count) => { if (page.value > count) page.value = count })
-
-function clearFilters() {
-  search.value = ''
-  statusFilter.value = null
-  structureFilter.value = null
-  dateFilter.value = null
-}
 
 function getInitials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toLocaleUpperCase('tr-TR')
