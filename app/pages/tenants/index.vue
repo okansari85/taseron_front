@@ -116,14 +116,14 @@
       class="overflow-hidden"
     >
       <v-table hover>
-        <thead class="bg-surface-variant">
+        <thead class="bg-grey-lighten-5">
           <tr>
-            <th class="text-caption font-weight-bold text-medium-emphasis">Tenant Adı</th>
-            <th class="text-caption font-weight-bold text-medium-emphasis">Slug</th>
-            <th class="text-caption font-weight-bold text-medium-emphasis">Kurumsal Yapı</th>
-            <th class="text-caption font-weight-bold text-medium-emphasis">Durum</th>
-            <th class="text-caption font-weight-bold text-medium-emphasis">Oluşturulma Tarihi</th>
-            <th class="text-caption font-weight-bold text-medium-emphasis text-center">İşlemler</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis">Tenant Adı</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis">Slug</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis">Kurumsal Yapı</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis">Durum</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis">Oluşturulma Tarihi</th>
+            <th class="text-body-2 font-weight-bold text-high-emphasis text-center">İşlemler</th>
           </tr>
         </thead>
 
@@ -226,7 +226,7 @@
 
       <v-divider />
 
-      <div class="d-flex align-center justify-space-between px-4 py-2">
+      <div class="d-flex align-center justify-space-between px-4 py-3">
         <span class="text-caption text-medium-emphasis">
           Toplam {{ totalTenantCount }} kayıt
         </span>
@@ -247,7 +247,7 @@
           variant="outlined"
           density="compact"
           hide-details
-          max-width="112"
+          max-width="120"
           class="text-caption flex-grow-0"
         >
           <template #selection="{ item }">
