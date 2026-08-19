@@ -1,86 +1,93 @@
 <template>
-  <div>
-    <div class="d-flex align-center mb-6">
-      <div class="icon-badge">
-        <v-icon icon="mdi-bank-outline" size="20" />
+  <section>
+    <div class="mb-6 flex items-start gap-3">
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+        <span class="text-lg">⌂</span>
       </div>
-      <div class="ml-3">
-        <div class="text-subtitle-1 font-weight-bold">Tenant Bilgileri</div>
-        <div class="text-body-2 text-medium-emphasis">Tenant hesabınızın temel bilgilerini girin.</div>
+      <div>
+        <h2 class="text-theme-xl font-semibold text-gray-800 dark:text-white/90">Tenant Bilgileri</h2>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Tenant hesabınızın temel bilgilerini girin.</p>
       </div>
     </div>
 
-    <v-text-field
-      v-model="form.tenantName"
-      label="Tenant Adı *"
-      placeholder="Örn. Koç Holding"
-      variant="outlined"
-      density="comfortable"
-      hide-details="auto"
-      class="mb-1"
-      @update:model-value="onTenantNameChange"
-    />
-    <p class="text-caption text-medium-emphasis mb-5">Tenant sistemde bu ad ile görüntülenecektir.</p>
+    <div class="space-y-6">
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Tenant Adı *</label>
+        <input
+          v-model="form.tenantName"
+          type="text"
+          placeholder="Örn. Koç Holding"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+          @input="onTenantNameChange"
+        />
+        <p class="mt-1.5 text-theme-xs text-gray-500 dark:text-gray-400">Tenant sistemde bu ad ile görüntülenecektir.</p>
+      </div>
 
-    <v-text-field
-      v-model="form.slug"
-      label="Slug (Kısa Ad) *"
-      placeholder="koc-holding"
-      variant="outlined"
-      density="comfortable"
-      hide-details="auto"
-      class="mb-1"
-      @update:model-value="onSlugChange"
-    />
-    <p class="text-caption text-medium-emphasis mb-5">
-      Sistemde benzersiz olmalıdır. Küçük harf, rakam ve tire (-) kullanılabilir.
-    </p>
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Slug (Kısa Ad) *</label>
+        <input
+          v-model="form.slug"
+          type="text"
+          placeholder="koc-holding"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+          @input="onSlugChange"
+        />
+        <p class="mt-1.5 text-theme-xs text-gray-500 dark:text-gray-400">Sistemde benzersiz olmalıdır. Küçük harf, rakam ve tire (-) kullanılabilir.</p>
+      </div>
 
-    <div class="text-body-2 font-weight-medium mb-2">Durum <span class="text-error">*</span></div>
-    <v-row dense>
-      <v-col cols="12" sm="6">
-        <button
-          type="button"
-          class="status-card"
-          :class="{ 'status-card--active': form.status === 'active' }"
-          @click="form.status = 'active'"
-        >
-          <div class="d-flex align-center" style="gap: 8px">
-            <span class="radio-dot" :class="{ 'radio-dot--active': form.status === 'active' }" />
-            <span class="text-body-2 font-weight-medium">Aktif</span>
-            <v-chip size="x-small" color="success" variant="flat">Önerilen</v-chip>
-          </div>
-          <p class="text-caption text-medium-emphasis mt-1 status-desc">
-            Tenant hesabı aktif olarak kullanılabilir.
-          </p>
-        </button>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <button
-          type="button"
-          class="status-card"
-          :class="{ 'status-card--active': form.status === 'passive' }"
-          @click="form.status = 'passive'"
-        >
-          <div class="d-flex align-center" style="gap: 8px">
-            <span class="radio-dot" :class="{ 'radio-dot--active': form.status === 'passive' }" />
-            <span class="text-body-2 font-weight-medium">Pasif</span>
-            <v-chip size="x-small" color="grey-lighten-1" variant="tonal">Devre dışı</v-chip>
-          </div>
-          <p class="text-caption text-medium-emphasis mt-1 status-desc">
-            Tenant hesabı pasif durumda oluşturulur.
-          </p>
-        </button>
-      </v-col>
-    </v-row>
-  </div>
+      <div>
+        <div class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-400">Durum <span class="text-error-500">*</span></div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <button
+            type="button"
+            :class="[
+              'rounded-lg border p-4 text-left transition',
+              form.status === 'active'
+                ? 'border-brand-500 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10'
+                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700',
+            ]"
+            @click="form.status = 'active'"
+          >
+            <div class="flex items-center gap-2">
+              <span :class="['h-4 w-4 rounded-full border-2 p-0.5', form.status === 'active' ? 'border-brand-500' : 'border-gray-300 dark:border-gray-600']">
+                <span v-if="form.status === 'active'" class="block h-full w-full rounded-full bg-brand-500" />
+              </span>
+              <span class="text-sm font-medium text-gray-800 dark:text-white/90">Aktif</span>
+              <TailAdminBadge tone="success">Önerilen</TailAdminBadge>
+            </div>
+            <p class="mt-2 pl-6 text-theme-xs text-gray-500 dark:text-gray-400">Tenant hesabı aktif olarak kullanılabilir.</p>
+          </button>
+
+          <button
+            type="button"
+            :class="[
+              'rounded-lg border p-4 text-left transition',
+              form.status === 'passive'
+                ? 'border-brand-500 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10'
+                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700',
+            ]"
+            @click="form.status = 'passive'"
+          >
+            <div class="flex items-center gap-2">
+              <span :class="['h-4 w-4 rounded-full border-2 p-0.5', form.status === 'passive' ? 'border-brand-500' : 'border-gray-300 dark:border-gray-600']">
+                <span v-if="form.status === 'passive'" class="block h-full w-full rounded-full bg-brand-500" />
+              </span>
+              <span class="text-sm font-medium text-gray-800 dark:text-white/90">Pasif</span>
+              <TailAdminBadge tone="gray">Devre dışı</TailAdminBadge>
+            </div>
+            <p class="mt-2 pl-6 text-theme-xs text-gray-500 dark:text-gray-400">Tenant hesabı pasif durumda oluşturulur.</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
 const form = useTenantForm()
 
-function onTenantNameChange(v: string) {
-  if (!form.value.slugTouched) form.value.slug = slugify(v)
+function onTenantNameChange() {
+  if (!form.value.slugTouched) form.value.slug = slugify(form.value.tenantName)
 }
 
 function onSlugChange() {
@@ -88,53 +95,3 @@ function onSlugChange() {
   form.value.slug = slugify(form.value.slug)
 }
 </script>
-
-<style scoped>
-.icon-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgb(var(--v-theme-primary) / 0.1);
-  color: rgb(var(--v-theme-primary));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.status-card {
-  width: 100%;
-  text-align: left;
-  border-radius: 12px;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  padding: 14px 16px;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.status-card--active {
-  border-color: rgb(var(--v-theme-primary));
-  background: rgb(var(--v-theme-primary) / 0.06);
-}
-.status-desc {
-  margin-left: 24px;
-}
-.radio-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(var(--v-border-color), 0.5);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.radio-dot--active {
-  border-color: rgb(var(--v-theme-primary));
-}
-.radio-dot--active::after {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgb(var(--v-theme-primary));
-}
-</style>
