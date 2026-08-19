@@ -3,7 +3,6 @@
     class="tenant-list-page mx-auto px-0"
     style="max-width: 1120px; width: 100%;"
   >
-    <!-- Page header -->
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
         <div class="text-h5 font-weight-bold">Tenantlar</div>
@@ -24,15 +23,14 @@
       </v-btn>
     </div>
 
-    <!-- Filters -->
     <v-card
+      class="tenant-filter-card mb-5"
       rounded="md"
       elevation="0"
       border
-      class="tenant-filter-card mb-5"
     >
       <v-row align="center" dense>
-        <v-col cols="12" md="4" class="pa-2">
+        <v-col cols="12" md="4" class="pa-1">
           <v-text-field
             v-model="search"
             placeholder="Tenant ara..."
@@ -44,7 +42,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="statusFilter"
             label="Durum"
@@ -56,7 +54,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="structureFilter"
             label="Kurumsal Yapı"
@@ -68,7 +66,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="dateFilter"
             label="Oluşturulma Tarihi"
@@ -81,7 +79,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2" class="pa-2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-btn
             block
             height="48"
@@ -99,12 +97,11 @@
       </v-row>
     </v-card>
 
-    <!-- Tenant table -->
     <v-card
+      class="tenant-table-card overflow-hidden"
       rounded="md"
       elevation="0"
       border
-      class="tenant-table-card overflow-hidden"
     >
       <v-table class="tenant-table" hover>
         <thead>
@@ -243,7 +240,6 @@
 
       <v-divider />
 
-      <!-- Table footer -->
       <v-row
         class="tenant-table-footer ma-0 px-4"
         align="center"
@@ -391,9 +387,9 @@ const tenants = ref<Tenant[]>([
 const hasFilters = computed(() => {
   return Boolean(
     search.value ||
-      statusFilter.value ||
-      structureFilter.value ||
-      dateFilter.value,
+    statusFilter.value ||
+    structureFilter.value ||
+    dateFilter.value,
   )
 })
 
@@ -541,11 +537,11 @@ function toggleStatus(tenant: Tenant) {
 }
 
 .tenant-filter-card {
-  padding: 10px;
+  padding: 16px;
 }
 
 .tenant-filter-card .v-col {
-  padding: 6px !important;
+  padding: 4px !important;
 }
 
 .tenant-filter-card .v-field {
@@ -565,6 +561,7 @@ function toggleStatus(tenant: Tenant) {
   font-size: 12px;
   letter-spacing: 0;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .tenant-table-card {
@@ -577,6 +574,14 @@ function toggleStatus(tenant: Tenant) {
 
 .tenant-table .v-table__wrapper > table > thead > tr {
   height: 44px;
+  background: rgba(var(--v-theme-on-surface), 0.035);
+}
+
+.tenant-table .v-table__wrapper > table > thead > tr > th {
+  color: rgba(var(--v-theme-on-surface), 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .tenant-table .v-table__wrapper > table > tbody > tr {
