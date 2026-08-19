@@ -1,13 +1,11 @@
 <template>
   <v-container
-    class="mx-auto px-0"
+    class="tenant-list-page mx-auto px-0"
     style="max-width: 1120px; width: 100%;"
   >
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <div class="text-h5 font-weight-bold">
-          Tenantlar
-        </div>
+        <div class="text-h5 font-weight-bold">Tenantlar</div>
         <div class="text-body-2 text-medium-emphasis mt-1">
           Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
         </div>
@@ -26,7 +24,7 @@
     </div>
 
     <v-card
-      class="mb-5 pa-4"
+      class="tenant-filter-card mb-5 pa-4"
       rounded="md"
       elevation="0"
       border
@@ -108,24 +106,12 @@
       <v-table hover>
         <thead class="bg-surface-variant">
           <tr>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">
-              Tenant Adı
-            </th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">
-              Slug
-            </th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">
-              Kurumsal Yapı
-            </th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">
-              Durum
-            </th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">
-              Oluşturulma Tarihi
-            </th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis text-center">
-              İşlemler
-            </th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">Tenant Adı</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">Slug</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">Kurumsal Yapı</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">Durum</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis">Oluşturulma Tarihi</th>
+            <th class="text-body-2 font-weight-bold text-medium-emphasis text-center">İşlemler</th>
           </tr>
         </thead>
 
@@ -133,7 +119,6 @@
           <tr
             v-for="tenant in paginatedTenants"
             :key="tenant.id"
-            class="cursor-pointer"
             @click="openTenant(tenant)"
           >
             <td>
@@ -149,8 +134,8 @@
                   </span>
                 </v-avatar>
 
-                <div class="min-w-0">
-                  <div class="text-body-2 font-weight-semibold text-truncate">
+                <div>
+                  <div class="text-body-2 font-weight-semibold">
                     {{ tenant.name }}
                   </div>
                   <div class="text-caption text-medium-emphasis">
@@ -160,9 +145,7 @@
               </div>
             </td>
 
-            <td class="text-body-2 text-medium-emphasis">
-              {{ tenant.slug }}
-            </td>
+            <td class="text-body-2 text-medium-emphasis">{{ tenant.slug }}</td>
 
             <td>
               <v-chip
@@ -181,14 +164,11 @@
                 variant="tonal"
                 :color="tenant.status === 'active' ? 'success' : 'default'"
               >
-                <span class="mr-2 rounded-circle bg-current" style="width: 6px; height: 6px;" />
                 {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
               </v-chip>
             </td>
 
-            <td class="text-body-2 text-medium-emphasis">
-              {{ formatDate(tenant.created_at) }}
-            </td>
+            <td class="text-body-2 text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
 
             <td class="text-center">
               <v-menu>
@@ -203,28 +183,12 @@
                 </template>
 
                 <v-list density="compact">
-                  <v-list-item
-                    prepend-icon="mdi-eye-outline"
-                    title="Görüntüle"
-                    @click="openTenant(tenant)"
-                  />
-                  <v-list-item
-                    prepend-icon="mdi-pencil-outline"
-                    title="Düzenle"
-                    @click="editTenant(tenant)"
-                  />
+                  <v-list-item prepend-icon="mdi-eye-outline" title="Görüntüle" @click="openTenant(tenant)" />
+                  <v-list-item prepend-icon="mdi-pencil-outline" title="Düzenle" @click="editTenant(tenant)" />
                   <v-divider class="my-1" />
                   <v-list-item
-                    :prepend-icon="
-                      tenant.status === 'active'
-                        ? 'mdi-close-circle-outline'
-                        : 'mdi-check-circle-outline'
-                    "
-                    :title="
-                      tenant.status === 'active'
-                        ? 'Pasife Al'
-                        : 'Aktifleştir'
-                    "
+                    :prepend-icon="tenant.status === 'active' ? 'mdi-close-circle-outline' : 'mdi-check-circle-outline'"
+                    :title="tenant.status === 'active' ? 'Pasife Al' : 'Aktifleştir'"
                     @click="toggleStatus(tenant)"
                   />
                 </v-list>
@@ -234,14 +198,8 @@
 
           <tr v-if="paginatedTenants.length === 0">
             <td colspan="6" class="py-12 text-center">
-              <v-icon
-                icon="mdi-domain-off"
-                size="40"
-                class="mb-3 text-medium-emphasis"
-              />
-              <div class="text-subtitle-1 font-weight-medium">
-                Tenant bulunamadı
-              </div>
+              <v-icon icon="mdi-domain-off" size="40" class="mb-3 text-medium-emphasis" />
+              <div class="text-subtitle-1 font-weight-medium">Tenant bulunamadı</div>
               <div class="text-body-2 text-medium-emphasis mt-1">
                 Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
               </div>
@@ -252,14 +210,9 @@
 
       <v-divider />
 
-      <v-row
-        class="ma-0 px-4"
-        align="center"
-      >
+      <v-row class="ma-0 px-4" align="center">
         <v-col cols="4" class="pa-0">
-          <span class="text-caption text-medium-emphasis">
-            Toplam {{ totalTenantCount }} kayıt
-          </span>
+          <span class="text-caption text-medium-emphasis">Toplam {{ totalTenantCount }} kayıt</span>
         </v-col>
 
         <v-col cols="4" class="pa-0 d-flex justify-center">
@@ -283,6 +236,7 @@
             hide-details
             suffix="/ sayfa"
             width="108"
+            max-width="108"
           />
         </v-col>
       </v-row>
@@ -301,14 +255,12 @@ interface Tenant {
 }
 
 const router = useRouter()
-
 const search = ref('')
 const statusFilter = ref<string | null>(null)
 const structureFilter = ref<string | null>(null)
 const dateFilter = ref<string | null>(null)
 const page = ref(1)
 const itemsPerPage = ref(10)
-
 const totalTenantCount = 24
 
 const statusOptions = [
@@ -338,124 +290,51 @@ const pageSizeOptions = [
 ]
 
 const tenants = ref<Tenant[]>([
-  {
-    id: 1,
-    name: 'Koç Holding',
-    slug: 'koc-holding',
-    status: 'active',
-    onboarding_type: 'holding',
-    created_at: '2025-05-18T14:32:00',
-  },
-  {
-    id: 2,
-    name: 'MADO',
-    slug: 'mado',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-17T11:20:00',
-  },
-  {
-    id: 3,
-    name: 'Arçelik A.Ş.',
-    slug: 'arcelik',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-16T09:15:00',
-  },
-  {
-    id: 4,
-    name: 'İpek Gıda',
-    slug: 'ipek-gida',
-    status: 'passive',
-    onboarding_type: 'group',
-    created_at: '2025-05-15T16:45:00',
-  },
-  {
-    id: 5,
-    name: 'Tepe Savunma',
-    slug: 'tepe-savunma',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-14T10:05:00',
-  },
-  {
-    id: 6,
-    name: 'Beko',
-    slug: 'beko',
-    status: 'active',
-    onboarding_type: 'brand',
-    created_at: '2025-05-13T13:30:00',
-  },
-  {
-    id: 7,
-    name: 'Setur',
-    slug: 'setur',
-    status: 'passive',
-    onboarding_type: 'company',
-    created_at: '2025-05-12T08:50:00',
-  },
+  { id: 1, name: 'Koç Holding', slug: 'koc-holding', status: 'active', onboarding_type: 'holding', created_at: '2025-05-18T14:32:00' },
+  { id: 2, name: 'MADO', slug: 'mado', status: 'active', onboarding_type: 'company', created_at: '2025-05-17T11:20:00' },
+  { id: 3, name: 'Arçelik A.Ş.', slug: 'arcelik', status: 'active', onboarding_type: 'company', created_at: '2025-05-16T09:15:00' },
+  { id: 4, name: 'İpek Gıda', slug: 'ipek-gida', status: 'passive', onboarding_type: 'group', created_at: '2025-05-15T16:45:00' },
+  { id: 5, name: 'Tepe Savunma', slug: 'tepe-savunma', status: 'active', onboarding_type: 'company', created_at: '2025-05-14T10:05:00' },
+  { id: 6, name: 'Beko', slug: 'beko', status: 'active', onboarding_type: 'brand', created_at: '2025-05-13T13:30:00' },
+  { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
 ])
 
-const hasFilters = computed(() => {
-  return Boolean(
-    search.value ||
-      statusFilter.value ||
-      structureFilter.value ||
-      dateFilter.value,
-  )
-})
+const hasFilters = computed(() => Boolean(
+  search.value ||
+  statusFilter.value ||
+  structureFilter.value ||
+  dateFilter.value,
+))
 
 const filteredTenants = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('tr-TR')
 
   return tenants.value.filter((tenant) => {
-    const matchesSearch =
-      !query ||
+    const matchesSearch = !query ||
       tenant.name.toLocaleLowerCase('tr-TR').includes(query) ||
       tenant.slug.toLocaleLowerCase('tr-TR').includes(query)
-
-    const matchesStatus =
-      !statusFilter.value || tenant.status === statusFilter.value
-
-    const matchesStructure =
-      !structureFilter.value ||
-      tenant.onboarding_type === structureFilter.value
-
+    const matchesStatus = !statusFilter.value || tenant.status === statusFilter.value
+    const matchesStructure = !structureFilter.value || tenant.onboarding_type === structureFilter.value
     return matchesSearch && matchesStatus && matchesStructure
   })
 })
 
 const pageCount = computed(() => {
-  if (!hasFilters.value) {
-    return 3
-  }
-
-  return Math.max(
-    1,
-    Math.ceil(filteredTenants.value.length / itemsPerPage.value),
-  )
+  if (!hasFilters.value) return 3
+  return Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value))
 })
 
 const paginatedTenants = computed(() => {
   const start = (page.value - 1) * itemsPerPage.value
-
-  return filteredTenants.value.slice(
-    start,
-    start + itemsPerPage.value,
-  )
+  return filteredTenants.value.slice(start, start + itemsPerPage.value)
 })
 
-watch(
-  [search, statusFilter, structureFilter, dateFilter, itemsPerPage],
-  () => {
-    page.value = 1
-  },
-)
+watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => {
+  page.value = 1
+})
 
 watch(pageCount, (count) => {
-  if (page.value > count) {
-    page.value = count
-  }
+  if (page.value > count) page.value = count
 })
 
 function clearFilters() {
@@ -466,63 +345,28 @@ function clearFilters() {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toLocaleUpperCase('tr-TR')
+  return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toLocaleUpperCase('tr-TR')
 }
 
 function getAvatarColor(id: number) {
-  const colors = [
-    'primary',
-    'success',
-    'info',
-    'warning',
-    'primary',
-    'error',
-    'info',
-  ]
-
-  return colors[(id - 1) % colors.length]
+  return ['primary', 'success', 'info', 'warning', 'primary', 'error', 'info'][(id - 1) % 7]
 }
 
 function getStructureLabel(type: Tenant['onboarding_type']) {
-  return {
-    holding: 'Holding',
-    group: 'Grup',
-    company: 'Şirket',
-    brand: 'Marka',
-  }[type]
+  return { holding: 'Holding', group: 'Grup', company: 'Şirket', brand: 'Marka' }[type]
 }
 
 function getStructureColor(type: Tenant['onboarding_type']) {
-  return {
-    holding: 'primary',
-    group: 'warning',
-    company: 'success',
-    brand: 'info',
-  }[type]
+  return { holding: 'primary', group: 'warning', company: 'success', brand: 'info' }[type]
 }
 
 function getStructureIcon(type: Tenant['onboarding_type']) {
-  return {
-    holding: 'mdi-bank-outline',
-    group: 'mdi-account-group-outline',
-    company: 'mdi-domain',
-    brand: 'mdi-tag-outline',
-  }[type]
+  return { holding: 'mdi-bank-outline', group: 'mdi-account-group-outline', company: 'mdi-domain', brand: 'mdi-tag-outline' }[type]
 }
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }).format(new Date(value))
 }
 
