@@ -3,7 +3,7 @@
     <div class="text-subtitle-1 font-weight-bold">Oluşturulacak Yapı Önizlemesi</div>
     <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
 
-    <div class="org-tree">
+    <div class="org-tree" :class="{ 'org-tree--single': !isSahisSirketi }">
       <div class="tree-root tree-node tree-node--purple">
         <v-icon icon="mdi-domain" size="22" color="primary" class="mr-3" />
         <div>
@@ -13,12 +13,7 @@
       </div>
 
       <template v-if="isCompany">
-        <div class="tree-line tree-line--down" aria-hidden="true" />
-        <div class="tree-line tree-line--horizontal" aria-hidden="true" />
-        <div class="tree-line tree-line--left" aria-hidden="true" />
-        <div class="tree-line tree-line--right" aria-hidden="true" />
-
-        <div class="tree-children">
+        <div class="tree-children" :class="{ 'tree-children--split': isSahisSirketi, 'tree-children--single': !isSahisSirketi }">
           <div class="tree-branch">
             <div class="tree-node tree-node--child tree-node--green">
               <v-icon icon="mdi-domain" size="24" color="success" />
@@ -131,53 +126,86 @@ const legend = [
   color: var(--tree-purple) !important;
 }
 
-.tree-line {
-  position: absolute;
-  z-index: 1;
-  pointer-events: none;
-  border-color: var(--tree-line) !important;
-  border-style: dashed !important;
-  border-width: 0;
-  opacity: 0.9;
-}
-
-.tree-line--down {
-  top: 60px;
-  left: 50%;
-  height: 30px;
-  border-left-width: 1.5px !important;
-  transform: translateX(-50%);
-}
-
-.tree-line--horizontal {
-  top: 90px;
-  left: 25%;
-  width: 50%;
-  border-top-width: 1.5px !important;
-}
-
-.tree-line--left,
-.tree-line--right {
-  top: 90px;
-  height: 28px;
-  border-left-width: 1.5px !important;
-}
-
-.tree-line--left { left: 25%; }
-.tree-line--right { left: 75%; }
-
 .tree-children {
   position: absolute;
   z-index: 2;
-  top: 118px;
   left: 0;
   right: 0;
   display: grid;
+}
+
+.tree-children--split {
+  top: 118px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
 }
 
-.tree-branch { min-width: 0; }
+/* The connector is part of the branch structure: it physically meets each child card. */
+.tree-children--split::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 25%;
+  width: 50%;
+  height: 30px;
+  border-top: 1.5px dashed var(--tree-line);
+  border-left: 1.5px dashed var(--tree-line);
+  border-right: 1.5px dashed var(--tree-line);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.tree-children--split::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -60px;
+  left: 50%;
+  height: 30px;
+  border-left: 1.5px dashed var(--tree-line);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tree-children--split .tree-branch::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  height: 30px;
+  border-left: 1.5px dashed var(--tree-line);
+  pointer-events: none;
+}
+
+.tree-children--split .tree-branch:first-child::before {
+  left: 25%;
+}
+
+.tree-children--split .tree-branch:last-child::before {
+  left: 75%;
+}
+
+.tree-children--single {
+  top: 118px;
+  grid-template-columns: minmax(0, 160px);
+  justify-content: center;
+}
+
+/* Corporate company: one real branch, so there is no orphaned horizontal/second connector. */
+.tree-children--single::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  height: 60px;
+  border-left: 1.5px dashed var(--tree-line);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tree-branch {
+  position: relative;
+  min-width: 0;
+}
 
 .tree-node--child {
   min-height: 105px;
@@ -187,6 +215,8 @@ const legend = [
   align-items: center;
   justify-content: center;
   text-align: center;
+  position: relative;
+  z-index: 2;
 }
 
 .tree-node--child .v-icon { margin-bottom: 4px; }
@@ -217,9 +247,24 @@ const legend = [
 @media (max-width: 600px) {
   .org-tree { min-height: 320px; }
   .tree-root { width: 100%; }
-  .tree-children { top: 118px; grid-template-columns: 1fr; gap: 12px; }
-  .tree-line--horizontal { display: none; }
-  .tree-line--left { left: 50%; }
-  .tree-line--right { display: none; }
+  .tree-children--split,
+  .tree-children--single {
+    top: 118px;
+  }
+  .tree-children--split {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .tree-children--split::after,
+  .tree-children--split::before,
+  .tree-children--split .tree-branch::before {
+    display: none;
+  }
+  .tree-children--single {
+    grid-template-columns: 1fr;
+  }
+  .tree-children--single::before {
+    height: 60px;
+  }
 }
 </style>
