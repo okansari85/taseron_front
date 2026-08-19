@@ -65,6 +65,7 @@ const zoom = ref(1)
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
 let chartObserver: MutationObserver | null = null
+let resizeObserver: ResizeObserver | null = null
 let connectorRenderTimer: ReturnType<typeof setTimeout> | null = null
 let initialFitTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -77,16 +78,13 @@ const description = computed(() => props.reviewMode ? 'Tenant oluşturulduğunda
 
 const orgData = computed<PreviewNode>(() => {
   const children: PreviewNode[] = []
-
   if (onboardingType.value === 'company') {
     children.push({ id: 'company', title: rootLabel.value, member: [], meta: { type: 'Şirket', textClass: 'text-success-700 dark:text-success-400', icon: 'company', tone: 'green' } })
     if (isSahisSirketi.value) children.push({ id: 'location', title: `${rootLabel.value} - Merkez`, member: [], meta: { type: 'Lokasyon', textClass: 'text-warning-700 dark:text-warning-400', icon: 'location', tone: 'orange', automatic: true } })
   }
-
   if (onboardingType.value === 'brand') children.push({ id: 'brand', title: rootLabel.value, member: [], meta: { type: 'Marka', textClass: 'text-blue-light-600 dark:text-blue-light-400', icon: 'group', tone: 'blue' } })
   if (onboardingType.value === 'group') return { id: 'group', title: rootLabel.value, member: [], meta: { type: 'Grup', textClass: 'text-brand-500 dark:text-brand-400', icon: 'group', tone: 'purple' } }
   if (onboardingType.value === 'holding') return { id: 'holding', title: rootLabel.value, member: [], meta: { type: 'Holding', textClass: 'text-brand-500 dark:text-brand-400', icon: 'organization', tone: 'purple' } }
-
   return { id: 'organization', title: rootLabel.value, member: [], children, meta: { type: 'Organizasyon', textClass: 'text-brand-500 dark:text-brand-400', icon: 'organization', tone: 'purple' } }
 })
 
@@ -107,51 +105,58 @@ function visibleNode(node: HTMLElement) {
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-const renderConnectors = async () => {
-  await nextTick()
-  await nextFrame()
-
+function getVisibleNodes() {
   const canvas = chartCanvas.value
-  if (!canvas) return
+  if (!canvas) return []
+  return Array.from(canvas.querySelectorAll('.tenant-org-chart .org-container')).filter((node) => visibleNode(node as HTMLElement)) as HTMLElement[]
+}
 
-  const nodes = Array.from(canvas.querySelectorAll('.tenant-org-chart .org-container')).filter((node) => visibleNode(node as HTMLElement)) as HTMLElement[]
-
-  connectorSize.value = { width: Math.max(1, canvas.offsetWidth), height: Math.max(1, canvas.offsetHeight) }
-
-  if (nodes.length < 2) {
-    connectorLines.value = []
-    return
-  }
-
+function getNodeGeometry(nodes: HTMLElement[]) {
+  const canvas = chartCanvas.value
+  if (!canvas) return []
   const canvasRect = canvas.getBoundingClientRect()
   const scale = Math.max(0.001, zoom.value)
-  const rects = nodes.map((node) => {
+  return nodes.map((node) => {
     const rect = node.getBoundingClientRect()
-    return {
-      top: (rect.top - canvasRect.top) / scale,
-      bottom: (rect.bottom - canvasRect.top) / scale,
-      centerX: (rect.left - canvasRect.left + rect.width / 2) / scale,
-    }
+    return { top: (rect.top - canvasRect.top) / scale, bottom: (rect.bottom - canvasRect.top) / scale, centerX: (rect.left - canvasRect.left + rect.width / 2) / scale }
   })
+}
 
+async function waitForStableChartLayout() {
+  let previous = ''
+  let stableFrames = 0
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    await nextFrame()
+    const nodes = getVisibleNodes()
+    if (nodes.length < 2) return nodes
+    const geometry = nodes.map((node) => {
+      const rect = node.getBoundingClientRect()
+      return [rect.left, rect.top, rect.width, rect.height].map((value) => Math.round(value * 2) / 2).join(',')
+    }).join('|')
+    if (geometry === previous) stableFrames += 1
+    else stableFrames = 0
+    previous = geometry
+    if (stableFrames >= 2) return nodes
+  }
+  return getVisibleNodes()
+}
+
+const renderConnectors = async () => {
+  await nextTick()
+  const nodes = await waitForStableChartLayout()
+  const canvas = chartCanvas.value
+  if (!canvas) return
+  connectorSize.value = { width: Math.max(1, canvas.offsetWidth), height: Math.max(1, canvas.offsetHeight) }
+  if (nodes.length < 2) { connectorLines.value = []; return }
+  const rects = getNodeGeometry(nodes)
   const root = rects[0]
   const children = rects.slice(1)
-
-  if (children.length === 1) {
-    connectorLines.value = [`M ${root.centerX} ${root.bottom} V ${children[0].top}`]
-    return
-  }
-
+  if (children.length === 1) { connectorLines.value = [`M ${root.centerX} ${root.bottom} V ${children[0].top}`]; return }
   const branchY = root.bottom + 16
   const childTop = Math.min(...children.map((child) => child.top))
   const minX = Math.min(...children.map((child) => child.centerX))
   const maxX = Math.max(...children.map((child) => child.centerX))
-
-  connectorLines.value = [
-    `M ${root.centerX} ${root.bottom} V ${branchY}`,
-    `M ${minX} ${branchY} H ${maxX}`,
-    ...children.map((child) => `M ${child.centerX} ${branchY} V ${childTop}`),
-  ]
+  connectorLines.value = [`M ${root.centerX} ${root.bottom} V ${branchY}`, `M ${minX} ${branchY} H ${maxX}`, ...children.map((child) => `M ${child.centerX} ${branchY} V ${childTop}`)]
 }
 
 const scheduleConnectorRender = () => {
@@ -163,7 +168,6 @@ const observeChart = async () => {
   await nextTick()
   const chart = chartCanvas.value?.querySelector('.tenant-org-chart')
   if (!(chart instanceof HTMLElement)) return
-
   chartObserver?.disconnect()
   chartObserver = new MutationObserver(() => scheduleConnectorRender())
   chartObserver.observe(chart, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'aria-expanded'] })
@@ -171,23 +175,18 @@ const observeChart = async () => {
 
 const fitChart = async () => {
   await nextTick()
-  await nextFrame()
-  await nextFrame()
-  await wait(60)
-
+  await waitForStableChartLayout()
+  await wait(20)
   const wrap = chartWrap.value
   const chart = wrap?.querySelector('.tenant-org-chart') as HTMLElement | null
   if (!wrap || !chart) return
-
   const contentWidth = chart.offsetWidth || 1
   const contentHeight = chart.offsetHeight || 1
   const availableWidth = Math.max(1, wrap.clientWidth - 18)
   const availableHeight = Math.max(1, wrap.clientHeight - 18)
   const fitScale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight)
-
   zoom.value = Number(Math.min(1.2, Math.max(0.72, fitScale)).toFixed(3))
   pan.value = { x: 0, y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2) }
-
   await nextFrame()
   await observeChart()
   await renderConnectors()
@@ -209,9 +208,7 @@ function movePan(event: MouseEvent) {
   pan.value = { x: dragStart.value.panX + event.clientX - dragStart.value.x, y: dragStart.value.panY + event.clientY - dragStart.value.y }
 }
 
-function endPan() {
-  isDragging.value = false
-}
+function endPan() { isDragging.value = false }
 
 function zoomWithWheel(event: WheelEvent) {
   zoom.value = Math.min(1.5, Math.max(0.65, zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)))
@@ -222,13 +219,16 @@ watch([() => form.value.orgName, () => form.value.onboardingType, () => form.val
 
 onMounted(() => {
   void fitChart()
-  initialFitTimer = setTimeout(() => {
-    void fitChart()
-  }, 120)
+  initialFitTimer = setTimeout(() => { void fitChart() }, 180)
+  if (chartWrap.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => fitChart())
+    resizeObserver.observe(chartWrap.value)
+  }
 })
 
 onBeforeUnmount(() => {
   chartObserver?.disconnect()
+  resizeObserver?.disconnect()
   if (connectorRenderTimer) clearTimeout(connectorRenderTimer)
   if (initialFitTimer) clearTimeout(initialFitTimer)
 })
