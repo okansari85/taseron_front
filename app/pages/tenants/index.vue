@@ -1,23 +1,15 @@
 <template>
-  <v-container fluid class="tenant-list-page">
+  <v-container class="tenant-list-page">
     <div class="d-flex align-start justify-space-between mb-6">
       <div>
-        <h1 class="text-h5 font-weight-bold mb-1">
-          Tenantlar
-        </h1>
+        <h1 class="text-h5 font-weight-bold mb-1">Tenantlar</h1>
         <p class="text-body-2 text-medium-emphasis mb-0">
           Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
         </p>
       </div>
     </div>
 
-    <!-- Filters -->
-    <v-card
-      class="mb-4 pa-3"
-      rounded="lg"
-      elevation="0"
-      border
-    >
+    <v-card class="mb-4 pa-3" rounded="lg" elevation="0" border>
       <v-row align="center" dense>
         <v-col cols="12" md="4">
           <v-text-field
@@ -82,13 +74,7 @@
       </v-row>
     </v-card>
 
-    <!-- Tenant table -->
-    <v-card
-      rounded="lg"
-      elevation="0"
-      border
-      class="overflow-hidden"
-    >
+    <v-card rounded="lg" elevation="0" border class="overflow-hidden">
       <v-table hover>
         <thead>
           <tr>
@@ -132,9 +118,7 @@
               </div>
             </td>
 
-            <td class="text-medium-emphasis">
-              {{ tenant.slug }}
-            </td>
+            <td class="text-medium-emphasis">{{ tenant.slug }}</td>
 
             <td>
               <v-chip
@@ -158,9 +142,7 @@
               </v-chip>
             </td>
 
-            <td class="text-medium-emphasis">
-              {{ formatDate(tenant.created_at) }}
-            </td>
+            <td class="text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
 
             <td class="text-center">
               <v-menu>
@@ -207,14 +189,8 @@
           <tr v-if="paginatedTenants.length === 0">
             <td colspan="6">
               <div class="py-12 text-center">
-                <v-icon
-                  icon="mdi-domain-off"
-                  size="40"
-                  class="mb-3"
-                />
-                <div class="text-subtitle-1 font-weight-medium">
-                  Tenant bulunamadı
-                </div>
+                <v-icon icon="mdi-domain-off" size="40" class="mb-3" />
+                <div class="text-subtitle-1 font-weight-medium">Tenant bulunamadı</div>
                 <div class="text-body-2 text-medium-emphasis mt-1">
                   Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
                 </div>
@@ -226,27 +202,14 @@
 
       <v-divider />
 
-      <!-- Table footer -->
-      <v-row
-        class="ma-0 px-4 py-2"
-        align="center"
-        justify="center"
-      >
-        <v-col
-          cols="12"
-          md="4"
-          class="pa-0"
-        >
+      <v-row class="ma-0 px-4 py-2" align="center" justify="center">
+        <v-col cols="12" md="4" class="pa-0">
           <span class="text-caption text-medium-emphasis">
             Toplam {{ filteredTenants.length }} kayıt
           </span>
         </v-col>
 
-        <v-col
-          cols="12"
-          md="4"
-          class="pa-0 d-flex justify-center"
-        >
+        <v-col cols="12" md="4" class="pa-0 d-flex justify-center">
           <v-pagination
             v-model="page"
             :length="pageCount"
@@ -256,11 +219,7 @@
           />
         </v-col>
 
-        <v-col
-          cols="12"
-          md="4"
-          class="pa-0 d-flex justify-end"
-        >
+        <v-col cols="12" md="4" class="pa-0 d-flex justify-end">
           <v-select
             v-model="itemsPerPage"
             :items="[10, 25, 50]"
@@ -316,62 +275,13 @@ const dateOptions = [
 ]
 
 const tenants = ref<Tenant[]>([
-  {
-    id: 1,
-    name: 'Koç Holding',
-    slug: 'koc-holding',
-    status: 'active',
-    onboarding_type: 'holding',
-    created_at: '2025-05-18T14:32:00',
-  },
-  {
-    id: 2,
-    name: 'MADO',
-    slug: 'mado',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-17T11:20:00',
-  },
-  {
-    id: 3,
-    name: 'Arçelik A.Ş.',
-    slug: 'arcelik',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-16T09:15:00',
-  },
-  {
-    id: 4,
-    name: 'İpek Gıda',
-    slug: 'ipek-gida',
-    status: 'passive',
-    onboarding_type: 'group',
-    created_at: '2025-05-15T16:45:00',
-  },
-  {
-    id: 5,
-    name: 'Tepe Savunma',
-    slug: 'tepe-savunma',
-    status: 'active',
-    onboarding_type: 'company',
-    created_at: '2025-05-14T10:05:00',
-  },
-  {
-    id: 6,
-    name: 'Beko',
-    slug: 'beko',
-    status: 'active',
-    onboarding_type: 'brand',
-    created_at: '2025-05-13T13:30:00',
-  },
-  {
-    id: 7,
-    name: 'Setur',
-    slug: 'setur',
-    status: 'passive',
-    onboarding_type: 'company',
-    created_at: '2025-05-12T08:50:00',
-  },
+  { id: 1, name: 'Koç Holding', slug: 'koc-holding', status: 'active', onboarding_type: 'holding', created_at: '2025-05-18T14:32:00' },
+  { id: 2, name: 'MADO', slug: 'mado', status: 'active', onboarding_type: 'company', created_at: '2025-05-17T11:20:00' },
+  { id: 3, name: 'Arçelik A.Ş.', slug: 'arcelik', status: 'active', onboarding_type: 'company', created_at: '2025-05-16T09:15:00' },
+  { id: 4, name: 'İpek Gıda', slug: 'ipek-gida', status: 'passive', onboarding_type: 'group', created_at: '2025-05-15T16:45:00' },
+  { id: 5, name: 'Tepe Savunma', slug: 'tepe-savunma', status: 'active', onboarding_type: 'company', created_at: '2025-05-14T10:05:00' },
+  { id: 6, name: 'Beko', slug: 'beko', status: 'active', onboarding_type: 'brand', created_at: '2025-05-13T13:30:00' },
+  { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
 ])
 
 const filteredTenants = computed(() => {
@@ -387,27 +297,19 @@ const filteredTenants = computed(() => {
       !statusFilter.value || tenant.status === statusFilter.value
 
     const matchesStructure =
-      !structureFilter.value ||
-      tenant.onboarding_type === structureFilter.value
+      !structureFilter.value || tenant.onboarding_type === structureFilter.value
 
     return matchesSearch && matchesStatus && matchesStructure
   })
 })
 
 const pageCount = computed(() => {
-  return Math.max(
-    1,
-    Math.ceil(filteredTenants.value.length / itemsPerPage.value),
-  )
+  return Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value))
 })
 
 const paginatedTenants = computed(() => {
   const start = (page.value - 1) * itemsPerPage.value
-
-  return filteredTenants.value.slice(
-    start,
-    start + itemsPerPage.value,
-  )
+  return filteredTenants.value.slice(start, start + itemsPerPage.value)
 })
 
 watch(
@@ -434,16 +336,7 @@ function getInitials(name: string) {
 }
 
 function getAvatarColor(id: number) {
-  const colors = [
-    'primary',
-    'success',
-    'info',
-    'warning',
-    'primary',
-    'error',
-    'info',
-  ]
-
+  const colors = ['primary', 'success', 'info', 'warning', 'primary', 'error', 'info']
   return colors[(id - 1) % colors.length]
 }
 
@@ -503,8 +396,7 @@ function toggleStatus(tenant: Tenant) {
 
 <style>
 .tenant-list-page {
-  max-width: 1240px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .tenant-row {
@@ -521,11 +413,5 @@ function toggleStatus(tenant: Tenant) {
   border-radius: 50%;
   display: inline-block;
   background: currentColor;
-}
-
-@media (max-width: 959px) {
-  .tenant-list-page {
-    padding-inline: 8px;
-  }
 }
 </style>
