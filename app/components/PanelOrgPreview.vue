@@ -171,7 +171,7 @@ const fitChart = async () => {
     const availableHeight = Math.max(1, wrap.clientHeight - 12)
     const widthScale = availableWidth / contentWidth
     const heightScale = availableHeight / contentHeight
-    const nextZoom = Math.min(1.12, widthScale, heightScale)
+    const nextZoom = Math.min(1.35, widthScale * 1.15, heightScale * 1.15)
 
     zoom.value = Number(Math.max(0.65, nextZoom).toFixed(3))
     pan.value = {
