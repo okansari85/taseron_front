@@ -5,8 +5,8 @@
   >
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <div class="text-h5 font-weight-bold">Tenantlar</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
+        <div class="text-h6 font-weight-bold">Tenantlar</div>
+        <div class="text-caption text-medium-emphasis mt-1">
           Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
         </div>
       </div>
@@ -15,7 +15,7 @@
         color="primary"
         rounded="md"
         prepend-icon="mdi-plus"
-        class="text-none"
+        class="text-caption text-none font-weight-medium"
         height="40"
         @click="goToCreate"
       >
@@ -36,7 +36,7 @@
             placeholder="Tenant ara..."
             prepend-inner-icon="mdi-magnify"
             variant="outlined"
-            density="comfortable"
+            density="compact"
             hide-details
             clearable
           />
@@ -48,7 +48,7 @@
             label="Durum"
             :items="statusOptions"
             variant="outlined"
-            density="comfortable"
+            density="compact"
             hide-details
             clearable
           />
@@ -60,7 +60,7 @@
             label="Kurumsal Yapı"
             :items="structureOptions"
             variant="outlined"
-            density="comfortable"
+            density="compact"
             hide-details
             clearable
           />
@@ -73,7 +73,7 @@
             :items="dateOptions"
             prepend-inner-icon="mdi-calendar-outline"
             variant="outlined"
-            density="comfortable"
+            density="compact"
             hide-details
             clearable
           />
@@ -82,12 +82,12 @@
         <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-btn
             block
-            height="48"
+            height="40"
             variant="tonal"
             color="primary"
             rounded="md"
             prepend-icon="mdi-filter-remove-outline"
-            class="text-none"
+            class="text-caption text-none font-weight-medium"
             :disabled="!hasFilters"
             @click="clearFilters"
           >
@@ -106,12 +106,12 @@
       <v-table hover>
         <thead class="bg-surface-variant">
           <tr>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">Tenant Adı</th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">Slug</th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">Kurumsal Yapı</th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">Durum</th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis">Oluşturulma Tarihi</th>
-            <th class="text-body-2 font-weight-bold text-medium-emphasis text-center">İşlemler</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis">Tenant Adı</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis">Slug</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis">Kurumsal Yapı</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis">Durum</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis">Oluşturulma Tarihi</th>
+            <th class="text-caption font-weight-bold text-medium-emphasis text-center">İşlemler</th>
           </tr>
         </thead>
 
@@ -125,7 +125,7 @@
             <td class="py-3">
               <div class="d-flex align-center ga-3">
                 <v-avatar
-                  size="38"
+                  size="36"
                   :color="getAvatarColor(tenant.id)"
                   variant="tonal"
                   rounded="md"
@@ -146,7 +146,7 @@
               </div>
             </td>
 
-            <td class="py-3 text-body-2 text-medium-emphasis">{{ tenant.slug }}</td>
+            <td class="py-3 text-caption text-medium-emphasis">{{ tenant.slug }}</td>
 
             <td class="py-3">
               <v-chip
@@ -154,6 +154,7 @@
                 variant="tonal"
                 :color="getStructureColor(tenant.onboarding_type)"
                 :prepend-icon="getStructureIcon(tenant.onboarding_type)"
+                class="text-caption"
               >
                 {{ getStructureLabel(tenant.onboarding_type) }}
               </v-chip>
@@ -164,13 +165,14 @@
                 size="small"
                 variant="tonal"
                 :color="tenant.status === 'active' ? 'success' : 'default'"
+                class="text-caption"
               >
                 <span class="status-dot mr-2" />
                 {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
               </v-chip>
             </td>
 
-            <td class="py-3 text-body-2 text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
+            <td class="py-3 text-caption text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
 
             <td class="py-3 text-center">
               <v-menu>
@@ -200,9 +202,9 @@
 
           <tr v-if="paginatedTenants.length === 0">
             <td colspan="6" class="py-12 text-center">
-              <v-icon icon="mdi-domain-off" size="40" class="mb-3 text-medium-emphasis" />
-              <div class="text-subtitle-1 font-weight-medium">Tenant bulunamadı</div>
-              <div class="text-body-2 text-medium-emphasis mt-1">
+              <v-icon icon="mdi-domain-off" size="36" class="mb-3 text-medium-emphasis" />
+              <div class="text-body-2 font-weight-medium">Tenant bulunamadı</div>
+              <div class="text-caption text-medium-emphasis mt-1">
                 Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
               </div>
             </td>
@@ -230,19 +232,17 @@
         </v-col>
 
         <v-col cols="4" class="pa-0 d-flex justify-end">
-          <div class="d-flex align-center">
-            <v-select
-              v-model="itemsPerPage"
-              :items="pageSizeOptions"
-              item-title="title"
-              item-value="value"
-              variant="outlined"
-              density="compact"
-              hide-details
-              suffix="/ sayfa"
-              class="w-auto"
-            />
-          </div>
+          <v-select
+            v-model="itemsPerPage"
+            :items="pageSizeOptions"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="compact"
+            hide-details
+            suffix="/ sayfa"
+            class="w-auto text-caption"
+          />
         </v-col>
       </v-row>
     </v-card>
