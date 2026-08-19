@@ -1,21 +1,21 @@
 <template>
-  <v-app>
-    <AppSidebar :rail="rail" />
-    <AppHeader :rail="rail" @toggle="rail = !rail" />
-    <v-main>
-      <div class="page-wrap">
+  <div class="min-h-screen xl:flex">
+    <TailAdminSidebar />
+    <div
+      :class="[
+        'min-w-0 flex-1 transition-all duration-300 ease-in-out',
+        isExpanded ? 'lg:ml-[290px]' : 'lg:ml-[90px]',
+      ]"
+    >
+      <TailAdminHeader />
+      <main class="mx-auto w-full max-w-[2000px] p-4 md:p-6">
         <slot />
-      </div>
-    </v-main>
-  </v-app>
+      </main>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-const rail = ref(false)
+const { isExpanded } = useTailAdminSidebar()
+useTailAdminTheme()
 </script>
-
-<style scoped>
-.page-wrap {
-  min-height: 100vh;
-}
-</style>
