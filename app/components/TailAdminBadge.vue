@@ -1,19 +1,17 @@
 <template>
-  <span
-    :class="[
-      'inline-flex items-center rounded-full px-2.5 py-1 text-theme-xs font-medium',
-      toneClasses[tone],
-    ]"
-  >
+  <span :class="['inline-flex items-center rounded-full px-2.5 py-1 text-theme-xs font-medium', toneClasses[tone]]">
     <span v-if="dot" class="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
     <slot />
   </span>
 </template>
 
 <script setup lang="ts">
-withDefaults(
-  defineProps<{ tone?: 'success' | 'warning' | 'error' | 'brand' | 'gray' }>(),
-  { tone: 'gray' },
+const props = withDefaults(
+  defineProps<{
+    tone?: 'success' | 'warning' | 'error' | 'brand' | 'gray'
+    dot?: boolean
+  }>(),
+  { tone: 'gray', dot: false },
 )
 
 const toneClasses = {
@@ -23,4 +21,7 @@ const toneClasses = {
   brand: 'bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400',
   gray: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400',
 }
+
+const tone = props.tone
+const dot = props.dot
 </script>
