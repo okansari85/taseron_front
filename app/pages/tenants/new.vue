@@ -8,13 +8,13 @@
     <TenantStepper :current="stepIndex" />
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-      <section class="lg:col-span-8 rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs md:p-8 dark:border-gray-800 dark:bg-white/[0.03]">
+      <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-8 md:p-8">
         <StepTenantInfo v-if="stepIndex === 0" />
         <StepOrganization v-else-if="stepIndex === 1" />
         <StepReview v-else :submitted="submitted" />
       </section>
 
-      <aside class="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+      <aside class="lg:sticky lg:top-24 lg:col-span-4 lg:self-start">
         <PanelTenantInfo v-if="stepIndex === 0" />
         <PanelOrgPreview v-else-if="stepIndex === 1" />
         <PanelOrgPreview v-else review-mode />
@@ -25,7 +25,7 @@
       <button
         type="button"
         class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-white/[0.03]"
-        @click="stepIndex > 0 ? goBack() : cancel"
+        @click="stepIndex > 0 ? goBack() : cancel()"
       >
         {{ stepIndex > 0 ? '← Geri' : 'İptal' }}
       </button>
@@ -35,6 +35,7 @@
           v-if="stepIndex === STEPS_COUNT - 1"
           type="button"
           class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-white/[0.03]"
+          @click="cancel"
         >
           İptal
         </button>
