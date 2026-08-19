@@ -6,7 +6,7 @@
         <p class="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.</p>
       </div>
       <button class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600" @click="goToCreate">
-        <span class="text-lg leading-none">+</span>
+        <Plus :size="16" />
         Yeni Tenant
       </button>
     </div>
@@ -19,27 +19,21 @@
           <select v-model="statusFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm leading-5 text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
             <option value="">Durum</option><option value="active">Aktif</option><option value="passive">Pasif</option>
           </select>
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
-          </span>
+          <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" :size="16" />
         </div>
 
         <div class="relative lg:col-span-2">
           <select v-model="structureFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm leading-5 text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
             <option value="">Kurumsal Yapı</option><option value="holding">Holding</option><option value="group">Grup</option><option value="company">Şirket</option><option value="brand">Marka</option>
           </select>
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
-          </span>
+          <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" :size="16" />
         </div>
 
         <div class="relative lg:col-span-2">
           <select v-model="dateFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm leading-5 text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
             <option value="">Oluşturulma Tarihi</option><option value="7">Son 7 gün</option><option value="30">Son 30 gün</option>
           </select>
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
-          </span>
+          <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" :size="16" />
         </div>
 
         <button class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-medium leading-5 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 lg:col-span-2" :disabled="!hasFilters" @click="clearFilters">Filtreleri Temizle</button>
@@ -84,9 +78,9 @@
       <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
         <span class="text-xs leading-5 text-gray-500 dark:text-gray-400">Toplam {{ filteredTenants.length }} kayıt</span>
         <div class="flex items-center justify-center gap-1">
-          <button class="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === 1" @click="page--">‹</button>
+          <button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === 1" @click="page--"><ChevronLeft :size="16" /></button>
           <button v-for="p in pageCount" :key="p" :class="['h-9 min-w-9 rounded-lg border px-2 text-xs font-medium leading-5 transition', p === page ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5']" @click="page = p">{{ p }}</button>
-          <button class="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === pageCount" @click="page++">›</button>
+          <button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === pageCount" @click="page++"><ChevronRight :size="16" /></button>
         </div>
         <select v-model="itemsPerPage" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs leading-5 text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select>
       </div>
@@ -95,6 +89,8 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronDown, ChevronLeft, ChevronRight, Plus } from '@lucide/vue'
+
 interface Tenant { id: number; name: string; slug: string; status: 'active' | 'passive'; onboarding_type: 'holding' | 'group' | 'company' | 'brand'; created_at: string }
 const router = useRouter()
 const search = ref('')
