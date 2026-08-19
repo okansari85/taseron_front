@@ -5,37 +5,47 @@
     </div>
     <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
 
-    <div class="tree-node tree-node--purple mb-3">
-      <v-avatar size="32" color="surface" class="mr-3">
-        <v-icon icon="mdi-domain" size="16" color="primary" />
-      </v-avatar>
-      <div>
-        <div class="text-body-2 font-weight-semibold">{{ rootLabel }}</div>
-        <div class="text-caption font-weight-semibold text-primary-strong">ORGANIZATION</div>
-      </div>
-    </div>
-
-    <div v-if="isCompany" class="pl-6" :class="isSahisSirketi ? 'children-grid' : ''">
-      <div class="tree-node tree-node--green mb-3">
+    <div class="org-tree">
+      <div class="tree-root tree-node tree-node--purple">
         <v-avatar size="32" color="surface" class="mr-3">
-          <v-icon icon="mdi-domain" size="16" color="success" />
+          <v-icon icon="mdi-domain" size="16" color="primary" />
         </v-avatar>
         <div>
           <div class="text-body-2 font-weight-semibold">{{ rootLabel }}</div>
-          <div class="text-caption font-weight-semibold text-success">COMPANY</div>
+          <div class="text-caption font-weight-semibold text-primary-strong">ORGANIZATION</div>
         </div>
       </div>
 
-      <div v-if="isSahisSirketi" class="tree-node tree-node--amber mb-3">
-        <v-avatar size="32" color="surface" class="mr-3">
-          <v-icon icon="mdi-map-marker" size="16" color="warning" />
-        </v-avatar>
-        <div>
-          <div class="text-body-2 font-weight-semibold">{{ rootLabel }} - Merkez</div>
-          <div class="text-caption font-weight-semibold text-warning">LOCATION</div>
-          <div class="text-caption text-medium-emphasis">Otomatik</div>
+      <template v-if="isCompany">
+        <div class="tree-connector tree-connector--vertical" />
+
+        <div class="tree-children" :class="{ 'tree-children--single': !isSahisSirketi }">
+          <div class="tree-branch" :class="{ 'tree-branch--single': !isSahisSirketi }">
+            <div class="tree-node tree-node--green">
+              <v-avatar size="32" color="surface" class="mr-3">
+                <v-icon icon="mdi-domain" size="16" color="success" />
+              </v-avatar>
+              <div>
+                <div class="text-body-2 font-weight-semibold">{{ rootLabel }}</div>
+                <div class="text-caption font-weight-semibold text-success">COMPANY</div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isSahisSirketi" class="tree-branch">
+            <div class="tree-node tree-node--amber">
+              <v-avatar size="32" color="surface" class="mr-3">
+                <v-icon icon="mdi-map-marker" size="16" color="warning" />
+              </v-avatar>
+              <div>
+                <div class="text-body-2 font-weight-semibold">{{ rootLabel }} - Merkez</div>
+                <div class="text-caption font-weight-semibold text-warning">LOCATION</div>
+                <div class="text-caption text-medium-emphasis">Otomatik</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <v-divider class="my-5" />
@@ -97,29 +107,123 @@ const legend = [
 </script>
 
 <style scoped>
+.org-tree {
+  position: relative;
+  padding: 0 2px;
+}
+
 .tree-node {
   display: flex;
   align-items: flex-start;
   border-radius: 12px;
   padding: 12px 14px;
+  border: 1px solid transparent;
 }
+
 .tree-node--purple {
   background: rgb(var(--v-theme-primary) / 0.08);
+  border-color: rgb(var(--v-theme-primary) / 0.14);
 }
+
 .tree-node--green {
-  background: rgb(var(--v-theme-success) / 0.1);
+  background: rgb(var(--v-theme-success) / 0.08);
+  border-color: rgb(var(--v-theme-success) / 0.18);
 }
+
 .tree-node--amber {
-  background: rgb(var(--v-theme-warning) / 0.1);
+  background: rgb(var(--v-theme-warning) / 0.08);
+  border-color: rgb(var(--v-theme-warning) / 0.2);
 }
-.children-grid {
+
+.tree-root {
+  width: fit-content;
+  min-width: 184px;
+  margin: 0 auto;
+}
+
+.tree-connector--vertical {
+  width: 1px;
+  height: 28px;
+  margin: 0 auto;
+  border-left: 1px dashed rgb(var(--v-theme-primary) / 0.75);
+}
+
+.tree-children {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 24px;
 }
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  border-top: 1px dashed rgb(var(--v-theme-primary) / 0.75);
+}
+
+.tree-branch {
+  position: relative;
+  min-width: 0;
+}
+
+.tree-branch::before {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  height: 24px;
+  border-left: 1px dashed rgb(var(--v-theme-primary) / 0.75);
+}
+
+.tree-children--single {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: 12%;
+  padding-right: 12%;
+}
+
+.tree-children--single::before {
+  left: 50%;
+  right: auto;
+  width: 0;
+  height: 24px;
+  top: 0;
+  border-top: 0;
+}
+
+.tree-branch--single::before {
+  left: 50%;
+}
+
 @media (max-width: 600px) {
-  .children-grid {
+  .tree-root {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tree-children {
     grid-template-columns: 1fr;
+  }
+
+  .tree-children::before {
+    left: 50%;
+    right: auto;
+    height: 24px;
+    border-top: 0;
+    border-left: 1px dashed rgb(var(--v-theme-primary) / 0.75);
+  }
+
+  .tree-branch::before {
+    top: -24px;
+    left: 50%;
+  }
+
+  .tree-children--single {
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 </style>
