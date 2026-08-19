@@ -170,7 +170,7 @@ const orgData = computed<PreviewNode>(() => {
 
   return {
     id: 'organization',
-    title: `${rootLabel.value} - Organizasyon`,
+    title: rootLabel.value,
     member: [],
     children,
     meta: { type: 'Organizasyon', textClass: 'text-brand-500 dark:text-brand-400', icon: 'organization', tone: 'purple' },
@@ -412,12 +412,16 @@ onBeforeUnmount(() => {
 .tenant-org-chart .tenant-node-content--orange .tenant-node-icon { color: #f59e0b; }
 
 .tenant-org-chart .tenant-node-title {
-  max-width: 156px;
-  overflow-wrap: anywhere;
+  display: block;
+  width: 156px;
+  height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-align: center;
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 16px;
   color: #1f2937;
 }
 
