@@ -1,7 +1,7 @@
 <template>
   <aside class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
     <div class="mb-4 flex items-center gap-2">
-      <span class="text-brand-500">?</span>
+      <span class="text-brand-500"><CircleHelp :size="18" /></span>
       <h3 class="text-theme-xl font-semibold text-gray-800 dark:text-white/90">Tenant Nedir?</h3>
     </div>
 
@@ -13,14 +13,7 @@
     <h4 class="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Oluşturma Adımları</h4>
     <div class="space-y-4">
       <div v-for="(step, index) in steps" :key="step.title" class="flex items-start gap-3">
-        <span
-          :class="[
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-theme-xs font-medium',
-            index === 0 ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400',
-          ]"
-        >
-          {{ index + 1 }}
-        </span>
+        <span :class="['flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-theme-xs font-medium', index === 0 ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400']">{{ index + 1 }}</span>
         <div>
           <div class="text-sm font-medium text-gray-800 dark:text-white/90">{{ step.title }}</div>
           <div class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">{{ step.desc }}</div>
@@ -36,6 +29,8 @@
 </template>
 
 <script setup lang="ts">
+import { CircleHelp } from '@lucide/vue'
+
 const steps = [
   { title: 'Tenant Bilgileri', desc: 'Tenant hesabınızın temel bilgilerini girin.' },
   { title: 'İlk Organizasyon', desc: 'İlk organizasyon düğümünü tanımlayın.' },
