@@ -114,8 +114,8 @@
           <v-card
             v-for="item in items"
             :key="item.raw.id"
-            rounded="md"
-            elevation="0"
+            rounded="lg"
+            elevation="2"
             border
             class="tenant-card pa-4"
             @click="openTenant(item.raw)"
@@ -173,7 +173,7 @@
                     @click="toggleStatus(item.raw)"
                   />
                 </v-list>
-              </v-menu>
+              </v-list>
             </div>
 
             <div class="d-flex align-center ga-3 mt-4 flex-wrap">
@@ -208,8 +208,8 @@
 
           <v-card
             v-if="items.length === 0"
-            rounded="md"
-            elevation="0"
+            rounded="lg"
+            elevation="2"
             border
             class="pa-12 text-center"
           >
