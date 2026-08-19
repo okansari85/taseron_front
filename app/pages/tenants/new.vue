@@ -14,34 +14,6 @@
           <StepOrganization v-else-if="stepIndex === 1" />
           <StepReview v-else :submitted="submitted" />
         </v-card>
-
-        <div class="d-flex justify-space-between mt-6">
-          <v-btn
-            v-if="stepIndex > 0"
-            variant="outlined"
-            prepend-icon="mdi-arrow-left"
-            @click="goBack"
-          >
-            Geri
-          </v-btn>
-          <v-btn v-else variant="outlined">İptal</v-btn>
-
-          <div class="d-flex" style="gap: 12px">
-            <v-btn v-if="stepIndex === STEPS_COUNT - 1" variant="outlined">İptal</v-btn>
-            <v-btn
-              v-if="stepIndex < STEPS_COUNT - 1"
-              color="primary"
-              append-icon="mdi-arrow-right"
-              :disabled="!canGoNext"
-              @click="goNext"
-            >
-              Devam Et
-            </v-btn>
-            <v-btn v-else color="primary" append-icon="mdi-check" @click="submit">
-              Tenant'ı Oluştur
-            </v-btn>
-          </div>
-        </div>
       </v-col>
 
       <v-col cols="12" lg="4">
@@ -52,6 +24,38 @@
         </div>
       </v-col>
     </v-row>
+
+    <div class="wizard-actions">
+      <div>
+        <v-btn
+          v-if="stepIndex > 0"
+          variant="outlined"
+          prepend-icon="mdi-arrow-left"
+          @click="goBack"
+        >
+          Geri
+        </v-btn>
+        <v-btn v-else variant="outlined">İptal</v-btn>
+      </div>
+
+      <div class="d-flex align-center" style="gap: 12px">
+        <v-btn v-if="stepIndex === STEPS_COUNT - 1" variant="outlined">
+          İptal
+        </v-btn>
+        <v-btn
+          v-if="stepIndex < STEPS_COUNT - 1"
+          color="primary"
+          append-icon="mdi-arrow-right"
+          :disabled="!canGoNext"
+          @click="goNext"
+        >
+          Devam Et
+        </v-btn>
+        <v-btn v-else color="primary" append-icon="mdi-check" @click="submit">
+          Tenant'ı Oluştur
+        </v-btn>
+      </div>
+    </div>
   </v-container>
 </template>
 
@@ -106,5 +110,26 @@ function submit() {
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(var(--v-theme-on-surface) / 0.08);
+}
+
+@media (max-width: 600px) {
+  .wizard-actions {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .wizard-actions > :last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>
