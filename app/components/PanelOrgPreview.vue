@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import OrganizationChart from 'organization-chart-vue3'
 import 'organization-chart-vue3/style.css'
 
@@ -63,6 +63,8 @@ const pan = ref({ x: 0, y: 0 })
 const zoom = ref(1)
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
+let chartObserver: MutationObserver | null = null
+let connectorRenderTimer: ReturnType<typeof setTimeout> | null = null
 
 const onboardingType = computed(() => form.value.onboardingType)
 const isCompany = computed(() => onboardingType.value === 'company')
@@ -116,6 +118,20 @@ const renderConnectors = async () => {
   })
 }
 
+const scheduleConnectorRender = () => {
+  if (connectorRenderTimer) clearTimeout(connectorRenderTimer)
+  connectorRenderTimer = setTimeout(() => renderConnectors(), 30)
+}
+
+const observeChart = async () => {
+  await nextTick()
+  const chart = chartCanvas.value?.querySelector('.tenant-org-chart')
+  if (!(chart instanceof HTMLElement)) return
+  chartObserver?.disconnect()
+  chartObserver = new MutationObserver(() => scheduleConnectorRender())
+  chartObserver.observe(chart, { childList: true, subtree: true })
+}
+
 const fitChart = async () => {
   await nextTick()
   requestAnimationFrame(() => {
@@ -129,13 +145,14 @@ const fitChart = async () => {
     const fitScale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight)
     zoom.value = Number(Math.min(1.2, Math.max(0.72, fitScale)).toFixed(3))
     pan.value = { x: 0, y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2) }
+    observeChart()
     renderConnectors()
   })
 }
 
 async function handleNodeClick() {
   await nextTick()
-  renderConnectors()
+  scheduleConnectorRender()
 }
 
 function startPan(event: MouseEvent) { if (event.button !== 0) return; isDragging.value = true; dragStart.value = { x: event.clientX, y: event.clientY, panX: pan.value.x, panY: pan.value.y } }
@@ -144,6 +161,7 @@ function endPan() { isDragging.value = false }
 function zoomWithWheel(event: WheelEvent) { zoom.value = Math.min(1.5, Math.max(0.65, zoom.value * (event.deltaY < 0 ? 1.08 : 0.92))) }
 watch([() => form.value.orgName, () => form.value.onboardingType, () => form.value.companyKind], () => fitChart(), { immediate: true })
 onMounted(() => fitChart())
+onBeforeUnmount(() => { chartObserver?.disconnect(); if (connectorRenderTimer) clearTimeout(connectorRenderTimer) })
 </script>
 
 <style>
