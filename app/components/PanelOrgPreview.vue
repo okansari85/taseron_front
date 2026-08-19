@@ -4,6 +4,7 @@
     <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
 
     <div
+      ref="chartWrap"
       class="org-chart-wrap"
       :class="{ 'is-dragging': isDragging }"
       @mousedown="startPan"
@@ -28,8 +29,9 @@
         </OrganizationChart>
       </div>
 
-      <div class="org-chart-hint">
-        Sürükle · Tekerlek ile yakınlaştır
+      <div class="org-chart-controls" aria-hidden="true">
+        <v-icon icon="mdi-cursor-move" size="14" />
+        <v-icon icon="mdi-magnify-plus-minus-outline" size="15" />
       </div>
     </div>
 
@@ -51,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import OrganizationChart from 'organization-chart-vue3'
 import 'organization-chart-vue3/style.css'
 
@@ -140,7 +142,7 @@ const legend = [
   { title: 'LOCATION', icon: 'mdi-map-marker', color: 'warning', textClass: 'text-warning', desc: 'Lokasyon bilgileri Locations tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
 ]
 
-// Pan/zoom is only for preview navigation; it never changes the hierarchy.
+const chartWrap = ref<HTMLElement | null>(null)
 const pan = ref({ x: 0, y: 0 })
 const zoom = ref(1)
 const isDragging = ref(false)
@@ -150,11 +152,35 @@ const chartTransform = computed(() => ({
   transform: `translate(-50%, 0) translate(${pan.value.x}px, ${pan.value.y}px) scale(${zoom.value})`,
 }))
 
+const fitChart = async () => {
+  await nextTick()
+  requestAnimationFrame(() => {
+    const wrap = chartWrap.value
+    const chart = wrap?.querySelector('.tenant-org-chart') as HTMLElement | null
+    if (!wrap || !chart) return
+
+    const contentWidth = chart.offsetWidth || 1
+    const contentHeight = chart.offsetHeight || 1
+    const availableWidth = wrap.clientWidth - 12
+    const availableHeight = wrap.clientHeight - 12
+
+    const widthScale = availableWidth / contentWidth
+    const heightScale = availableHeight / contentHeight
+    const nextZoom = Math.min(1.12, Math.max(0.78, widthScale, heightScale))
+
+    zoom.value = Number(nextZoom.toFixed(3))
+    pan.value = {
+      x: 0,
+      y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2 - 2),
+    }
+  })
+}
+
 const startPan = (event: MouseEvent) => {
   if (event.button !== 0) return
 
   const target = event.target as HTMLElement
-  if (target.closest('.org-container, .org-title, .org-content, button, a')) return
+  if (target.closest('.org-container, .org-title, .org-content, button, a, .org-chart-controls')) return
 
   isDragging.value = true
   dragStart.value = {
@@ -182,6 +208,16 @@ const zoomWithWheel = (event: WheelEvent) => {
   const next = zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)
   zoom.value = Math.min(1.5, Math.max(0.75, next))
 }
+
+watch(
+  [rootLabel, isCompany, isSahisSirketi],
+  () => {
+    fitChart()
+  },
+  { immediate: true },
+)
+
+onMounted(() => fitChart())
 </script>
 
 <style scoped>
@@ -203,10 +239,10 @@ const zoomWithWheel = (event: WheelEvent) => {
 
 .org-chart-canvas {
   position: absolute;
-  top: 4px;
+  top: 0;
   left: 50%;
   transform-origin: top center;
-  transition: transform 80ms ease-out;
+  transition: transform 140ms ease-out;
   will-change: transform;
 }
 
@@ -214,16 +250,19 @@ const zoomWithWheel = (event: WheelEvent) => {
   transition: none;
 }
 
-.org-chart-hint {
+.org-chart-controls {
   position: absolute;
-  right: 4px;
-  bottom: 3px;
+  right: 5px;
+  bottom: 5px;
   z-index: 5;
-  padding: 2px 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid #e6e1ff;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #98a0b2;
-  font-size: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #7964f7;
   pointer-events: none;
 }
 
@@ -239,9 +278,10 @@ const zoomWithWheel = (event: WheelEvent) => {
 }
 
 :deep(.tenant-org-chart .org-table td) {
-  padding: 0 0 34px 0 !important;
   vertical-align: top;
   text-align: center;
+  padding: 0 0 30px 0 !important;
+  position: relative;
 }
 
 :deep(.tenant-org-chart .org-child-level) {
@@ -250,6 +290,55 @@ const zoomWithWheel = (event: WheelEvent) => {
   background: transparent !important;
   border: 0 !important;
   outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Library connectors: keep the geometry, only recolor/dash the real strokes. */
+:deep(.tenant-org-chart .org-child-level::before) {
+  border-left: 1px dashed #8a73ff !important;
+  height: 15px !important;
+  background: transparent !important;
+}
+
+:deep(.tenant-org-chart .org-child-level::after) {
+  border-top: 1px dashed #8a73ff !important;
+  background: transparent !important;
+}
+
+:deep(.tenant-org-chart .org-child-level:first-child::before),
+:deep(.tenant-org-chart .org-child-level:last-child::before) {
+  display: none !important;
+}
+
+:deep(.tenant-org-chart .org-child-level:first-child::after) {
+  border: 1px dashed transparent !important;
+  border-color: #8a73ff transparent transparent #8a73ff !important;
+  height: 13px !important;
+  background: transparent !important;
+}
+
+:deep(.tenant-org-chart .org-child-level:last-child::after) {
+  border: 1px dashed #8a73ff !important;
+  border-color: #8a73ff #8a73ff transparent transparent !important;
+  height: 13px !important;
+  background: transparent !important;
+}
+
+:deep(.tenant-org-chart .org-child-level:first-child:last-child::after) {
+  border: 0 !important;
+  border-left: 1px dashed #8a73ff !important;
+  left: 50% !important;
+  right: auto !important;
+  height: 15px !important;
+}
+
+:deep(.tenant-org-chart .org-extend::after) {
+  border-left: 1px dashed #8a73ff !important;
+  background: transparent !important;
+}
+
+:deep(.tenant-org-chart .org-extend-arrow::before) {
+  border-color: #8a73ff #8a73ff transparent transparent !important;
 }
 
 :deep(.tenant-org-chart .org-node) {
@@ -313,27 +402,6 @@ const zoomWithWheel = (event: WheelEvent) => {
   justify-content: center !important;
   padding: 0 !important;
   border: 0 !important;
-}
-
-/* Keep the library's connector geometry, but only color the actual connector strokes. */
-:deep(.tenant-org-chart .org-child-level::before),
-:deep(.tenant-org-chart .org-child-level::after),
-:deep(.tenant-org-chart .org-extend::after) {
-  background: transparent !important;
-  box-shadow: none !important;
-  border-color: #7964f7 !important;
-  border-style: dashed !important;
-  border-width: 1px !important;
-}
-
-/* Do not let the connector wrapper itself become a visible rectangle. */
-:deep(.tenant-org-chart .org-child-level) {
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-:deep(.tenant-org-chart .org-extend-arrow::before) {
-  border-color: #7964f7 #7964f7 transparent transparent !important;
 }
 
 .tenant-node-content {
