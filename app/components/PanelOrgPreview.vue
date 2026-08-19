@@ -1,293 +1,138 @@
 <template>
-  <v-card rounded="xl" elevation="0" class="pa-6 border-card">
-    <div class="text-subtitle-1 font-weight-bold">Oluşturulacak Yapı Önizlemesi</div>
-    <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
+  <aside class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+    <h3 class="text-theme-xl font-semibold text-gray-800 dark:text-white/90">Oluşturulacak Yapı Önizlemesi</h3>
+    <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{{ description }}</p>
 
     <div
-      ref="chartWrap"
-      class="org-chart-wrap"
-      :class="{ 'is-dragging': isDragging }"
+      class="relative mt-5 h-[260px] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900"
+      @wheel.prevent="zoomWithWheel"
       @mousedown="startPan"
       @mousemove="movePan"
       @mouseup="endPan"
       @mouseleave="endPan"
-      @wheel.prevent="zoomWithWheel"
     >
-      <div class="org-chart-canvas" :style="chartTransform">
-        <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
-          <template #node-title="{ node }">
-            <div class="tenant-node-content">
-              <v-icon :icon="node.meta.icon" :color="node.meta.color" size="20" class="tenant-node-icon" />
-              <div class="tenant-node-name">{{ node.title }}</div>
-              <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
-              <div v-if="node.meta.automatic" class="tree-auto">Otomatik</div>
+      <div
+        class="absolute left-1/2 top-6 flex origin-top flex-col items-center transition-transform duration-150"
+        :class="isDragging ? 'cursor-grabbing duration-0' : 'cursor-grab'"
+        :style="{ transform: `translateX(calc(-50% + ${pan.x}px)) translateY(${pan.y}px) scale(${zoom})` }"
+      >
+        <div :class="nodeClass(rootTone)">
+          <div class="flex items-center justify-center text-base">{{ rootIcon }}</div>
+          <div class="mt-1 text-xs font-semibold text-gray-800 dark:text-white/90">{{ rootLabel }}</div>
+          <div :class="['mt-1 text-[10px] font-semibold', rootText]">{{ selectedTypeLabel }}</div>
+        </div>
+
+        <template v-if="children.length">
+          <div class="h-7 w-px border-l border-dashed border-brand-400" />
+          <div class="flex items-start gap-4">
+            <div v-for="child in children" :key="child.id" class="flex flex-col items-center">
+              <div class="h-3 w-px border-l border-dashed border-brand-400" />
+              <div :class="nodeClass(child.tone)">
+                <div class="flex items-center justify-center text-base">{{ child.icon }}</div>
+                <div class="mt-1 text-xs font-semibold text-gray-800 dark:text-white/90">{{ child.title }}</div>
+                <div :class="['mt-1 text-[10px] font-semibold', child.text]">{{ child.type }}</div>
+                <div v-if="child.automatic" class="mt-1 inline-flex rounded-full bg-warning-50 px-2 py-0.5 text-[9px] font-medium text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">Otomatik</div>
+              </div>
             </div>
-          </template>
-        </OrganizationChart>
+          </div>
+        </template>
       </div>
 
-      <div class="org-chart-controls" aria-hidden="true">
-        <v-icon icon="mdi-cursor-move" size="14" />
-        <v-icon icon="mdi-magnify-plus" size="15" />
-      </div>
-    </div>
-
-    <v-divider class="my-5" />
-
-    <div v-for="row in legend" :key="row.title" class="d-flex mb-3" style="gap: 12px">
-      <v-icon :icon="row.icon" :color="row.color" size="20" class="mt-1" />
-      <div>
-        <div class="text-caption font-weight-bold" :class="row.textClass">{{ row.title }}</div>
-        <div class="text-caption text-medium-emphasis">{{ row.desc }}</div>
+      <div class="absolute right-3 top-3 rounded-lg border border-gray-200 bg-white/90 px-2 py-1 text-[11px] text-gray-500 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800/90 dark:text-gray-400">
+        Tekerlek ile yakınlaştır
       </div>
     </div>
 
-    <v-alert color="primary" variant="tonal" icon="mdi-information-outline" density="comfortable" class="mt-2">
-      <div class="text-body-2 font-weight-bold">Bilgi</div>
-      <div class="text-caption mt-1">Seçtiğiniz kurumsal yapıya göre ilk yapılandırma burada gösterilir. Şahıs şirketinde merkez lokasyon otomatik oluşturulur.</div>
-    </v-alert>
-  </v-card>
+    <div class="my-5 border-t border-gray-200 dark:border-gray-800" />
+
+    <div class="space-y-3">
+      <div v-for="row in legend" :key="row.title" class="flex items-start gap-3">
+        <span :class="['mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg text-xs', row.bg, row.text]">{{ row.icon }}</span>
+        <div>
+          <div :class="['text-theme-xs font-semibold', row.text]">{{ row.title }}</div>
+          <div class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">{{ row.desc }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 dark:border-brand-500/20 dark:bg-brand-500/10">
+      <div class="text-sm font-semibold text-brand-600 dark:text-brand-400">Bilgi</div>
+      <div class="mt-1 text-theme-xs text-brand-700 dark:text-brand-400">Seçtiğiniz kurumsal yapıya göre ilk yapılandırma burada gösterilir. Şahıs şirketinde merkez lokasyon otomatik oluşturulur.</div>
+    </div>
+  </aside>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import OrganizationChart from 'organization-chart-vue3'
-import 'organization-chart-vue3/style.css'
-
 const props = defineProps<{ reviewMode?: boolean }>()
-
-type OrgMeta = { icon: string; color: string; type: string; textClass: string; automatic?: boolean }
-type PreviewNode = {
-  id: string
-  title: string
-  member: Array<{ name: string; add?: string }>
-  children?: PreviewNode[]
-  titleClass?: string
-  contentClass?: string
-  meta: OrgMeta
-}
-
 const form = useTenantForm()
+
 const rootLabel = computed(() => form.value.orgName || 'Organizasyon adı')
 const onboardingType = computed(() => form.value.onboardingType)
 const isCompany = computed(() => onboardingType.value === 'company')
 const isSahisSirketi = computed(() => isCompany.value && form.value.companyKind === 'sahis')
 const selectedTypeLabel = computed(() => ORG_TYPES.find((type) => type.value === onboardingType.value)?.label ?? 'Organizasyon')
-const description = computed(() =>
-  props.reviewMode
-    ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.'
-    : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`,
-)
+const description = computed(() => props.reviewMode ? 'Tenant oluşturulduğunda aşağıdaki yapı oluşturulacaktır.' : `${selectedTypeLabel.value} seçiminize göre oluşturulacak yapı aşağıdaki gibidir.`)
 
-const orgData = computed<PreviewNode>(() => {
-  const children: PreviewNode[] = []
+const rootTone = computed(() => {
+  if (onboardingType.value === 'company') return 'green'
+  if (onboardingType.value === 'brand') return 'blue'
+  return 'purple'
+})
 
-  if (isCompany.value) {
-    children.push({
-      id: 'company',
-      title: rootLabel.value,
-      titleClass: 'tenant-title-company',
-      member: [],
-      meta: { icon: 'mdi-domain', color: 'success', type: 'Şirket', textClass: 'text-success' },
-    })
+const rootIcon = computed(() => ({ holding: '⌂', group: '♧', company: '▣', brand: '◆' }[onboardingType.value ?? 'holding']))
+const rootText = computed(() => rootTone.value === 'green' ? 'text-success-600' : rootTone.value === 'blue' ? 'text-blue-light-600' : 'text-brand-500')
 
-    if (isSahisSirketi.value) {
-      children.push({
-        id: 'location',
-        title: `${rootLabel.value} - Merkez`,
-        titleClass: 'tenant-title-location',
-        contentClass: 'tenant-content-location',
-        member: [],
-        meta: { icon: 'mdi-map-marker', color: 'warning', type: 'Lokasyon', textClass: 'text-warning', automatic: true },
-      })
-    }
+const children = computed(() => {
+  if (onboardingType.value === 'company') {
+    const result = [
+      { id: 'company', title: rootLabel.value, type: 'Şirket', icon: '▣', tone: 'green', text: 'text-success-600' },
+    ]
+    if (isSahisSirketi.value) result.push({ id: 'location', title: `${rootLabel.value} - Merkez`, type: 'Lokasyon', icon: '⌖', tone: 'orange', text: 'text-warning-600', automatic: true })
+    return result
   }
 
-  if (onboardingType.value === 'brand') {
-    children.push({
-      id: 'brand',
-      title: rootLabel.value,
-      titleClass: 'tenant-title-brand',
-      member: [],
-      meta: { icon: 'mdi-tag-outline', color: 'info', type: 'Marka', textClass: 'text-info' },
-    })
-  }
-
-  const isHolding = onboardingType.value === 'holding'
-  const isGroup = onboardingType.value === 'group'
-
-  if (isHolding || isGroup) {
-    return {
-      id: onboardingType.value,
-      title: rootLabel.value,
-      titleClass: isHolding ? 'tenant-title-holding' : 'tenant-title-group',
-      member: [],
-      meta: {
-        icon: isHolding ? 'mdi-bank-outline' : 'mdi-account-group-outline',
-        color: 'primary',
-        type: isHolding ? 'Holding' : 'Grup',
-        textClass: 'text-primary',
-      },
-    }
-  }
-
-  return {
-    id: 'organization',
-    title: rootLabel.value,
-    titleClass: 'tenant-title-organization',
-    member: [],
-    children,
-    meta: { icon: 'mdi-domain', color: 'primary', type: 'Organizasyon', textClass: 'text-primary' },
-  }
+  if (onboardingType.value === 'brand') return [{ id: 'brand', title: rootLabel.value, type: 'Marka', icon: '◆', tone: 'blue', text: 'text-blue-light-600' }]
+  return []
 })
 
 const legend = [
-  { title: 'Organizasyon', icon: 'mdi-domain', color: 'primary', textClass: 'text-primary', desc: 'Kurumsal yapının başlangıç düğümüdür.' },
-  { title: 'Şirket', icon: 'mdi-domain', color: 'success', textClass: 'text-success', desc: 'Şirket seçildiğinde ilk yapı altında şirket bilgileri oluşturulur.' },
-  { title: 'Marka', icon: 'mdi-tag-outline', color: 'info', textClass: 'text-info', desc: 'Marka seçildiğinde marka yapısı oluşturulur; bu aşamada şirket ve lokasyon oluşturulmaz.' },
-  { title: 'Lokasyon', icon: 'mdi-map-marker', color: 'warning', textClass: 'text-warning', desc: 'Şahıs şirketinde merkez lokasyon otomatik oluşturulur.' },
+  { title: 'Organizasyon', icon: '⌘', bg: 'bg-brand-50 dark:bg-brand-500/15', text: 'text-brand-500 dark:text-brand-400', desc: 'Kurumsal yapının başlangıç düğümüdür.' },
+  { title: 'Şirket', icon: '▣', bg: 'bg-success-50 dark:bg-success-500/15', text: 'text-success-700 dark:text-success-400', desc: 'Şirket seçildiğinde ilk yapı altında şirket bilgileri oluşturulur.' },
+  { title: 'Marka', icon: '◆', bg: 'bg-blue-light-50 dark:bg-blue-light-500/15', text: 'text-blue-light-600 dark:text-blue-light-400', desc: 'Marka seçildiğinde marka yapısı oluşturulur; bu aşamada şirket ve lokasyon oluşturulmaz.' },
+  { title: 'Lokasyon', icon: '⌖', bg: 'bg-warning-50 dark:bg-warning-500/15', text: 'text-warning-700 dark:text-warning-400', desc: 'Şahıs şirketinde merkez lokasyon otomatik oluşturulur.' },
 ]
 
-const chartWrap = ref<HTMLElement | null>(null)
-const pan = ref({ x: 0, y: 0 })
 const zoom = ref(1)
+const pan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
 
-const chartTransform = computed(() => ({
-  transform: `translate(-50%, 0) translate(${pan.value.x}px, ${pan.value.y}px) scale(${zoom.value})`,
-}))
-
-const fitChart = async () => {
-  await nextTick()
-  requestAnimationFrame(() => {
-    const wrap = chartWrap.value
-    const chart = wrap?.querySelector('.tenant-org-chart') as HTMLElement | null
-    if (!wrap || !chart) return
-
-    const contentWidth = chart.offsetWidth || 1
-    const contentHeight = chart.offsetHeight || 1
-    const availableWidth = Math.max(1, wrap.clientWidth - 12)
-    const availableHeight = Math.max(1, wrap.clientHeight - 12)
-    const widthScale = availableWidth / contentWidth
-    const heightScale = availableHeight / contentHeight
-    const fitScale = Math.min(widthScale, heightScale)
-    const nextZoom = Math.min(1.28, fitScale)
-
-    zoom.value = Number(Math.max(0.65, nextZoom).toFixed(3))
-    pan.value = {
-      x: 0,
-      y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2),
-    }
-  })
+function nodeClass(tone: string) {
+  const toneClasses: Record<string, string> = {
+    purple: 'border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10',
+    green: 'border-success-200 bg-success-50 dark:border-success-500/30 dark:bg-success-500/10',
+    blue: 'border-blue-light-200 bg-blue-light-50 dark:border-blue-light-500/30 dark:bg-blue-light-500/10',
+    orange: 'border-warning-200 bg-warning-50 dark:border-warning-500/30 dark:bg-warning-500/10',
+  }
+  return `w-36 rounded-lg border px-3 py-3 text-center shadow-theme-xs ${toneClasses[tone] ?? toneClasses.purple}`
 }
 
-const startPan = (event: MouseEvent) => {
-  if (event.button !== 0) return
-  const target = event.target as HTMLElement
-  if (target.closest('.org-container, .org-title, .org-content, button, a, .org-chart-controls')) return
+function zoomWithWheel(event: WheelEvent) {
+  zoom.value = Math.min(1.5, Math.max(0.75, zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)))
+}
 
+function startPan(event: MouseEvent) {
+  if (event.button !== 0) return
   isDragging.value = true
   dragStart.value = { x: event.clientX, y: event.clientY, panX: pan.value.x, panY: pan.value.y }
 }
 
-const movePan = (event: MouseEvent) => {
+function movePan(event: MouseEvent) {
   if (!isDragging.value) return
-  pan.value = {
-    x: dragStart.value.panX + event.clientX - dragStart.value.x,
-    y: dragStart.value.panY + event.clientY - dragStart.value.y,
-  }
+  pan.value = { x: dragStart.value.panX + event.clientX - dragStart.value.x, y: dragStart.value.panY + event.clientY - dragStart.value.y }
 }
 
-const endPan = () => { isDragging.value = false }
-
-const zoomWithWheel = (event: WheelEvent) => {
-  const next = zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)
-  zoom.value = Math.min(1.5, Math.max(0.75, next))
+function endPan() {
+  isDragging.value = false
 }
-
-watch([rootLabel, onboardingType, isSahisSirketi], () => fitChart(), { immediate: true })
-onMounted(() => fitChart())
 </script>
-
-<style scoped>
-.org-chart-wrap {
-  position: relative;
-  width: 100%;
-  height: 225px;
-  overflow: hidden;
-  display: block;
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-  background: transparent;
-}
-
-.org-chart-wrap.is-dragging { cursor: grabbing; }
-
-.org-chart-canvas {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform-origin: top center;
-  transition: transform 140ms ease-out;
-  will-change: transform;
-}
-
-.org-chart-wrap.is-dragging .org-chart-canvas { transition: none; }
-
-.org-chart-controls {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  border: 1px solid #e6e1ff;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #7964f7;
-  pointer-events: none;
-}
-
-:deep(.tenant-org-chart) { display: flex; justify-content: center; }
-:deep(.tenant-org-chart .org-table) { border-collapse: separate !important; border-spacing: 0 !important; margin: 0 auto !important; }
-:deep(.tenant-org-chart .org-table td) { vertical-align: top; text-align: center; padding: 0 0 30px 0 !important; position: relative; }
-:deep(.tenant-org-chart .org-child-level) { padding-left: 4px !important; padding-right: 4px !important; background: transparent !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; }
-:deep(.tenant-org-chart .org-child-level::before) { border-left: 1px dashed #8a73ff !important; height: 15px !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-child-level::after) { border-top: 1px dashed #8a73ff !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-child-level:first-child::before), :deep(.tenant-org-chart .org-child-level:last-child::before) { display: none !important; }
-:deep(.tenant-org-chart .org-child-level:first-child::after) { border: 1px dashed transparent !important; border-color: #8a73ff transparent transparent #8a73ff !important; height: 13px !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-child-level:last-child::after) { border: 1px dashed #8a73ff !important; border-color: #8a73ff #8a73ff transparent transparent !important; height: 13px !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-child-level:first-child:last-child::after) { border: 0 !important; border-left: 1px dashed #8a73ff !important; left: 50% !important; right: auto !important; height: 15px !important; }
-:deep(.tenant-org-chart .org-extend::after) { border-left: 1px dashed #8a73ff !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-extend-arrow::before) { border-color: #8a73ff #8a73ff transparent transparent !important; }
-:deep(.tenant-org-chart .org-node) { margin: 0 4px !important; box-sizing: border-box; background: transparent !important; border: 0 !important; }
-:deep(.tenant-org-chart .org-container) { width: 132px !important; min-width: 132px !important; box-sizing: border-box; border: 1px solid #ddd6ff !important; border-radius: 10px !important; overflow: hidden; box-shadow: none !important; background: transparent !important; }
-:deep(.tenant-org-chart .org-title) { width: 100% !important; min-height: 72px !important; padding: 8px 8px 7px !important; box-sizing: border-box; border: 0 !important; border-radius: 9px !important; background: transparent !important; white-space: normal !important; }
-:deep(.tenant-org-chart .tenant-title-organization) { background: #f3efff !important; }
-:deep(.tenant-org-chart .tenant-title-holding), :deep(.tenant-org-chart .tenant-title-group) { background: #f3efff !important; }
-:deep(.tenant-org-chart .tenant-title-company) { background: #effaf4 !important; }
-:deep(.tenant-org-chart .tenant-title-brand) { background: #eef7ff !important; }
-:deep(.tenant-org-chart .tenant-title-location) { background: #fff7e9 !important; }
-:deep(.tenant-org-chart .org-content) { width: 100% !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box; border: 0 !important; background: transparent !important; white-space: normal !important; text-align: center !important; }
-:deep(.tenant-org-chart .tenant-content-location) { background: #fff7e9 !important; border: 0 !important; }
-:deep(.tenant-org-chart .org-content .org-content-item) { justify-content: center !important; padding: 0 !important; border: 0 !important; }
-
-.tenant-node-content { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: auto auto auto; align-items: center; column-gap: 5px; width: 100%; min-height: 56px; box-sizing: border-box; }
-.tenant-node-icon { grid-row: 1 / span 2; align-self: center; }
-.tenant-node-name { min-width: 0; font-size: 11px; line-height: 1.2; font-weight: 700; text-align: center; overflow-wrap: anywhere; word-break: break-word; color: #26324b; }
-.tenant-node-type { font-size: 9px; line-height: 1.05; font-weight: 800; text-align: center; letter-spacing: 0.1px; }
-.text-primary { color: #6746f5 !important; }
-.text-success { color: #00a968 !important; }
-.text-warning { color: #e98400 !important; }
-
-.tree-auto { grid-column: 1 / -1; justify-self: center; display: inline-block; margin-top: 2px; padding: 2px 8px; border-radius: 10px; background: #fff0d5; color: #777; font-size: 9px; line-height: 1.15; white-space: nowrap; }
-
-@media (max-width: 600px) {
-  .org-chart-wrap { height: 215px; }
-  :deep(.tenant-org-chart .org-container) { width: 124px !important; min-width: 124px !important; }
-}
-</style>
