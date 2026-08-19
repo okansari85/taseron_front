@@ -3,20 +3,34 @@
     <div class="text-subtitle-1 font-weight-bold">Oluşturulacak Yapı Önizlemesi</div>
     <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
 
-    <div class="org-chart-wrap">
-      <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
-        <template #node-title="{ node }">
-          <div class="tenant-node-content">
-            <v-icon :icon="node.meta.icon" :color="node.meta.color" size="20" class="tenant-node-icon" />
-            <div class="tenant-node-name">{{ node.title }}</div>
-            <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
-          </div>
-        </template>
+    <div
+      class="org-chart-wrap"
+      :class="{ 'is-dragging': isDragging }"
+      @mousedown="startPan"
+      @mousemove="movePan"
+      @mouseup="endPan"
+      @mouseleave="endPan"
+      @wheel.prevent="zoomWithWheel"
+    >
+      <div class="org-chart-canvas" :style="chartTransform">
+        <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
+          <template #node-title="{ node }">
+            <div class="tenant-node-content">
+              <v-icon :icon="node.meta.icon" :color="node.meta.color" size="20" class="tenant-node-icon" />
+              <div class="tenant-node-name">{{ node.title }}</div>
+              <div class="tenant-node-type" :class="node.meta.textClass">{{ node.meta.type }}</div>
+            </div>
+          </template>
 
-        <template #member="{ member }">
-          <div v-if="member.add === 'auto'" class="tree-auto">Otomatik</div>
-        </template>
-      </OrganizationChart>
+          <template #member="{ member }">
+            <div v-if="member.add === 'auto'" class="tree-auto">Otomatik</div>
+          </template>
+        </OrganizationChart>
+      </div>
+
+      <div class="org-chart-hint">
+        Sürükle · Tekerlek ile yakınlaştır
+      </div>
     </div>
 
     <v-divider class="my-5" />
@@ -37,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import OrganizationChart from 'organization-chart-vue3'
 import 'organization-chart-vue3/style.css'
 
@@ -124,25 +139,99 @@ const legend = [
   { title: 'COMPANY', icon: 'mdi-domain', color: 'success', textClass: 'text-success', desc: 'Şirket bilgileri Company tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
   { title: 'LOCATION', icon: 'mdi-map-marker', color: 'warning', textClass: 'text-warning', desc: 'Lokasyon bilgileri Locations tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
 ]
+
+// Pan/zoom is only for preview navigation; it never changes the hierarchy.
+const pan = ref({ x: 0, y: 0 })
+const zoom = ref(1)
+const isDragging = ref(false)
+const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
+
+const chartTransform = computed(() => ({
+  transform: `translate(-50%, 0) translate(${pan.value.x}px, ${pan.value.y}px) scale(${zoom.value})`,
+}))
+
+const startPan = (event: MouseEvent) => {
+  if (event.button !== 0) return
+
+  const target = event.target as HTMLElement
+  if (target.closest('.org-container, .org-title, .org-content, button, a')) return
+
+  isDragging.value = true
+  dragStart.value = {
+    x: event.clientX,
+    y: event.clientY,
+    panX: pan.value.x,
+    panY: pan.value.y,
+  }
+}
+
+const movePan = (event: MouseEvent) => {
+  if (!isDragging.value) return
+
+  pan.value = {
+    x: dragStart.value.panX + event.clientX - dragStart.value.x,
+    y: dragStart.value.panY + event.clientY - dragStart.value.y,
+  }
+}
+
+const endPan = () => {
+  isDragging.value = false
+}
+
+const zoomWithWheel = (event: WheelEvent) => {
+  const next = zoom.value * (event.deltaY < 0 ? 1.08 : 0.92)
+  zoom.value = Math.min(1.5, Math.max(0.75, next))
+}
 </script>
 
 <style scoped>
 .org-chart-wrap {
+  position: relative;
   width: 100%;
-  min-height: 205px;
+  height: 225px;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  display: block;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  background: transparent;
+}
+
+.org-chart-wrap.is-dragging {
+  cursor: grabbing;
+}
+
+.org-chart-canvas {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform-origin: top center;
+  transition: transform 80ms ease-out;
+  will-change: transform;
+}
+
+.org-chart-wrap.is-dragging .org-chart-canvas {
+  transition: none;
+}
+
+.org-chart-hint {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  z-index: 5;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #98a0b2;
+  font-size: 8px;
+  pointer-events: none;
 }
 
 :deep(.tenant-org-chart) {
-  width: 100%;
   display: flex;
   justify-content: center;
 }
 
-/* organization-chart-vue3 uses real table/node classes. Style those classes directly. */
 :deep(.tenant-org-chart .org-table) {
   border-collapse: separate !important;
   border-spacing: 0 !important;
@@ -158,11 +247,16 @@ const legend = [
 :deep(.tenant-org-chart .org-child-level) {
   padding-left: 4px !important;
   padding-right: 4px !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
 }
 
 :deep(.tenant-org-chart .org-node) {
   margin: 0 4px !important;
   box-sizing: border-box;
+  background: transparent !important;
+  border: 0 !important;
 }
 
 :deep(.tenant-org-chart .org-container) {
@@ -173,6 +267,7 @@ const legend = [
   border-radius: 10px !important;
   overflow: hidden;
   box-shadow: none !important;
+  background: transparent !important;
 }
 
 :deep(.tenant-org-chart .org-title) {
@@ -188,17 +283,14 @@ const legend = [
 
 :deep(.tenant-org-chart .tenant-title-organization) {
   background: #f3efff !important;
-  border-color: #ddd3ff !important;
 }
 
 :deep(.tenant-org-chart .tenant-title-company) {
   background: #effaf4 !important;
-  border-color: #cfead9 !important;
 }
 
 :deep(.tenant-org-chart .tenant-title-location) {
   background: #fff7e9 !important;
-  border-color: #f2d9ad !important;
 }
 
 :deep(.tenant-org-chart .org-content) {
@@ -223,24 +315,21 @@ const legend = [
   border: 0 !important;
 }
 
-/* The library owns the connector geometry; only its appearance is themed here. */
+/* Keep the library's connector geometry, but only color the actual connector strokes. */
 :deep(.tenant-org-chart .org-child-level::before),
 :deep(.tenant-org-chart .org-child-level::after),
 :deep(.tenant-org-chart .org-extend::after) {
+  background: transparent !important;
+  box-shadow: none !important;
   border-color: #7964f7 !important;
   border-style: dashed !important;
   border-width: 1px !important;
 }
 
-:deep(.tenant-org-chart .org-child-level:first-child::after),
-:deep(.tenant-org-chart .org-child-level:last-child::after) {
-  border-style: dashed !important;
-  border-color: #7964f7 !important;
-}
-
-:deep(.tenant-org-chart .org-child-level:first-child.org-child-level:last-child::after) {
-  border-left-style: dashed !important;
-  border-left-color: #7964f7 !important;
+/* Do not let the connector wrapper itself become a visible rectangle. */
+:deep(.tenant-org-chart .org-child-level) {
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 :deep(.tenant-org-chart .org-extend-arrow::before) {
@@ -299,7 +388,7 @@ const legend = [
 
 @media (max-width: 600px) {
   .org-chart-wrap {
-    overflow-x: auto;
+    height: 215px;
   }
 
   :deep(.tenant-org-chart .org-container) {
