@@ -5,7 +5,7 @@ export interface TenantFormState {
   status: 'active' | 'passive'
   orgName: string
   orgNameTouched: boolean
-  onboardingType: 'holding' | 'group' | 'company' | 'brand'
+  onboardingType: 'holding' | 'group' | 'company' | 'brand' | null
   companyKind: 'tuzel' | 'sahis'
 }
 
@@ -17,7 +17,7 @@ export function useTenantForm() {
     status: 'active',
     orgName: '',
     orgNameTouched: false,
-    onboardingType: 'company',
+    onboardingType: null,
     companyKind: 'sahis',
   }))
 }
