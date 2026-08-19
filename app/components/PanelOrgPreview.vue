@@ -19,24 +19,13 @@
         :class="isDragging ? 'duration-0' : ''"
         :style="chartTransform"
       >
-        <OrganizationChart
-          :data="orgData"
-          :default-expand-all="true"
-          class="tenant-org-chart"
-        >
+        <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
           <template #node-title="{ node }">
-            <div class="tenant-node-content">
+            <div :class="['tenant-node-content', `tenant-node-content--${node.meta?.tone ?? 'purple'}`]">
               <span class="tenant-node-icon">{{ node.meta?.icon }}</span>
               <span class="tenant-node-title">{{ node.title }}</span>
-              <span :class="['tenant-node-type', node.meta?.textClass ?? 'text-brand-500']">
-                {{ node.meta?.type }}
-              </span>
-              <span
-                v-if="node.meta?.automatic"
-                class="tenant-node-automatic"
-              >
-                Otomatik
-              </span>
+              <span :class="['tenant-node-type', node.meta?.textClass ?? 'text-brand-500']">{{ node.meta?.type }}</span>
+              <span v-if="node.meta?.automatic" class="tenant-node-automatic">Otomatik</span>
             </div>
           </template>
         </OrganizationChart>
@@ -78,6 +67,7 @@ type PreviewMeta = {
   type: string
   textClass: string
   icon: string
+  tone: 'purple' | 'green' | 'blue' | 'orange'
   automatic?: boolean
 }
 
@@ -114,7 +104,7 @@ const orgData = computed<PreviewNode>(() => {
       id: 'company',
       title: rootLabel.value,
       member: [],
-      meta: { type: 'Şirket', textClass: 'text-success-700 dark:text-success-400', icon: '▣' },
+      meta: { type: 'Şirket', textClass: 'text-success-700 dark:text-success-400', icon: '▣', tone: 'green' },
     })
 
     if (isSahisSirketi.value) {
@@ -122,7 +112,7 @@ const orgData = computed<PreviewNode>(() => {
         id: 'location',
         title: `${rootLabel.value} - Merkez`,
         member: [],
-        meta: { type: 'Lokasyon', textClass: 'text-warning-700 dark:text-warning-400', icon: '⌖', automatic: true },
+        meta: { type: 'Lokasyon', textClass: 'text-warning-700 dark:text-warning-400', icon: '⌖', tone: 'orange', automatic: true },
       })
     }
   }
@@ -132,7 +122,7 @@ const orgData = computed<PreviewNode>(() => {
       id: 'brand',
       title: rootLabel.value,
       member: [],
-      meta: { type: 'Marka', textClass: 'text-blue-light-600 dark:text-blue-light-400', icon: '◆' },
+      meta: { type: 'Marka', textClass: 'text-blue-light-600 dark:text-blue-light-400', icon: '◆', tone: 'blue' },
     })
   }
 
@@ -141,7 +131,7 @@ const orgData = computed<PreviewNode>(() => {
       id: 'group',
       title: rootLabel.value,
       member: [],
-      meta: { type: 'Grup', textClass: 'text-brand-500 dark:text-brand-400', icon: '♧' },
+      meta: { type: 'Grup', textClass: 'text-brand-500 dark:text-brand-400', icon: '♧', tone: 'purple' },
     }
   }
 
@@ -150,7 +140,7 @@ const orgData = computed<PreviewNode>(() => {
       id: 'holding',
       title: rootLabel.value,
       member: [],
-      meta: { type: 'Holding', textClass: 'text-brand-500 dark:text-brand-400', icon: '⌂' },
+      meta: { type: 'Holding', textClass: 'text-brand-500 dark:text-brand-400', icon: '⌂', tone: 'purple' },
     }
   }
 
@@ -159,7 +149,7 @@ const orgData = computed<PreviewNode>(() => {
     title: `${rootLabel.value} - Organizasyon`,
     member: [],
     children,
-    meta: { type: 'Organizasyon', textClass: 'text-brand-500 dark:text-brand-400', icon: '⌘' },
+    meta: { type: 'Organizasyon', textClass: 'text-brand-500 dark:text-brand-400', icon: '⌘', tone: 'purple' },
   }
 })
 
@@ -186,33 +176,21 @@ const fitChart = async () => {
     const contentHeight = chart.offsetHeight || 1
     const availableWidth = Math.max(1, wrap.clientWidth - 18)
     const availableHeight = Math.max(1, wrap.clientHeight - 18)
-
-    const widthScale = availableWidth / contentWidth
-    const heightScale = availableHeight / contentHeight
-    const fitScale = Math.min(widthScale, heightScale)
+    const fitScale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight)
 
     zoom.value = Number(Math.min(1.2, Math.max(0.72, fitScale)).toFixed(3))
-    pan.value = {
-      x: 0,
-      y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2),
-    }
+    pan.value = { x: 0, y: Math.max(0, (wrap.clientHeight - contentHeight * zoom.value) / 2) }
   })
 }
 
 function startPan(event: MouseEvent) {
   if (event.button !== 0) return
   isDragging.value = true
-  dragStart.value = {
-    x: event.clientX,
-    y: event.clientY,
-    panX: pan.value.x,
-    panY: pan.value.y,
-  }
+  dragStart.value = { x: event.clientX, y: event.clientY, panX: pan.value.x, panY: pan.value.y }
 }
 
 function movePan(event: MouseEvent) {
   if (!isDragging.value) return
-
   pan.value = {
     x: dragStart.value.panX + event.clientX - dragStart.value.x,
     y: dragStart.value.panY + event.clientY - dragStart.value.y,
@@ -238,100 +216,52 @@ onMounted(() => fitChart())
 </script>
 
 <style>
-.tenant-org-chart {
-  display: flex !important;
-  justify-content: center !important;
-}
-
-.tenant-org-chart .org-table {
-  margin: 0 auto !important;
-}
-
+.tenant-org-chart { display: flex !important; justify-content: center !important; }
+.tenant-org-chart .org-table { margin: 0 auto !important; }
 .tenant-org-chart .org-container {
   width: 180px !important;
   min-width: 180px !important;
   min-height: 72px !important;
-  border: 1px solid rgb(229 231 235) !important;
+  border: 1px solid #e5e7eb !important;
   border-radius: 0.75rem !important;
   box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
   overflow: hidden !important;
   background: transparent !important;
 }
-
-.dark .tenant-org-chart .org-container {
-  border-color: rgb(55 65 81) !important;
-}
-
+.dark .tenant-org-chart .org-container { border-color: #374151 !important; }
 .tenant-org-chart .org-title {
   min-height: 72px !important;
   padding: 12px !important;
-  background: rgb(248 247 255) !important;
   border-radius: 0.75rem !important;
-}
-
-.tenant-org-chart .org-content {
-  min-height: 0 !important;
-  padding: 0 !important;
-  background: transparent !important;
   border: 0 !important;
 }
-
-.tenant-org-chart .org-child-level,
-.tenant-org-chart .org-extend {
-  background: transparent !important;
+.tenant-org-chart .org-container:has(.tenant-node-content--purple) .org-title { background: #f5f3ff !important; }
+.tenant-org-chart .org-container:has(.tenant-node-content--green) .org-title { background: #effaf4 !important; }
+.tenant-org-chart .org-container:has(.tenant-node-content--blue) .org-title { background: #eff6ff !important; }
+.tenant-org-chart .org-container:has(.tenant-node-content--orange) .org-title { background: #fff8eb !important; }
+.dark .tenant-org-chart .org-container:has(.tenant-node-content--purple) .org-title { background: rgb(139 92 246 / 0.12) !important; }
+.dark .tenant-org-chart .org-container:has(.tenant-node-content--green) .org-title { background: rgb(16 185 129 / 0.12) !important; }
+.dark .tenant-org-chart .org-container:has(.tenant-node-content--blue) .org-title { background: rgb(59 130 246 / 0.12) !important; }
+.dark .tenant-org-chart .org-container:has(.tenant-node-content--orange) .org-title { background: rgb(245 158 11 / 0.12) !important; }
+.tenant-org-chart .org-content { min-height: 0 !important; padding: 0 !important; background: transparent !important; border: 0 !important; }
+.tenant-org-chart .org-child-level, .tenant-org-chart .org-extend { background: transparent !important; box-shadow: none !important; }
+.tenant-org-chart .org-child-level::before, .tenant-org-chart .org-child-level::after, .tenant-org-chart .org-extend::after {
+  border-color: #8b7cff !important;
+  border-style: dashed !important;
 }
-
-.tenant-org-chart .tenant-node-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-height: 48px;
-}
-
-.tenant-org-chart .tenant-node-icon {
-  font-size: 18px;
-  line-height: 1;
-  color: #4f46e5;
-}
-
-.tenant-org-chart .tenant-node-title {
-  max-width: 156px;
-  overflow-wrap: anywhere;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: #1f2937;
-}
-
-.tenant-org-chart .tenant-node-type {
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.tenant-org-chart .tenant-node-automatic {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 9999px;
-  background: #fffbeb;
-  padding: 2px 8px;
-  font-size: 9px;
-  font-weight: 500;
-  line-height: 1;
-  color: #b45309;
-}
-
-.dark .tenant-org-chart .tenant-node-title {
-  color: #f8fafc;
-}
-
-.dark .tenant-org-chart .tenant-node-automatic {
-  background: rgb(245 158 11 / 0.15);
-  color: #fbbf24;
-}
+.tenant-org-chart .org-child-level::before { border-left-width: 1px !important; }
+.tenant-org-chart .org-child-level::after { border-top-width: 1px !important; }
+.tenant-org-chart .org-extend::after { border-left-width: 1px !important; }
+.dark .tenant-org-chart .org-child-level::before, .dark .tenant-org-chart .org-child-level::after, .dark .tenant-org-chart .org-extend::after { border-color: #9b8cff !important; }
+.tenant-org-chart .tenant-node-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; }
+.tenant-org-chart .tenant-node-icon { font-size: 21px; line-height: 1; }
+.tenant-org-chart .tenant-node-content--purple .tenant-node-icon { color: #4f46e5; }
+.tenant-org-chart .tenant-node-content--green .tenant-node-icon { color: #059669; }
+.tenant-org-chart .tenant-node-content--blue .tenant-node-icon { color: #2563eb; }
+.tenant-org-chart .tenant-node-content--orange .tenant-node-icon { color: #f59e0b; }
+.tenant-org-chart .tenant-node-title { max-width: 156px; overflow-wrap: anywhere; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.25; color: #1f2937; }
+.tenant-org-chart .tenant-node-type { font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: 0.02em; text-transform: uppercase; }
+.tenant-org-chart .tenant-node-automatic { display: inline-flex; align-items: center; border-radius: 9999px; background: #fffbeb; padding: 3px 8px; font-size: 9px; font-weight: 500; line-height: 1; color: #b45309; }
+.dark .tenant-org-chart .tenant-node-title { color: #f8fafc; }
+.dark .tenant-org-chart .tenant-node-automatic { background: rgb(245 158 11 / 0.15); color: #fbbf24; }
 </style>
