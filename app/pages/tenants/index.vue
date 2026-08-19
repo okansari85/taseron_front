@@ -14,15 +14,34 @@
     <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
       <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <input v-model="search" type="search" placeholder="Tenant ara..." class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 lg:col-span-4" />
-        <select v-model="statusFilter" class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 lg:col-span-2">
-          <option value="">Durum</option><option value="active">Aktif</option><option value="passive">Pasif</option>
-        </select>
-        <select v-model="structureFilter" class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 lg:col-span-2">
-          <option value="">Kurumsal Yapı</option><option value="holding">Holding</option><option value="group">Grup</option><option value="company">Şirket</option><option value="brand">Marka</option>
-        </select>
-        <select v-model="dateFilter" class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 lg:col-span-2">
-          <option value="">Oluşturulma Tarihi</option><option value="7">Son 7 gün</option><option value="30">Son 30 gün</option>
-        </select>
+
+        <div class="relative lg:col-span-2">
+          <select v-model="statusFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <option value="">Durum</option><option value="active">Aktif</option><option value="passive">Pasif</option>
+          </select>
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
+          </span>
+        </div>
+
+        <div class="relative lg:col-span-2">
+          <select v-model="structureFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <option value="">Kurumsal Yapı</option><option value="holding">Holding</option><option value="group">Grup</option><option value="company">Şirket</option><option value="brand">Marka</option>
+          </select>
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
+          </span>
+        </div>
+
+        <div class="relative lg:col-span-2">
+          <select v-model="dateFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <option value="">Oluşturulma Tarihi</option><option value="7">Son 7 gün</option><option value="30">Son 30 gün</option>
+          </select>
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 1.04l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>
+          </span>
+        </div>
+
         <button class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 lg:col-span-2" :disabled="!hasFilters" @click="clearFilters">Filtreleri Temizle</button>
       </div>
     </div>
