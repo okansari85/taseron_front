@@ -3,17 +3,18 @@
     <div class="flex w-full items-center justify-between px-4 py-3 lg:px-6 lg:py-4">
       <div class="flex items-center gap-3">
         <button class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 lg:h-11 lg:w-11" @click="handleSidebar">
-          <span class="text-lg">☰</span>
+          <Menu :size="20" />
         </button>
         <div class="hidden text-sm font-medium text-gray-500 sm:block dark:text-gray-400">Taseron Management</div>
       </div>
 
       <div class="flex items-center gap-2">
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Tema" @click="toggleTheme">
-          <span class="text-lg">{{ isDark ? '☀' : '☾' }}</span>
+          <Sun v-if="isDark" :size="18" />
+          <Moon v-else :size="18" />
         </button>
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Bildirimler">
-          <span class="text-lg">♧</span>
+          <Bell :size="18" />
         </button>
         <div class="hidden items-center gap-3 border-l border-gray-200 pl-3 sm:flex dark:border-gray-800">
           <div class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">AY</div>
@@ -28,6 +29,8 @@
 </template>
 
 <script setup lang="ts">
+import { Bell, Menu, Moon, Sun } from '@lucide/vue'
+
 const { toggle, toggleMobile } = useTailAdminSidebar()
 const { isDark, toggle: toggleTheme } = useTailAdminTheme()
 
