@@ -5,8 +5,8 @@
   >
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <div class="text-h6 font-weight-bold">Tenantlar</div>
-        <div class="text-caption text-medium-emphasis mt-1">
+        <div class="text-h4 font-weight-bold">Tenantlar</div>
+        <div class="text-body-1 text-medium-emphasis mt-1">
           Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
         </div>
       </div>
@@ -15,7 +15,7 @@
         color="primary"
         rounded="md"
         prepend-icon="mdi-plus"
-        class="text-caption text-none font-weight-medium"
+        class="text-body-2 text-none font-weight-medium"
         height="40"
         @click="goToCreate"
       >
@@ -39,7 +39,6 @@
             density="compact"
             hide-details
             clearable
-            class="text-caption"
           />
         </v-col>
 
@@ -227,42 +226,35 @@
 
       <v-divider />
 
-      <v-row class="ma-0 px-4" align="center">
-        <v-col cols="4" class="pa-0">
-          <span class="text-caption text-medium-emphasis">
-            Toplam {{ totalTenantCount }} kayıt
-          </span>
-        </v-col>
+      <div class="d-flex align-center justify-space-between px-4 py-2">
+        <span class="text-caption text-medium-emphasis">
+          Toplam {{ totalTenantCount }} kayıt
+        </span>
 
-        <v-col cols="4" class="pa-0 d-flex justify-center">
-          <v-pagination
-            v-model="page"
-            :length="pageCount"
-            :total-visible="5"
-            density="compact"
-            rounded="circle"
-          />
-        </v-col>
+        <v-pagination
+          v-model="page"
+          :length="pageCount"
+          :total-visible="5"
+          density="compact"
+          rounded="circle"
+        />
 
-        <v-col cols="4" class="pa-0 d-flex justify-end">
-          <v-select
-            v-model="itemsPerPage"
-            :items="pageSizeOptions"
-            item-title="title"
-            item-value="value"
-            variant="outlined"
-            density="compact"
-            hide-details
-            suffix="/ sayfa"
-            class="text-caption"
-            max-width="96"
-          >
-            <template #selection="{ item }">
-              <span class="text-caption">{{ item.title }}</span>
-            </template>
-          </v-select>
-        </v-col>
-      </v-row>
+        <v-select
+          v-model="itemsPerPage"
+          :items="pageSizeOptions"
+          item-title="title"
+          item-value="value"
+          variant="outlined"
+          density="compact"
+          hide-details
+          max-width="112"
+          class="text-caption flex-grow-0"
+        >
+          <template #selection="{ item }">
+            <span class="text-caption">{{ item.title }} / sayfa</span>
+          </template>
+        </v-select>
+      </div>
     </v-card>
   </v-container>
 </template>
