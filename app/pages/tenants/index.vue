@@ -122,7 +122,7 @@
             class="tenant-row"
             @click="openTenant(tenant)"
           >
-            <td>
+            <td class="py-3">
               <div class="d-flex align-center ga-3">
                 <v-avatar
                   size="38"
@@ -146,9 +146,9 @@
               </div>
             </td>
 
-            <td class="text-body-2 text-medium-emphasis">{{ tenant.slug }}</td>
+            <td class="py-3 text-body-2 text-medium-emphasis">{{ tenant.slug }}</td>
 
-            <td>
+            <td class="py-3">
               <v-chip
                 size="small"
                 variant="tonal"
@@ -159,7 +159,7 @@
               </v-chip>
             </td>
 
-            <td>
+            <td class="py-3">
               <v-chip
                 size="small"
                 variant="tonal"
@@ -170,9 +170,9 @@
               </v-chip>
             </td>
 
-            <td class="text-body-2 text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
+            <td class="py-3 text-body-2 text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
 
-            <td class="text-center">
+            <td class="py-3 text-center">
               <v-menu>
                 <template #activator="{ props }">
                   <v-btn
