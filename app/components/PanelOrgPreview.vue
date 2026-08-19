@@ -3,35 +3,20 @@
     <div class="text-subtitle-1 font-weight-bold">Oluşturulacak Yapı Önizlemesi</div>
     <p class="text-body-2 text-medium-emphasis mt-1 mb-5">{{ description }}</p>
 
-    <div class="org-tree" :class="{ 'org-tree--single': !isSahisSirketi }">
-      <div class="tree-root tree-node tree-node--purple">
-        <v-icon icon="mdi-domain" size="22" color="primary" class="mr-3" />
-        <div>
-          <div class="text-body-2 font-weight-bold">{{ rootLabel }}</div>
-          <div class="text-caption font-weight-bold text-primary">ORGANIZATION</div>
-        </div>
-      </div>
-
-      <template v-if="isCompany">
-        <div class="tree-children" :class="{ 'tree-children--split': isSahisSirketi, 'tree-children--single': !isSahisSirketi }">
-          <div class="tree-branch">
-            <div class="tree-node tree-node--child tree-node--green">
-              <v-icon icon="mdi-domain" size="24" color="success" />
-              <div class="tree-child-name">{{ rootLabel }}</div>
-              <div class="text-caption font-weight-bold text-success">COMPANY</div>
-            </div>
+    <div class="org-chart-wrap">
+      <OrganizationChart :data="orgData" :default-expand-all="true" class="tenant-org-chart">
+        <template #node-title="{ node }">
+          <div class="tenant-node-content" :class="node.contentClass">
+            <v-icon :icon="node.meta?.icon || 'mdi-domain'" :color="node.meta?.color || 'primary'" size="22" />
+            <div class="tenant-node-name">{{ node.title }}</div>
+            <div class="tenant-node-type" :class="node.meta?.textClass">{{ node.meta?.type }}</div>
           </div>
+        </template>
 
-          <div v-if="isSahisSirketi" class="tree-branch">
-            <div class="tree-node tree-node--child tree-node--amber">
-              <v-icon icon="mdi-map-marker" size="24" color="warning" />
-              <div class="tree-child-name">{{ rootLabel }} - Merkez</div>
-              <div class="text-caption font-weight-bold text-warning">LOCATION</div>
-              <div class="text-caption text-medium-emphasis tree-auto">Otomatik</div>
-            </div>
-          </div>
-        </div>
-      </template>
+        <template #member="{ member }">
+          <div v-if="member.add === 'auto'" class="tree-auto">Otomatik</div>
+        </template>
+      </OrganizationChart>
     </div>
 
     <v-divider class="my-5" />
@@ -52,6 +37,9 @@
 </template>
 
 <script setup lang="ts">
+import OrganizationChart from 'organization-chart-vue3'
+import 'organization-chart-vue3/style.css'
+
 const props = defineProps<{ reviewMode?: boolean }>()
 
 const form = useTenantForm()
@@ -65,6 +53,55 @@ const description = computed(() =>
     : 'Bu adımla birlikte oluşturulacak yapı aşağıdaki gibidir.'
 )
 
+const orgData = computed(() => {
+  const children = isCompany.value
+    ? [
+        {
+          id: 'company',
+          title: rootLabel.value,
+          contentClass: 'org-node-company',
+          member: [],
+          meta: {
+            icon: 'mdi-domain',
+            color: 'success',
+            type: 'COMPANY',
+            textClass: 'text-success',
+          },
+        },
+        ...(isSahisSirketi.value
+          ? [
+              {
+                id: 'location',
+                title: `${rootLabel.value} - Merkez`,
+                contentClass: 'org-node-location',
+                member: [{ name: 'Otomatik', add: 'auto' }],
+                meta: {
+                  icon: 'mdi-map-marker',
+                  color: 'warning',
+                  type: 'LOCATION',
+                  textClass: 'text-warning',
+                },
+              },
+            ]
+          : []),
+      ]
+    : []
+
+  return {
+    id: 'organization',
+    title: rootLabel.value,
+    contentClass: 'org-node-root',
+    member: [],
+    children,
+    meta: {
+      icon: 'mdi-domain',
+      color: 'primary',
+      type: 'ORGANIZATION',
+      textClass: 'text-primary',
+    },
+  }
+})
+
 const legend = [
   { title: 'ORGANIZATION', icon: 'mdi-domain', color: 'primary', textClass: 'text-primary', desc: 'Hiyerarşi ağacında yer alan düğümdür.' },
   { title: 'COMPANY', icon: 'mdi-domain', color: 'success', textClass: 'text-success', desc: 'Şirket bilgileri Company tablosunda tutulur ve bu organizasyon düğümü ile eşleştirilir.' },
@@ -73,198 +110,125 @@ const legend = [
 </script>
 
 <style scoped>
-/* Locked tenant creation organization tree. Keep this component as the single source of truth for the preview. */
-.org-tree {
-  --tree-purple: #6746f5;
-  --tree-purple-bg: #f2efff;
-  --tree-purple-border: #e5deff;
-  --tree-green: #00a968;
-  --tree-green-bg: #f1fbf6;
-  --tree-green-border: #d5f0e1;
-  --tree-amber: #f59a00;
-  --tree-amber-bg: #fff8ed;
-  --tree-amber-border: #f6dfbd;
-  --tree-line: #7864f7;
-  position: relative;
-  padding: 2px 0 0;
-  min-height: 185px;
+.org-chart-wrap {
+  min-height: 190px;
+  width: 100%;
+  overflow: hidden;
 }
 
-.tree-node {
+/* The library owns the hierarchy and connector geometry. We only skin its nodes. */
+:deep(.tenant-org-chart) {
+  --orgchart-line-color: #7864f7;
+}
+
+:deep(.tenant-org-chart .orgchart) {
+  width: 100%;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+:deep(.tenant-org-chart .orgchart .node) {
+  min-width: 160px;
+  border: 1px solid #e5deff;
   border-radius: 10px;
-  border: 1px solid;
-  box-sizing: border-box;
-}
-
-.tree-node--purple {
-  background: var(--tree-purple-bg) !important;
-  border-color: var(--tree-purple-border) !important;
-}
-
-.tree-node--green {
-  background: var(--tree-green-bg) !important;
-  border-color: var(--tree-green-border) !important;
-}
-
-.tree-node--amber {
-  background: var(--tree-amber-bg) !important;
-  border-color: var(--tree-amber-border) !important;
-}
-
-.tree-root {
-  position: relative;
-  z-index: 3;
-  width: 160px;
-  min-height: 58px;
-  margin: 0 auto;
-  padding: 9px 14px;
-  display: flex;
-  align-items: center;
-}
-
-.tree-root .v-icon {
-  color: var(--tree-purple) !important;
-}
-
-.tree-children {
-  position: absolute;
-  z-index: 2;
-  left: 0;
-  right: 0;
-  display: grid;
-}
-
-.tree-children--split {
-  top: 118px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px;
-}
-
-/* The connector is part of the branch structure: it physically meets each child card. */
-.tree-children--split::after {
-  content: '';
-  position: absolute;
-  top: -60px;
-  left: 25%;
-  width: 50%;
-  height: 30px;
-  border-top: 1.5px dashed var(--tree-line);
-  border-left: 1.5px dashed var(--tree-line);
-  border-right: 1.5px dashed var(--tree-line);
-  box-sizing: border-box;
-  pointer-events: none;
-}
-
-.tree-children--split::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: -60px;
-  left: 50%;
-  height: 30px;
-  border-left: 1.5px dashed var(--tree-line);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.tree-children--split .tree-branch::before {
-  content: '';
-  position: absolute;
-  top: -30px;
-  height: 30px;
-  border-left: 1.5px dashed var(--tree-line);
-  pointer-events: none;
-}
-
-.tree-children--split .tree-branch:first-child::before {
-  left: 25%;
-}
-
-.tree-children--split .tree-branch:last-child::before {
-  left: 75%;
-}
-
-.tree-children--single {
-  top: 118px;
-  grid-template-columns: minmax(0, 160px);
-  justify-content: center;
-}
-
-/* Corporate company: one real branch, so there is no orphaned horizontal/second connector. */
-.tree-children--single::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  left: 50%;
-  height: 60px;
-  border-left: 1.5px dashed var(--tree-line);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.tree-branch {
-  position: relative;
-  min-width: 0;
-}
-
-.tree-node--child {
-  min-height: 105px;
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  position: relative;
-  z-index: 2;
-}
-
-.tree-node--child .v-icon { margin-bottom: 4px; }
-
-.tree-node--green .v-icon { color: var(--tree-green) !important; }
-.tree-node--amber .v-icon { color: var(--tree-amber) !important; }
-
-.tree-child-name {
-  margin-top: 3px;
-  font-size: 13px;
-  line-height: 1.25;
-  font-weight: 700;
+  box-shadow: none;
+  background: #f2efff;
+  padding: 0;
   color: #16213d;
 }
 
-.tree-node--green .text-success { color: var(--tree-green) !important; }
-.tree-node--amber .text-warning { color: #e98400 !important; }
-.tree-node--purple .text-primary { color: var(--tree-purple) !important; }
+:deep(.tenant-org-chart .orgchart .node.org-node-company) {
+  background: #f1fbf6;
+  border-color: #d5f0e1;
+}
+
+:deep(.tenant-org-chart .orgchart .node.org-node-location) {
+  background: #fff8ed;
+  border-color: #f6dfbd;
+}
+
+:deep(.tenant-org-chart .orgchart .node .title) {
+  height: auto;
+  min-height: 58px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  padding: 9px 14px;
+}
+
+:deep(.tenant-org-chart .orgchart .node .content) {
+  border: 0;
+  height: auto;
+  min-height: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 8px 8px;
+}
+
+:deep(.tenant-org-chart .orgchart .lines .downLine),
+:deep(.tenant-org-chart .orgchart .lines .topLine),
+:deep(.tenant-org-chart .orgchart .lines .leftLine),
+:deep(.tenant-org-chart .orgchart .lines .rightLine) {
+  border-color: #7864f7 !important;
+  border-style: dashed !important;
+}
+
+:deep(.tenant-org-chart .orgchart .lines .downLine) {
+  border-width: 0 1.5px 0 0 !important;
+}
+
+:deep(.tenant-org-chart .orgchart .lines .topLine),
+:deep(.tenant-org-chart .orgchart .lines .leftLine),
+:deep(.tenant-org-chart .orgchart .lines .rightLine) {
+  border-width: 1.5px 0 0 0 !important;
+}
+
+.tenant-node-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tenant-node-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.tenant-node-type {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+  text-align: center;
+}
+
+.text-primary { color: #6746f5 !important; }
+.text-success { color: #00a968 !important; }
+.text-warning { color: #e98400 !important; }
 
 .tree-auto {
-  margin-top: 3px;
+  display: inline-block;
+  margin: 0 auto 3px;
   padding: 2px 8px;
   border-radius: 10px;
   background: #fff0d5;
-  color: #777 !important;
+  color: #777;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 @media (max-width: 600px) {
-  .org-tree { min-height: 320px; }
-  .tree-root { width: 100%; }
-  .tree-children--split,
-  .tree-children--single {
-    top: 118px;
-  }
-  .tree-children--split {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .tree-children--split::after,
-  .tree-children--split::before,
-  .tree-children--split .tree-branch::before {
-    display: none;
-  }
-  .tree-children--single {
-    grid-template-columns: 1fr;
-  }
-  .tree-children--single::before {
-    height: 60px;
-  }
+  .org-chart-wrap { min-height: 300px; }
 }
 </style>
