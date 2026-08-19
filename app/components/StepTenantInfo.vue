@@ -81,7 +81,6 @@ const form = useTenantForm()
 
 function onTenantNameChange(v: string) {
   if (!form.value.slugTouched) form.value.slug = slugify(v)
-  if (!form.value.orgNameTouched) form.value.orgName = v
 }
 
 function onSlugChange() {
