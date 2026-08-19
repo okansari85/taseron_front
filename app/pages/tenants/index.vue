@@ -29,7 +29,7 @@
       elevation="0"
       border
     >
-      <v-row align="center" dense>
+      <v-row align="center" dense class="ma-0">
         <v-col cols="12" md="4" class="pa-1">
           <v-text-field
             v-model="search"
@@ -119,6 +119,7 @@
           <tr
             v-for="tenant in paginatedTenants"
             :key="tenant.id"
+            class="tenant-row"
             @click="openTenant(tenant)"
           >
             <td>
@@ -134,8 +135,8 @@
                   </span>
                 </v-avatar>
 
-                <div>
-                  <div class="text-body-2 font-weight-semibold">
+                <div class="min-w-0">
+                  <div class="text-body-2 font-weight-semibold text-truncate">
                     {{ tenant.name }}
                   </div>
                   <div class="text-caption text-medium-emphasis">
@@ -164,6 +165,7 @@
                 variant="tonal"
                 :color="tenant.status === 'active' ? 'success' : 'default'"
               >
+                <span class="status-dot mr-2" />
                 {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
               </v-chip>
             </td>
@@ -212,7 +214,9 @@
 
       <v-row class="ma-0 px-4" align="center">
         <v-col cols="4" class="pa-0">
-          <span class="text-caption text-medium-emphasis">Toplam {{ totalTenantCount }} kayıt</span>
+          <span class="text-caption text-medium-emphasis">
+            Toplam {{ totalTenantCount }} kayıt
+          </span>
         </v-col>
 
         <v-col cols="4" class="pa-0 d-flex justify-center">
@@ -225,19 +229,20 @@
           />
         </v-col>
 
-        <v-col cols="4" class="pa-0 d-flex justify-end py-2">
-          <v-select
-            v-model="itemsPerPage"
-            :items="pageSizeOptions"
-            item-title="title"
-            item-value="value"
-            variant="outlined"
-            density="compact"
-            hide-details
-            suffix="/ sayfa"
-            width="108"
-            max-width="108"
-          />
+        <v-col cols="4" class="pa-0 d-flex justify-end">
+          <div class="d-flex align-center">
+            <v-select
+              v-model="itemsPerPage"
+              :items="pageSizeOptions"
+              item-title="title"
+              item-value="value"
+              variant="outlined"
+              density="compact"
+              hide-details
+              suffix="/ sayfa"
+              class="w-auto"
+            />
+          </div>
         </v-col>
       </v-row>
     </v-card>
@@ -255,12 +260,14 @@ interface Tenant {
 }
 
 const router = useRouter()
+
 const search = ref('')
 const statusFilter = ref<string | null>(null)
 const structureFilter = ref<string | null>(null)
 const dateFilter = ref<string | null>(null)
 const page = ref(1)
 const itemsPerPage = ref(10)
+
 const totalTenantCount = 24
 
 const statusOptions = [
@@ -299,28 +306,34 @@ const tenants = ref<Tenant[]>([
   { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
 ])
 
-const hasFilters = computed(() => Boolean(
-  search.value ||
-  statusFilter.value ||
-  structureFilter.value ||
-  dateFilter.value,
-))
+const hasFilters = computed(() => {
+  return Boolean(
+    search.value ||
+    statusFilter.value ||
+    structureFilter.value ||
+    dateFilter.value,
+  )
+})
 
 const filteredTenants = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('tr-TR')
 
   return tenants.value.filter((tenant) => {
-    const matchesSearch = !query ||
+    const matchesSearch =
+      !query ||
       tenant.name.toLocaleLowerCase('tr-TR').includes(query) ||
       tenant.slug.toLocaleLowerCase('tr-TR').includes(query)
+
     const matchesStatus = !statusFilter.value || tenant.status === statusFilter.value
     const matchesStructure = !structureFilter.value || tenant.onboarding_type === structureFilter.value
+
     return matchesSearch && matchesStatus && matchesStructure
   })
 })
 
 const pageCount = computed(() => {
   if (!hasFilters.value) return 3
+
   return Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value))
 })
 
@@ -329,9 +342,12 @@ const paginatedTenants = computed(() => {
   return filteredTenants.value.slice(start, start + itemsPerPage.value)
 })
 
-watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => {
-  page.value = 1
-})
+watch(
+  [search, statusFilter, structureFilter, dateFilter, itemsPerPage],
+  () => {
+    page.value = 1
+  },
+)
 
 watch(pageCount, (count) => {
   if (page.value > count) page.value = count
@@ -345,11 +361,18 @@ function clearFilters() {
 }
 
 function getInitials(name: string) {
-  return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toLocaleUpperCase('tr-TR')
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toLocaleUpperCase('tr-TR')
 }
 
 function getAvatarColor(id: number) {
-  return ['primary', 'success', 'info', 'warning', 'primary', 'error', 'info'][(id - 1) % 7]
+  const colors = ['primary', 'success', 'info', 'warning', 'primary', 'error', 'info']
+  return colors[(id - 1) % colors.length]
 }
 
 function getStructureLabel(type: Tenant['onboarding_type']) {
@@ -361,12 +384,21 @@ function getStructureColor(type: Tenant['onboarding_type']) {
 }
 
 function getStructureIcon(type: Tenant['onboarding_type']) {
-  return { holding: 'mdi-bank-outline', group: 'mdi-account-group-outline', company: 'mdi-domain', brand: 'mdi-tag-outline' }[type]
+  return {
+    holding: 'mdi-bank-outline',
+    group: 'mdi-account-group-outline',
+    company: 'mdi-domain',
+    brand: 'mdi-tag-outline',
+  }[type]
 }
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('tr-TR', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(value))
 }
 
@@ -386,3 +418,10 @@ function toggleStatus(tenant: Tenant) {
   tenant.status = tenant.status === 'active' ? 'passive' : 'active'
 }
 </script>
+
+<style>
+.tenant-list-page { width: 100%; }
+.tenant-row { cursor: pointer; }
+.tenant-row:hover { background: rgba(var(--v-theme-primary), 0.04); }
+.status-dot { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: currentColor; }
+</style>
