@@ -1,5 +1,8 @@
 <template>
-  <v-container class="tenant-list-page">
+  <v-container
+    class="tenant-list-page mx-auto"
+    style="max-width: 1120px; width: 100%;"
+  >
     <div class="d-flex align-start justify-space-between mb-6">
       <div>
         <h1 class="text-h5 font-weight-bold mb-1">Tenantlar</h1>
