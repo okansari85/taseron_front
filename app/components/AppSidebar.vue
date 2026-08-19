@@ -7,22 +7,20 @@
     width="264"
     class="taseron-sidebar"
   >
-    <!-- Logo -->
     <div class="logo-row" :class="rail ? 'justify-center px-0' : 'px-4'">
       <div class="logo-badge">
-        <v-icon icon="mdi-sitemap-outline" size="20" color="white" />
+        <v-icon icon="mdi-sitemap-outline" size="20" color="primary" />
       </div>
       <transition name="fade">
         <div v-if="!rail" class="ml-3 logo-text">
-          <div class="text-white font-weight-bold text-body-2">TASERON</div>
-          <div class="text-caption sidebar-muted logo-sub">MANAGEMENT</div>
+          <div class="text-high-emphasis font-weight-bold text-body-2">TASERON</div>
+          <div class="text-caption text-medium-emphasis logo-sub">MANAGEMENT</div>
         </div>
       </transition>
     </div>
 
     <v-divider class="sidebar-divider" />
 
-    <!-- Nav -->
     <v-list nav density="comfortable" class="px-2 mt-2 flex-grow-1">
       <v-list-item
         v-for="item in navItems"
@@ -35,7 +33,6 @@
       />
     </v-list>
 
-    <!-- User -->
     <template #append>
       <v-divider class="sidebar-divider" />
       <div class="pa-3">
@@ -45,11 +42,11 @@
           </v-avatar>
           <transition name="fade">
             <div v-if="!rail" class="ml-3 flex-grow-1 overflow-hidden">
-              <div class="text-white text-body-2 font-weight-medium text-truncate">Ahmet Yılmaz</div>
-              <div class="text-caption sidebar-muted text-truncate">Sistem Yöneticisi</div>
+              <div class="text-high-emphasis text-body-2 font-weight-medium text-truncate">Ahmet Yılmaz</div>
+              <div class="text-caption text-medium-emphasis text-truncate">Sistem Yöneticisi</div>
             </div>
           </transition>
-          <v-icon v-if="!rail" icon="mdi-chevron-down" size="16" class="sidebar-muted" />
+          <v-icon v-if="!rail" icon="mdi-chevron-down" size="16" class="text-medium-emphasis" />
         </div>
       </div>
     </template>
@@ -77,8 +74,8 @@ const navItems = [
 
 <style scoped>
 .taseron-sidebar {
-  background-color: #14162c !important;
-  border-right: none !important;
+  background-color: #fff !important;
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
 }
 .logo-row {
   display: flex;
@@ -90,7 +87,7 @@ const navItems = [
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #6d5dfb, #8b7bff);
+  background: rgba(var(--v-theme-primary), 0.10);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,24 +96,21 @@ const navItems = [
 .logo-sub {
   letter-spacing: 0.12em;
 }
-.sidebar-muted {
-  color: rgba(255, 255, 255, 0.5) !important;
-}
 .sidebar-divider {
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(var(--v-theme-on-surface), 0.08) !important;
 }
 .nav-item {
-  color: rgba(255, 255, 255, 0.62) !important;
+  color: rgba(var(--v-theme-on-surface), 0.72) !important;
 }
 .nav-item :deep(.v-icon) {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--v-theme-on-surface), 0.62);
 }
 .nav-item--active {
-  background-color: #6d5dfb !important;
-  color: #fff !important;
+  background: rgba(var(--v-theme-primary), 0.10) !important;
+  color: rgb(var(--v-theme-primary)) !important;
 }
 .nav-item--active :deep(.v-icon) {
-  color: #fff !important;
+  color: rgb(var(--v-theme-primary)) !important;
 }
 .user-chip {
   padding: 6px;
