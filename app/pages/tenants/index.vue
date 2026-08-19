@@ -115,7 +115,7 @@
             v-for="item in items"
             :key="item.raw.id"
             rounded="lg"
-            elevation="2"
+            elevation="0"
             border
             class="tenant-card px-4 py-3"
             @click="openTenant(item.raw)"
