@@ -1,62 +1,58 @@
 <template>
-  <v-container fluid class="py-8 page-container">
+  <div class="mx-auto w-full max-w-[1200px]">
     <div class="mb-8">
-      <h1 class="text-h5 font-weight-bold">Yeni Tenant Oluştur</h1>
-      <p class="text-body-2 text-medium-emphasis mt-1">{{ subtitle }}</p>
+      <h1 class="text-title-sm font-semibold text-gray-800 dark:text-white/90">Yeni Tenant Oluştur</h1>
+      <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
     </div>
 
     <TenantStepper :current="stepIndex" />
 
-    <v-row>
-      <v-col cols="12" lg="8">
-        <v-card rounded="xl" elevation="0" class="pa-8 border-card">
-          <StepTenantInfo v-if="stepIndex === 0" />
-          <StepOrganization v-else-if="stepIndex === 1" />
-          <StepReview v-else :submitted="submitted" />
-        </v-card>
-      </v-col>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <section class="lg:col-span-8 rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs md:p-8 dark:border-gray-800 dark:bg-white/[0.03]">
+        <StepTenantInfo v-if="stepIndex === 0" />
+        <StepOrganization v-else-if="stepIndex === 1" />
+        <StepReview v-else :submitted="submitted" />
+      </section>
 
-      <v-col cols="12" lg="4">
-        <div class="sticky-panel">
-          <PanelTenantInfo v-if="stepIndex === 0" />
-          <PanelOrgPreview v-else-if="stepIndex === 1" />
-          <PanelOrgPreview v-else review-mode />
-        </div>
-      </v-col>
-    </v-row>
+      <aside class="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+        <PanelTenantInfo v-if="stepIndex === 0" />
+        <PanelOrgPreview v-else-if="stepIndex === 1" />
+        <PanelOrgPreview v-else review-mode />
+      </aside>
+    </div>
 
-    <div class="wizard-actions">
-      <div>
-        <v-btn
-          v-if="stepIndex > 0"
-          variant="outlined"
-          prepend-icon="mdi-arrow-left"
-          @click="goBack"
+    <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+      <button
+        type="button"
+        class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-white/[0.03]"
+        @click="stepIndex > 0 ? goBack() : cancel"
+      >
+        {{ stepIndex > 0 ? '← Geri' : 'İptal' }}
+      </button>
+
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <button
+          v-if="stepIndex === STEPS_COUNT - 1"
+          type="button"
+          class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-white/[0.03]"
         >
-          Geri
-        </v-btn>
-        <v-btn v-else variant="outlined">İptal</v-btn>
-      </div>
-
-      <div class="d-flex align-center" style="gap: 12px">
-        <v-btn v-if="stepIndex === STEPS_COUNT - 1" variant="outlined">
           İptal
-        </v-btn>
-        <v-btn
+        </button>
+
+        <TailAdminButton
           v-if="stepIndex < STEPS_COUNT - 1"
-          color="primary"
-          append-icon="mdi-arrow-right"
           :disabled="!canGoNext"
           @click="goNext"
         >
-          Devam Et
-        </v-btn>
-        <v-btn v-else color="primary" append-icon="mdi-check" @click="submit">
-          Tenant'ı Oluştur
-        </v-btn>
+          Devam Et →
+        </TailAdminButton>
+
+        <TailAdminButton v-else @click="submit">
+          Tenant'ı Oluştur ✓
+        </TailAdminButton>
       </div>
     </div>
-  </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -65,6 +61,7 @@ const STEPS_COUNT = 3
 const form = useTenantForm()
 const stepIndex = useTenantStep()
 const submitted = ref(false)
+const router = useRouter()
 
 const subtitle = computed(() => {
   if (stepIndex.value === 0) return 'Yeni bir tenant oluşturmak için adımları takip edin.'
@@ -73,16 +70,21 @@ const subtitle = computed(() => {
 })
 
 const canGoNext = computed(() => {
-  if (stepIndex.value === 0) return form.value.tenantName.trim().length > 0
-  if (stepIndex.value === 1) return form.value.orgName.trim().length > 0
+  if (stepIndex.value === 0) return form.value.tenantName.trim().length > 0 && form.value.slug.trim().length > 0
+  if (stepIndex.value === 1) return form.value.orgName.trim().length > 0 && Boolean(form.value.onboardingType)
   return false
 })
 
 function goNext() {
-  if (stepIndex.value < STEPS_COUNT - 1) stepIndex.value++
+  if (stepIndex.value < STEPS_COUNT - 1 && canGoNext.value) stepIndex.value++
 }
+
 function goBack() {
   if (stepIndex.value > 0) stepIndex.value--
+}
+
+function cancel() {
+  router.push('/tenants')
 }
 
 function submit() {
@@ -102,10 +104,7 @@ function submit() {
             name: form.value.orgName,
             company_type: form.value.companyKind === 'sahis' ? 'individual' : 'corporate',
           },
-          location:
-            form.value.companyKind === 'sahis'
-              ? { name: `${form.value.orgName} - Merkez` }
-              : null,
+          location: form.value.companyKind === 'sahis' ? { name: `${form.value.orgName} - Merkez` } : null,
         }
       : {}),
     ...(form.value.onboardingType === 'brand'
@@ -123,31 +122,3 @@ function submit() {
   submitted.value = true
 }
 </script>
-
-<style scoped>
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.wizard-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid rgb(var(--v-theme-on-surface) / 0.08);
-}
-
-@media (max-width: 600px) {
-  .wizard-actions {
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .wizard-actions > :last-child {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-</style>
