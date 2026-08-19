@@ -7,31 +7,31 @@
 
     <div class="org-tree">
       <div class="tree-root tree-node tree-node--purple">
-        <v-icon icon="mdi-domain" size="22" color="primary" class="mr-3" />
-        <div>
-          <div class="text-body-2 font-weight-bold">{{ rootLabel }}</div>
-          <div class="text-caption font-weight-bold text-primary">ORGANIZATION</div>
+        <v-icon icon="mdi-domain" size="25" color="primary" />
+        <div class="tree-root-content">
+          <div class="tree-root-name">{{ rootLabel }}</div>
+          <div class="tree-root-type">ORGANIZATION</div>
         </div>
       </div>
 
       <template v-if="isCompany">
-        <div class="tree-connector tree-connector--vertical" />
+        <div class="tree-stem" />
 
-        <div class="tree-children" :class="{ 'tree-children--single': !isSahisSirketi }">
-          <div class="tree-branch" :class="{ 'tree-branch--single': !isSahisSirketi }">
+        <div class="tree-children">
+          <div class="tree-branch">
             <div class="tree-node tree-node--child tree-node--green">
-              <v-icon icon="mdi-domain" size="24" color="success" />
+              <v-icon icon="mdi-domain" size="25" color="success" />
               <div class="tree-child-name">{{ rootLabel }}</div>
-              <div class="text-caption font-weight-bold text-success">COMPANY</div>
+              <div class="tree-child-type text-success">COMPANY</div>
             </div>
           </div>
 
           <div v-if="isSahisSirketi" class="tree-branch">
             <div class="tree-node tree-node--child tree-node--amber">
-              <v-icon icon="mdi-map-marker" size="24" color="warning" />
+              <v-icon icon="mdi-map-marker" size="25" color="warning" />
               <div class="tree-child-name">{{ rootLabel }} - Merkez</div>
-              <div class="text-caption font-weight-bold text-warning">LOCATION</div>
-              <div class="text-caption text-medium-emphasis">Otomatik</div>
+              <div class="tree-child-type text-warning">LOCATION</div>
+              <span class="automatic-badge">Otomatik</span>
             </div>
           </div>
         </div>
@@ -99,43 +99,82 @@ const legend = [
 <style scoped>
 .org-tree {
   position: relative;
-  padding: 2px 0 0;
+  padding: 4px 0 0;
 }
 
 .tree-node {
+  box-sizing: border-box;
   border-radius: 9px;
-  border: 1px solid transparent;
+  box-shadow: none !important;
 }
 
 .tree-node--purple {
-  background: rgb(var(--v-theme-primary) / 0.08);
-  border-color: rgb(var(--v-theme-primary) / 0.12);
+  background: #f5f1ff;
+  border: 1px solid #eee8ff !important;
 }
 
 .tree-node--green {
-  background: rgb(var(--v-theme-success) / 0.06);
-  border-color: rgb(var(--v-theme-success) / 0.22);
+  background: #f1fbf5;
+  border: 1px solid #d8f0df !important;
 }
 
 .tree-node--amber {
-  background: rgb(var(--v-theme-warning) / 0.07);
-  border-color: rgb(var(--v-theme-warning) / 0.25);
+  background: #fff8ed;
+  border: 1px solid #f8e6c7 !important;
 }
 
 .tree-root {
   width: 160px;
   min-height: 58px;
   margin: 0 auto;
-  padding: 10px 14px;
+  padding: 9px 13px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.tree-connector--vertical {
+.tree-root-content {
+  min-width: 0;
+}
+
+.tree-root-name {
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #18213d;
+  white-space: nowrap;
+}
+
+.tree-root-type,
+.tree-child-type {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: 0.1px;
+}
+
+.tree-root-type {
+  color: rgb(var(--v-theme-primary));
+}
+
+.tree-stem {
+  position: relative;
   width: 1px;
   height: 28px;
   margin: 0 auto;
   border-left: 1px dashed rgb(var(--v-theme-primary) / 0.7);
+}
+
+.tree-stem::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 27px;
+  width: 214px;
+  border-top: 1px dashed rgb(var(--v-theme-primary) / 0.7);
+  transform: translateX(-50%);
 }
 
 .tree-children {
@@ -143,16 +182,7 @@ const legend = [
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
-  padding: 26px 0 0;
-}
-
-.tree-children::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 25%;
-  right: 25%;
-  border-top: 1px dashed rgb(var(--v-theme-primary) / 0.7);
+  padding-top: 25px;
 }
 
 .tree-branch {
@@ -163,15 +193,16 @@ const legend = [
 .tree-branch::before {
   content: '';
   position: absolute;
-  top: -26px;
+  top: -25px;
   left: 50%;
-  height: 26px;
+  height: 25px;
   border-left: 1px dashed rgb(var(--v-theme-primary) / 0.7);
 }
 
 .tree-node--child {
-  min-height: 105px;
-  padding: 12px 8px;
+  width: 100%;
+  min-height: 92px;
+  padding: 11px 8px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -182,26 +213,33 @@ const legend = [
 .tree-child-name {
   margin-top: 5px;
   font-size: 13px;
-  line-height: 1.25;
+  line-height: 1.2;
   font-weight: 700;
-  color: rgb(var(--v-theme-on-surface));
+  color: #18213d;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tree-children--single {
-  grid-template-columns: minmax(0, 1fr);
-  padding-left: 18%;
-  padding-right: 18%;
-}
-
-.tree-children--single::before {
-  left: 50%;
-  right: auto;
-  border-top: 0;
+.automatic-badge {
+  margin-top: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fff0d5;
+  color: #8b6425;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
 }
 
 @media (max-width: 600px) {
   .tree-root {
-    width: 100%;
+    width: 160px;
+  }
+
+  .tree-stem::after {
+    width: 50%;
   }
 
   .tree-children {
@@ -209,22 +247,9 @@ const legend = [
     gap: 12px;
   }
 
-  .tree-children::before {
+  .tree-children .tree-branch::before {
+    top: -25px;
     left: 50%;
-    right: auto;
-    height: 26px;
-    border-top: 0;
-    border-left: 1px dashed rgb(var(--v-theme-primary) / 0.7);
-  }
-
-  .tree-branch::before {
-    top: -26px;
-    left: 50%;
-  }
-
-  .tree-children--single {
-    padding-left: 0;
-    padding-right: 0;
   }
 }
 </style>
