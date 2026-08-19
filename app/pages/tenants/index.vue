@@ -12,9 +12,17 @@
       </div>
     </div>
 
-    <v-card class="mb-4 pa-3" rounded="lg" elevation="0" border>
-      <v-row align="center" dense>
-        <v-col cols="12" md="4">
+    <v-card
+      class="mb-4 px-3 py-2"
+      rounded="lg"
+      elevation="0"
+      border
+    >
+      <v-row
+        align="center"
+        class="ma-0"
+      >
+        <v-col cols="12" md="4" class="pa-1">
           <v-text-field
             v-model="search"
             placeholder="Tenant ara..."
@@ -26,7 +34,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="statusFilter"
             label="Durum"
@@ -38,7 +46,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="structureFilter"
             label="Kurumsal Yapı"
@@ -50,7 +58,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-select
             v-model="dateFilter"
             label="Oluşturulma Tarihi"
@@ -63,7 +71,7 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="2">
+        <v-col cols="12" sm="6" md="2" class="pa-1">
           <v-btn
             block
             color="primary"
