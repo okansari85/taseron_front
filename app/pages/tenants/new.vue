@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto w-full max-w-[1200px]">
+  <div class="mx-auto w-full max-w-[1400px]">
     <div class="mb-8">
       <h1 class="text-title-sm font-semibold text-gray-800 dark:text-white/90">Yeni Tenant Oluştur</h1>
       <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
