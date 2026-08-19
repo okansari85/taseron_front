@@ -117,93 +117,99 @@
             rounded="lg"
             elevation="2"
             border
-            class="tenant-card pa-4"
+            class="tenant-card px-4 py-3"
             @click="openTenant(item.raw)"
           >
-            <div class="d-flex align-center">
-              <v-avatar
-                size="44"
-                :color="getAvatarColor(item.raw.id)"
-                variant="tonal"
-                rounded="lg"
-                class="flex-shrink-0"
-              >
-                <span class="text-body-1 font-weight-bold">
-                  {{ getInitials(item.raw.name) }}
-                </span>
-              </v-avatar>
+            <v-row align="center" class="ma-0">
+              <v-col cols="12" md="4" class="pa-0 d-flex align-center">
+                <v-img
+                  :src="item.raw.logo"
+                  :alt="item.raw.name"
+                  width="72"
+                  max-width="72"
+                  height="42"
+                  contain
+                  class="flex-grow-0"
+                />
 
-              <div class="ml-4 min-w-0 flex-grow-1">
-                <div class="text-body-1 font-weight-semibold text-truncate">
-                  {{ item.raw.name }}
+                <div class="ml-4 min-w-0">
+                  <div class="text-body-2 font-weight-semibold text-truncate">
+                    {{ item.raw.name }}
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    #{{ item.raw.id }} · {{ item.raw.slug }}
+                  </div>
                 </div>
-                <div class="text-caption text-medium-emphasis mt-1">
-                  #{{ item.raw.id }} · {{ item.raw.slug }}
+              </v-col>
+
+              <v-col cols="12" md="2" class="pa-0">
+                <v-chip
+                  size="small"
+                  rounded="lg"
+                  variant="tonal"
+                  :color="getStructureColor(item.raw.onboarding_type)"
+                  :prepend-icon="getStructureIcon(item.raw.onboarding_type)"
+                  class="text-body-2 px-3"
+                >
+                  {{ getStructureLabel(item.raw.onboarding_type) }}
+                </v-chip>
+              </v-col>
+
+              <v-col cols="12" md="2" class="pa-0">
+                <v-chip
+                  size="small"
+                  rounded="lg"
+                  variant="tonal"
+                  :color="item.raw.status === 'active' ? 'success' : 'default'"
+                  class="text-body-2 px-3"
+                >
+                  <span class="status-dot mr-2" />
+                  {{ item.raw.status === 'active' ? 'Aktif' : 'Pasif' }}
+                </v-chip>
+              </v-col>
+
+              <v-col cols="12" md="3" class="pa-0">
+                <div class="d-flex align-center ga-2 text-caption text-medium-emphasis">
+                  <v-icon icon="mdi-calendar-outline" size="16" />
+                  {{ formatDate(item.raw.created_at) }}
                 </div>
-              </div>
+              </v-col>
 
-              <v-menu>
-                <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    icon="mdi-dots-vertical"
-                    variant="text"
-                    size="small"
-                    @click.stop
-                  />
-                </template>
+              <v-col cols="12" md="1" class="pa-0 d-flex justify-end">
+                <v-menu>
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon="mdi-dots-vertical"
+                      variant="text"
+                      size="small"
+                      @click.stop
+                    />
+                  </template>
 
-                <v-list density="compact">
-                  <v-list-item
-                    prepend-icon="mdi-eye-outline"
-                    title="Görüntüle"
-                    @click="openTenant(item.raw)"
-                  />
-                  <v-list-item
-                    prepend-icon="mdi-pencil-outline"
-                    title="Düzenle"
-                    @click="editTenant(item.raw)"
-                  />
-                  <v-divider class="my-1" />
-                  <v-list-item
-                    :prepend-icon="item.raw.status === 'active'
-                      ? 'mdi-close-circle-outline'
-                      : 'mdi-check-circle-outline'"
-                    :title="item.raw.status === 'active' ? 'Pasife Al' : 'Aktifleştir'"
-                    @click="toggleStatus(item.raw)"
-                  />
-                </v-list>
-              </v-list>
-            </div>
-
-            <div class="d-flex align-center ga-3 mt-4 flex-wrap">
-              <v-chip
-                size="small"
-                rounded="lg"
-                variant="tonal"
-                :color="getStructureColor(item.raw.onboarding_type)"
-                :prepend-icon="getStructureIcon(item.raw.onboarding_type)"
-                class="text-body-2 px-3"
-              >
-                {{ getStructureLabel(item.raw.onboarding_type) }}
-              </v-chip>
-
-              <v-chip
-                size="small"
-                rounded="lg"
-                variant="tonal"
-                :color="item.raw.status === 'active' ? 'success' : 'default'"
-                class="text-body-2 px-3"
-              >
-                <span class="status-dot mr-2" />
-                {{ item.raw.status === 'active' ? 'Aktif' : 'Pasif' }}
-              </v-chip>
-
-              <span class="text-caption text-medium-emphasis ml-auto d-flex align-center ga-2">
-                <v-icon icon="mdi-calendar-outline" size="16" />
-                {{ formatDate(item.raw.created_at) }}
-              </span>
-            </div>
+                  <v-list density="compact">
+                    <v-list-item
+                      prepend-icon="mdi-eye-outline"
+                      title="Görüntüle"
+                      @click="openTenant(item.raw)"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-pencil-outline"
+                      title="Düzenle"
+                      @click="editTenant(item.raw)"
+                    />
+                    <v-divider class="my-1" />
+                    <v-list-item
+                      :prepend-icon="item.raw.status === 'active'
+                        ? 'mdi-close-circle-outline'
+                        : 'mdi-check-circle-outline'"
+                      :title="item.raw.status === 'active' ? 'Pasife Al' : 'Aktifleştir'"
+                      @click="toggleStatus(item.raw)"
+                    />
+                  </v-list>
+                </v-menu>
+              </v-col>
+            </v-row>
           </v-card>
 
           <v-card
@@ -264,6 +270,7 @@ interface Tenant {
   id: number
   name: string
   slug: string
+  logo: string
   status: 'active' | 'passive'
   onboarding_type: 'holding' | 'group' | 'company' | 'brand'
   created_at: string
@@ -305,13 +312,69 @@ const pageSizeOptions = [
 ]
 
 const tenants = ref<Tenant[]>([
-  { id: 1, name: 'Koç Holding', slug: 'koc-holding', status: 'active', onboarding_type: 'holding', created_at: '2025-05-18T14:32:00' },
-  { id: 2, name: 'MADO', slug: 'mado', status: 'active', onboarding_type: 'company', created_at: '2025-05-17T11:20:00' },
-  { id: 3, name: 'Arçelik A.Ş.', slug: 'arcelik', status: 'active', onboarding_type: 'company', created_at: '2025-05-16T09:15:00' },
-  { id: 4, name: 'İpek Gıda', slug: 'ipek-gida', status: 'passive', onboarding_type: 'group', created_at: '2025-05-15T16:45:00' },
-  { id: 5, name: 'Tepe Savunma', slug: 'tepe-savunma', status: 'active', onboarding_type: 'company', created_at: '2025-05-14T10:05:00' },
-  { id: 6, name: 'Beko', slug: 'beko', status: 'active', onboarding_type: 'brand', created_at: '2025-05-13T13:30:00' },
-  { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
+  {
+    id: 1,
+    name: 'Koç Holding',
+    slug: 'koc-holding',
+    logo: 'https://www.google.com/s2/favicons?domain=koc.com.tr&sz=128',
+    status: 'active',
+    onboarding_type: 'holding',
+    created_at: '2025-05-18T14:32:00',
+  },
+  {
+    id: 2,
+    name: 'MADO',
+    slug: 'mado',
+    logo: 'https://www.google.com/s2/favicons?domain=mado.com.tr&sz=128',
+    status: 'active',
+    onboarding_type: 'company',
+    created_at: '2025-05-17T11:20:00',
+  },
+  {
+    id: 3,
+    name: 'Arçelik A.Ş.',
+    slug: 'arcelik',
+    logo: 'https://www.google.com/s2/favicons?domain=arcelik.com.tr&sz=128',
+    status: 'active',
+    onboarding_type: 'company',
+    created_at: '2025-05-16T09:15:00',
+  },
+  {
+    id: 4,
+    name: 'İpek Gıda',
+    slug: 'ipek-gida',
+    logo: 'https://www.google.com/s2/favicons?domain=ipek.com.tr&sz=128',
+    status: 'passive',
+    onboarding_type: 'group',
+    created_at: '2025-05-15T16:45:00',
+  },
+  {
+    id: 5,
+    name: 'Tepe Savunma',
+    slug: 'tepe-savunma',
+    logo: 'https://www.google.com/s2/favicons?domain=tepesavunma.com.tr&sz=128',
+    status: 'active',
+    onboarding_type: 'company',
+    created_at: '2025-05-14T10:05:00',
+  },
+  {
+    id: 6,
+    name: 'Beko',
+    slug: 'beko',
+    logo: 'https://www.google.com/s2/favicons?domain=beko.com.tr&sz=128',
+    status: 'active',
+    onboarding_type: 'brand',
+    created_at: '2025-05-13T13:30:00',
+  },
+  {
+    id: 7,
+    name: 'Setur',
+    slug: 'setur',
+    logo: 'https://www.google.com/s2/favicons?domain=setur.com.tr&sz=128',
+    status: 'passive',
+    onboarding_type: 'company',
+    created_at: '2025-05-12T08:50:00',
+  },
 ])
 
 const filteredTenants = computed(() => {
@@ -349,21 +412,6 @@ watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => {
 watch(pageCount, (count) => {
   if (page.value > count) page.value = count
 })
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toLocaleUpperCase('tr-TR')
-}
-
-function getAvatarColor(id: number) {
-  const colors = ['primary', 'success', 'info', 'warning', 'primary', 'error', 'info']
-  return colors[(id - 1) % colors.length]
-}
 
 function getStructureLabel(type: Tenant['onboarding_type']) {
   return {
