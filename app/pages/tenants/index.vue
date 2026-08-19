@@ -3,173 +3,259 @@
     class="tenant-list-page mx-auto px-0"
     style="max-width: 1120px; width: 100%;"
   >
-    <div class="mb-6">
-      <div class="text-h5 font-weight-bold">Tenantlar</div>
-      <div class="text-body-2 text-medium-emphasis mt-1">
-        Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
+    <div class="d-flex align-center justify-space-between mb-6">
+      <div>
+        <div class="text-h5 font-weight-bold">Tenantlar</div>
+        <div class="text-body-2 text-medium-emphasis mt-1">
+          Sistemde tanımlı tenant hesaplarını görüntüleyin ve yönetin.
+        </div>
       </div>
+
+      <v-btn
+        color="primary"
+        rounded="md"
+        prepend-icon="mdi-plus"
+        class="text-body-2 text-none font-weight-medium"
+        height="40"
+        @click="goToCreate"
+      >
+        Yeni Tenant
+      </v-btn>
     </div>
 
-    <v-row align="center" dense class="ma-0 mb-5">
-      <v-col cols="12" md="4" class="pa-1">
-        <v-text-field
-          v-model="search"
-          placeholder="Tenant ara..."
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
+    <v-card class="mb-5 pa-4" rounded="md" elevation="0" border>
+      <v-row align="center" dense class="ma-0">
+        <v-col cols="12" md="4" class="pa-1">
+          <v-text-field
+            v-model="search"
+            placeholder="Tenant ara..."
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+          />
+        </v-col>
 
-      <v-col cols="6" sm="4" md="2" class="pa-1">
-        <v-select v-model="statusFilter" label="Durum" :items="statusOptions" variant="outlined" density="compact" hide-details clearable>
-          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-        </v-select>
-      </v-col>
+        <v-col cols="12" sm="6" md="2" class="pa-1">
+          <v-select
+            v-model="statusFilter"
+            label="Durum"
+            :items="statusOptions"
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
+        </v-col>
 
-      <v-col cols="6" sm="4" md="2" class="pa-1">
-        <v-select v-model="structureFilter" label="Kurumsal Yapı" :items="structureOptions" variant="outlined" density="compact" hide-details clearable>
-          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-        </v-select>
-      </v-col>
+        <v-col cols="12" sm="6" md="2" class="pa-1">
+          <v-select
+            v-model="structureFilter"
+            label="Kurumsal Yapı"
+            :items="structureOptions"
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
+        </v-col>
 
-      <v-col cols="12" sm="4" md="2" class="pa-1">
-        <v-select v-model="dateFilter" label="Oluşturulma Tarihi" :items="dateOptions" prepend-inner-icon="mdi-calendar-outline" variant="outlined" density="compact" hide-details clearable>
-          <template #selection="{ item }"><span class="text-caption">{{ item.title }}</span></template>
-        </v-select>
-      </v-col>
+        <v-col cols="12" sm="6" md="2" class="pa-1">
+          <v-select
+            v-model="dateFilter"
+            label="Oluşturulma Tarihi"
+            :items="dateOptions"
+            prepend-inner-icon="mdi-calendar-outline"
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+          >
+            <template #selection="{ item }">
+              <span class="text-caption">{{ item.title }}</span>
+            </template>
+          </v-select>
+        </v-col>
 
-      <v-col cols="12" md="2" class="pa-1 d-flex justify-md-end">
-        <v-btn
-          color="primary"
-          rounded="md"
-          prepend-icon="mdi-plus"
-          class="text-body-2 text-none font-weight-medium"
-          height="40"
-          block
-          @click="goToCreate"
-        >
-          Yeni Tenant
-        </v-btn>
-      </v-col>
-    </v-row>
+        <v-col cols="12" md="2" class="pa-1">
+          <v-btn
+            color="primary"
+            rounded="md"
+            prepend-icon="mdi-plus"
+            class="text-body-2 text-none font-weight-medium"
+            height="40"
+            block
+            @click="goToCreate"
+          >
+            Yeni Tenant
+          </v-btn>
+        </v-col>
+      </v-row>
+    </v-card>
 
-    <v-card rounded="md" elevation="0" border class="overflow-hidden">
-      <v-table hover>
-        <thead class="bg-grey-lighten-5">
-          <tr>
-            <th class="text-body-2 font-weight-bold text-high-emphasis">Tenant Adı</th>
-            <th class="text-body-2 font-weight-bold text-high-emphasis">Slug</th>
-            <th class="text-body-2 font-weight-bold text-high-emphasis">Kurumsal Yapı</th>
-            <th class="text-body-2 font-weight-bold text-high-emphasis">Durum</th>
-            <th class="text-body-2 font-weight-bold text-high-emphasis">Oluşturulma Tarihi</th>
-            <th class="text-body-2 font-weight-bold text-high-emphasis text-center">İşlemler</th>
-          </tr>
-        </thead>
+    <v-data-iterator
+      v-model:page="page"
+      :items="filteredTenants"
+      :items-per-page="itemsPerPage"
+      :page-count="pageCount"
+      hide-default-footer
+    >
+      <template #default="{ items }">
+        <div class="d-flex flex-column ga-3">
+          <v-card
+            v-for="item in items"
+            :key="item.raw.id"
+            rounded="md"
+            elevation="0"
+            border
+            class="tenant-card pa-4"
+            @click="openTenant(item.raw)"
+          >
+            <div class="d-flex align-center">
+              <v-avatar
+                size="44"
+                :color="getAvatarColor(item.raw.id)"
+                variant="tonal"
+                rounded="lg"
+                class="flex-shrink-0"
+              >
+                <span class="text-body-1 font-weight-bold">
+                  {{ getInitials(item.raw.name) }}
+                </span>
+              </v-avatar>
 
-        <tbody>
-          <tr v-for="tenant in paginatedTenants" :key="tenant.id" class="tenant-row" @click="openTenant(tenant)">
-            <td class="py-3">
-              <div class="d-flex align-center ga-3">
-                <v-avatar size="36" :color="getAvatarColor(tenant.id)" variant="tonal" rounded="lg">
-                  <span class="font-weight-bold text-caption">{{ getInitials(tenant.name) }}</span>
-                </v-avatar>
-                <div class="min-w-0">
-                  <div class="text-body-2 font-weight-semibold text-truncate">{{ tenant.name }}</div>
-                  <div class="text-caption text-medium-emphasis">#{{ tenant.id }}</div>
+              <div class="ml-4 min-w-0 flex-grow-1">
+                <div class="text-body-1 font-weight-semibold text-truncate">
+                  {{ item.raw.name }}
+                </div>
+                <div class="text-caption text-medium-emphasis mt-1">
+                  #{{ item.raw.id }} · {{ item.raw.slug }}
                 </div>
               </div>
-            </td>
 
-            <td class="py-3 text-caption text-medium-emphasis">{{ tenant.slug }}</td>
-
-            <td class="py-3">
-              <v-chip
-                size="small"
-                rounded="lg"
-                variant="tonal"
-                :color="getStructureColor(tenant.onboarding_type)"
-                :prepend-icon="getStructureIcon(tenant.onboarding_type)"
-                class="text-body-2 px-3 py-1"
-              >
-                {{ getStructureLabel(tenant.onboarding_type) }}
-              </v-chip>
-            </td>
-
-            <td class="py-3">
-              <v-chip
-                size="small"
-                rounded="lg"
-                variant="tonal"
-                :color="tenant.status === 'active' ? 'success' : 'default'"
-                class="text-body-2 px-3 py-1"
-              >
-                <span class="status-dot mr-2" />
-                {{ tenant.status === 'active' ? 'Aktif' : 'Pasif' }}
-              </v-chip>
-            </td>
-
-            <td class="py-3 text-caption text-medium-emphasis">{{ formatDate(tenant.created_at) }}</td>
-
-            <td class="py-3 text-center">
               <v-menu>
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" icon="mdi-dots-vertical" variant="text" size="small" @click.stop />
+                  <v-btn
+                    v-bind="props"
+                    icon="mdi-dots-vertical"
+                    variant="text"
+                    size="small"
+                    @click.stop
+                  />
                 </template>
+
                 <v-list density="compact">
-                  <v-list-item prepend-icon="mdi-eye-outline" title="Görüntüle" @click="openTenant(tenant)" />
-                  <v-list-item prepend-icon="mdi-pencil-outline" title="Düzenle" @click="editTenant(tenant)" />
+                  <v-list-item
+                    prepend-icon="mdi-eye-outline"
+                    title="Görüntüle"
+                    @click="openTenant(item.raw)"
+                  />
+                  <v-list-item
+                    prepend-icon="mdi-pencil-outline"
+                    title="Düzenle"
+                    @click="editTenant(item.raw)"
+                  />
                   <v-divider class="my-1" />
                   <v-list-item
-                    :prepend-icon="tenant.status === 'active' ? 'mdi-close-circle-outline' : 'mdi-check-circle-outline'"
-                    :title="tenant.status === 'active' ? 'Pasife Al' : 'Aktifleştir'"
-                    @click="toggleStatus(tenant)"
+                    :prepend-icon="item.raw.status === 'active'
+                      ? 'mdi-close-circle-outline'
+                      : 'mdi-check-circle-outline'"
+                    :title="item.raw.status === 'active' ? 'Pasife Al' : 'Aktifleştir'"
+                    @click="toggleStatus(item.raw)"
                   />
                 </v-list>
-              </v-menu>
-            </td>
-          </tr>
+              </v-list>
+            </template>
 
-          <tr v-if="paginatedTenants.length === 0">
-            <td colspan="6" class="py-12 text-center">
-              <v-icon icon="mdi-domain-off" size="36" class="mb-3 text-medium-emphasis" />
-              <div class="text-body-2 font-weight-medium">Tenant bulunamadı</div>
-              <div class="text-caption text-medium-emphasis mt-1">Arama veya filtre kriterlerinizi değiştirmeyi deneyin.</div>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
+            <div class="d-flex align-center ga-3 mt-4 flex-wrap">
+              <v-chip
+                size="small"
+                rounded="lg"
+                variant="tonal"
+                :color="getStructureColor(item.raw.onboarding_type)"
+                :prepend-icon="getStructureIcon(item.raw.onboarding_type)"
+                class="text-body-2 px-3"
+              >
+                {{ getStructureLabel(item.raw.onboarding_type) }}
+              </v-chip>
 
-      <v-divider />
+              <v-chip
+                size="small"
+                rounded="lg"
+                variant="tonal"
+                :color="item.raw.status === 'active' ? 'success' : 'default'"
+                class="text-body-2 px-3"
+              >
+                <span class="status-dot mr-2" />
+                {{ item.raw.status === 'active' ? 'Aktif' : 'Pasif' }}
+              </v-chip>
 
-      <div class="d-flex align-center justify-space-between px-4 py-3">
-        <span class="text-caption text-medium-emphasis">Toplam {{ totalTenantCount }} kayıt</span>
+              <span class="text-caption text-medium-emphasis ml-auto d-flex align-center ga-2">
+                <v-icon icon="mdi-calendar-outline" size="16" />
+                {{ formatDate(item.raw.created_at) }}
+              </span>
+            </div>
+          </v-card>
 
-        <v-pagination
-          v-model="page"
-          :length="pageCount"
-          :total-visible="5"
-          density="comfortable"
-          rounded="circle"
-        />
+          <v-card
+            v-if="items.length === 0"
+            rounded="md"
+            elevation="0"
+            border
+            class="pa-12 text-center"
+          >
+            <v-icon
+              icon="mdi-domain-off"
+              size="36"
+              class="mb-3 text-medium-emphasis"
+            />
+            <div class="text-body-2 font-weight-medium">Tenant bulunamadı</div>
+            <div class="text-caption text-medium-emphasis mt-1">
+              Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
+            </div>
+          </v-card>
+        </div>
+      </template>
+    </v-data-iterator>
 
-        <v-select
-          v-model="itemsPerPage"
-          :items="pageSizeOptions"
-          item-title="title"
-          item-value="value"
-          variant="outlined"
-          density="comfortable"
-          hide-details
-          max-width="128"
-          class="text-caption flex-grow-0"
-        >
-          <template #selection="{ item }"><span class="text-caption">{{ item.title }} / sayfa</span></template>
-        </v-select>
-      </div>
-    </v-card>
+    <div class="d-flex align-center justify-space-between px-1 mt-4">
+      <span class="text-caption text-medium-emphasis">
+        Toplam {{ totalTenantCount }} kayıt
+      </span>
+
+      <v-pagination
+        v-model="page"
+        :length="pageCount"
+        :total-visible="5"
+        density="comfortable"
+        rounded="circle"
+      />
+
+      <v-select
+        v-model="itemsPerPage"
+        :items="pageSizeOptions"
+        item-title="title"
+        item-value="value"
+        variant="outlined"
+        density="comfortable"
+        hide-details
+        max-width="128"
+        class="text-caption flex-grow-0"
+      >
+        <template #selection="{ item }">
+          <span class="text-caption">{{ item.title }} / sayfa</span>
+        </template>
+      </v-select>
+    </div>
   </v-container>
 </template>
 
@@ -230,25 +316,48 @@ const tenants = ref<Tenant[]>([
 
 const filteredTenants = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('tr-TR')
+
   return tenants.value.filter((tenant) => {
-    const matchesSearch = !query || tenant.name.toLocaleLowerCase('tr-TR').includes(query) || tenant.slug.toLocaleLowerCase('tr-TR').includes(query)
+    const matchesSearch =
+      !query ||
+      tenant.name.toLocaleLowerCase('tr-TR').includes(query) ||
+      tenant.slug.toLocaleLowerCase('tr-TR').includes(query)
+
     const matchesStatus = !statusFilter.value || tenant.status === statusFilter.value
     const matchesStructure = !structureFilter.value || tenant.onboarding_type === structureFilter.value
+
     return matchesSearch && matchesStatus && matchesStructure
   })
 })
-const hasFilters = computed(() => Boolean(search.value || statusFilter.value || structureFilter.value || dateFilter.value))
-const pageCount = computed(() => hasFilters.value ? Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value)) : 3)
-const paginatedTenants = computed(() => {
-  const start = (page.value - 1) * itemsPerPage.value
-  return filteredTenants.value.slice(start, start + itemsPerPage.value)
+
+const hasFilters = computed(() => Boolean(
+  search.value ||
+  statusFilter.value ||
+  structureFilter.value ||
+  dateFilter.value,
+))
+
+const pageCount = computed(() => {
+  const total = filteredTenants.value.length
+  return Math.max(1, Math.ceil(total / itemsPerPage.value))
 })
 
-watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => { page.value = 1 })
-watch(pageCount, (count) => { if (page.value > count) page.value = count })
+watch([search, statusFilter, structureFilter, dateFilter, itemsPerPage], () => {
+  page.value = 1
+})
+
+watch(pageCount, (count) => {
+  if (page.value > count) page.value = count
+})
 
 function getInitials(name: string) {
-  return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toLocaleUpperCase('tr-TR')
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toLocaleUpperCase('tr-TR')
 }
 
 function getAvatarColor(id: number) {
@@ -257,30 +366,62 @@ function getAvatarColor(id: number) {
 }
 
 function getStructureLabel(type: Tenant['onboarding_type']) {
-  return { holding: 'Holding', group: 'Grup', company: 'Şirket', brand: 'Marka' }[type]
+  return {
+    holding: 'Holding',
+    group: 'Grup',
+    company: 'Şirket',
+    brand: 'Marka',
+  }[type]
 }
 
 function getStructureColor(type: Tenant['onboarding_type']) {
-  return { holding: 'primary', group: 'warning', company: 'success', brand: 'info' }[type]
+  return {
+    holding: 'primary',
+    group: 'warning',
+    company: 'success',
+    brand: 'info',
+  }[type]
 }
 
 function getStructureIcon(type: Tenant['onboarding_type']) {
-  return { holding: 'mdi-bank-outline', group: 'mdi-account-group-outline', company: 'mdi-domain', brand: 'mdi-tag-outline' }[type]
+  return {
+    holding: 'mdi-bank-outline',
+    group: 'mdi-account-group-outline',
+    company: 'mdi-domain',
+    brand: 'mdi-tag-outline',
+  }[type]
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
 
-function goToCreate() { router.push('/tenants/new') }
-function openTenant(tenant: Tenant) { router.push(`/tenants/${tenant.id}`) }
-function editTenant(tenant: Tenant) { router.push(`/tenants/${tenant.id}/edit`) }
-function toggleStatus(tenant: Tenant) { tenant.status = tenant.status === 'active' ? 'passive' : 'active' }
+function goToCreate() {
+  router.push('/tenants/new')
+}
+
+function openTenant(tenant: Tenant) {
+  router.push(`/tenants/${tenant.id}`)
+}
+
+function editTenant(tenant: Tenant) {
+  router.push(`/tenants/${tenant.id}/edit`)
+}
+
+function toggleStatus(tenant: Tenant) {
+  tenant.status = tenant.status === 'active' ? 'passive' : 'active'
+}
 </script>
 
 <style>
 .tenant-list-page { width: 100%; }
-.tenant-row { cursor: pointer; }
-.tenant-row:hover { background: rgba(var(--v-theme-primary), 0.04); }
+.tenant-card { cursor: pointer; }
+.tenant-card:hover { border-color: rgba(var(--v-theme-primary), 0.24); }
 .status-dot { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: currentColor; }
 </style>
