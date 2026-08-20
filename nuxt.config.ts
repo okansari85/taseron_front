@@ -7,6 +7,11 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: 'http://localhost:8000',
+    },
+  },
   app: {
     head: {
       title: 'Taseron Management',
