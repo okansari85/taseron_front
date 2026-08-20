@@ -1,3 +1,5 @@
+import { apiClient } from '~/api/client'
+
 export type AuthUser = {
   id: number
   name: string
