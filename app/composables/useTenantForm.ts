@@ -5,7 +5,7 @@ export interface TenantFormState {
   status: 'active' | 'passive'
   orgName: string
   orgNameTouched: boolean
-  onboardingType: 'holding' | 'group' | 'company' | 'brand' | null
+  onboardingType: 'holding' | 'group' | 'company' | null
   companyKind: 'tuzel' | 'sahis'
 }
 
