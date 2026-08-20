@@ -7,6 +7,8 @@ export interface TenantFormState {
   orgNameTouched: boolean
   onboardingType: 'holding' | 'group' | 'company' | null
   companyKind: 'tuzel' | 'sahis'
+  logoFile: File | null
+  logoPreview: string
 }
 
 export function useTenantForm() {
@@ -19,6 +21,8 @@ export function useTenantForm() {
     orgNameTouched: false,
     onboardingType: null,
     companyKind: 'sahis',
+    logoFile: null,
+    logoPreview: '',
   }))
 }
 
