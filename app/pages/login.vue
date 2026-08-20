@@ -2,16 +2,26 @@
 import { ref } from 'vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'auth',
 })
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const showPassword = ref(false)
+const errorMessage = ref('')
 
-const handleSubmit = () => {
-  // Auth/Sanctum connection will be wired next.
+const auth = useAuth()
+
+const handleSubmit = async () => {
+  errorMessage.value = ''
+
+  try {
+    await auth.login(email.value, password.value)
+    await navigateTo('/')
+  } catch (error: any) {
+    errorMessage.value = error?.data?.message || 'E-posta veya şifre hatalı.'
+  }
 }
 </script>
 
@@ -62,7 +72,13 @@ const handleSubmit = () => {
               <button type="button" class="text-sm font-semibold text-indigo-600 transition hover:text-indigo-700">Şifremi unuttum?</button>
             </div>
 
-            <button type="submit" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20">Giriş Yap</button>
+            <p v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {{ errorMessage }}
+            </p>
+
+            <button type="submit" :disabled="auth.loading.value" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60">
+              {{ auth.loading.value ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
+            </button>
 
             <p class="text-sm text-slate-600">
               Hesabınız yok mu?
