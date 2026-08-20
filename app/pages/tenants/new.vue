@@ -21,6 +21,10 @@
       </aside>
     </div>
 
+    <p v-if="tenantStore.error" class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+      {{ tenantStore.error }}
+    </p>
+
     <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
       <button
         type="button"
@@ -35,6 +39,7 @@
           v-if="stepIndex === STEPS_COUNT - 1"
           type="button"
           class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-white/[0.03]"
+          :disabled="tenantStore.saving"
           @click="cancel"
         >
           İptal
@@ -48,8 +53,8 @@
           Devam Et →
         </TailAdminButton>
 
-        <TailAdminButton v-else @click="submit">
-          Tenant'ı Oluştur ✓
+        <TailAdminButton v-else :disabled="tenantStore.saving" @click="submit">
+          {{ tenantStore.saving ? 'Oluşturuluyor...' : "Tenant'ı Oluştur ✓" }}
         </TailAdminButton>
       </div>
     </div>
@@ -57,12 +62,15 @@
 </template>
 
 <script setup lang="ts">
+import type { TenantOnboardingPayload } from '~/types/tenant'
+
 const STEPS_COUNT = 3
 
 const form = useTenantForm()
 const stepIndex = useTenantStep()
 const submitted = ref(false)
 const router = useRouter()
+const tenantStore = useTenantStore()
 
 const subtitle = computed(() => {
   if (stepIndex.value === 0) return 'Yeni bir tenant oluşturmak için adımları takip edin.'
@@ -77,10 +85,12 @@ const canGoNext = computed(() => {
 })
 
 function goNext() {
+  tenantStore.error = null
   if (stepIndex.value < STEPS_COUNT - 1 && canGoNext.value) stepIndex.value++
 }
 
 function goBack() {
+  tenantStore.error = null
   if (stepIndex.value > 0) stepIndex.value--
 }
 
@@ -88,38 +98,38 @@ function cancel() {
   router.push('/tenants')
 }
 
-function submit() {
-  const payload = {
+async function submit() {
+  if (tenantStore.saving || !form.value.onboardingType) return
+
+  const payload: TenantOnboardingPayload = {
     onboarding_type: form.value.onboardingType,
     tenant: {
-      name: form.value.tenantName,
-      slug: form.value.slug,
+      name: form.value.tenantName.trim(),
+      slug: form.value.slug.trim(),
       status: form.value.status,
     },
     organization: {
-      name: form.value.orgName,
+      name: form.value.orgName.trim(),
     },
-    ...(form.value.onboardingType === 'company'
-      ? {
-          company: {
-            name: form.value.orgName,
-            company_type: form.value.companyKind === 'sahis' ? 'individual' : 'corporate',
-          },
-          location: form.value.companyKind === 'sahis' ? { name: `${form.value.orgName} - Merkez` } : null,
-        }
-      : {}),
-    ...(form.value.onboardingType === 'brand'
-      ? {
-          brand: {
-            name: form.value.orgName,
-          },
-        }
-      : {}),
   }
 
-  // TODO: mevcut tenant-onboarding API bağlantısına bu payload gönderilecek.
-  // eslint-disable-next-line no-console
-  console.log('Tenant payload', payload)
-  submitted.value = true
+  if (form.value.onboardingType === 'company') {
+    payload.company = {
+      name: form.value.orgName.trim(),
+      company_type: form.value.companyKind === 'sahis' ? 'individual' : 'corporate',
+    }
+
+    if (form.value.companyKind === 'sahis') {
+      payload.location = { name: `${form.value.orgName.trim()} - Merkez` }
+    }
+  }
+
+  try {
+    await tenantStore.onboardTenant(payload)
+    submitted.value = true
+    await router.push('/tenants')
+  } catch {
+    // Store exposes the user-facing API error.
+  }
 }
 </script>
