@@ -10,13 +10,15 @@ const password = ref('')
 const rememberMe = ref(false)
 const showPassword = ref(false)
 const errorMessage = ref('')
+const isSubmitting = ref(false)
 
 const auth = useAuth()
 
 const handleSubmit = async () => {
-  if (auth.loading.value) return
+  if (isSubmitting.value) return
 
   errorMessage.value = ''
+  isSubmitting.value = true
 
   try {
     await auth.login(email.value, password.value)
@@ -33,6 +35,8 @@ const handleSubmit = async () => {
     } else {
       errorMessage.value = error?.data?.message || error?.message || 'Giriş sırasında bir hata oluştu.'
     }
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -88,8 +92,8 @@ const handleSubmit = async () => {
               {{ errorMessage }}
             </p>
 
-            <button type="submit" :disabled="auth.loading" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60">
-              {{ auth.loading ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
+            <button type="submit" :disabled="isSubmitting" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60">
+              {{ isSubmitting ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
             </button>
 
             <p class="text-sm text-slate-600">
