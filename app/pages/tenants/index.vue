@@ -24,7 +24,7 @@
 
         <div class="relative lg:col-span-2">
           <select v-model="structureFilter" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm leading-5 text-gray-700 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-            <option value="">Kurumsal Yapı</option><option value="holding">Holding</option><option value="group">Grup</option><option value="company">Şirket</option><option value="brand">Marka</option>
+            <option value="">Kurumsal Yapı</option><option value="holding">Holding</option><option value="group">Grup</option><option value="company">Şirket</option>
           </select>
           <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" :size="16" />
         </div>
@@ -38,6 +38,10 @@
 
         <button class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-medium leading-5 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 lg:col-span-2" :disabled="!hasFilters" @click="clearFilters">Filtreleri Temizle</button>
       </div>
+    </div>
+
+    <div v-if="tenantStore.error" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+      {{ tenantStore.error }}
     </div>
 
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -54,7 +58,10 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="tenant in paginatedTenants" :key="tenant.id" class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <tr v-if="tenantStore.loading">
+              <td colspan="6" class="px-6 py-16 text-center text-sm text-gray-500 dark:text-gray-400">Tenantlar yükleniyor...</td>
+            </tr>
+            <tr v-for="tenant in paginatedTenants" v-else :key="tenant.id" class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
               <td class="px-5 py-4 sm:px-6">
                 <div class="flex items-center gap-3">
                   <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-gray-100 text-sm font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ getInitials(tenant.name) }}</div>
@@ -70,7 +77,7 @@
               <td class="px-5 py-4 text-sm leading-5 text-gray-500 dark:text-gray-400 sm:px-6">{{ formatDate(tenant.created_at) }}</td>
               <td class="px-5 py-4 sm:px-6"><div class="flex justify-end gap-1"><button class="rounded-lg px-2.5 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" @click="openTenant(tenant)">Görüntüle</button><button class="rounded-lg px-2.5 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" @click="editTenant(tenant)">Düzenle</button></div></td>
             </tr>
-            <tr v-if="paginatedTenants.length === 0"><td colspan="6" class="px-6 py-16 text-center"><p class="text-sm font-medium text-gray-800 dark:text-white/90">Tenant bulunamadı</p><p class="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">Arama veya filtre kriterlerinizi değiştirmeyi deneyin.</p></td></tr>
+            <tr v-if="!tenantStore.loading && paginatedTenants.length === 0"><td colspan="6" class="px-6 py-16 text-center"><p class="text-sm font-medium text-gray-800 dark:text-white/90">Tenant bulunamadı</p><p class="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">Arama veya filtre kriterlerinizi değiştirmeyi deneyin.</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -90,9 +97,10 @@
 
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, ChevronRight, Plus } from '@lucide/vue'
+import type { Tenant } from '~/types/tenant'
 
-interface Tenant { id: number; name: string; slug: string; status: 'active' | 'passive'; onboarding_type: 'holding' | 'group' | 'company' | 'brand'; created_at: string }
 const router = useRouter()
+const tenantStore = useTenantStore()
 const search = ref('')
 const statusFilter = ref('')
 const structureFilter = ref('')
@@ -100,24 +108,28 @@ const dateFilter = ref('')
 const page = ref(1)
 const itemsPerPage = ref(10)
 
-const tenants = ref<Tenant[]>([
-  { id: 1, name: 'Koç Holding', slug: 'koc-holding', status: 'active', onboarding_type: 'holding', created_at: '2025-05-18T14:32:00' },
-  { id: 2, name: 'MADO', slug: 'mado', status: 'active', onboarding_type: 'company', created_at: '2025-05-17T11:20:00' },
-  { id: 3, name: 'Arçelik A.Ş.', slug: 'arcelik', status: 'active', onboarding_type: 'company', created_at: '2025-05-16T09:15:00' },
-  { id: 4, name: 'İpek Gıda', slug: 'ipek-gida', status: 'passive', onboarding_type: 'group', created_at: '2025-05-15T16:45:00' },
-  { id: 5, name: 'Tepe Savunma', slug: 'tepe-savunma', status: 'active', onboarding_type: 'company', created_at: '2025-05-14T10:05:00' },
-  { id: 6, name: 'Beko', slug: 'beko', status: 'active', onboarding_type: 'brand', created_at: '2025-05-13T13:30:00' },
-  { id: 7, name: 'Setur', slug: 'setur', status: 'passive', onboarding_type: 'company', created_at: '2025-05-12T08:50:00' },
-])
+onMounted(async () => {
+  if (!tenantStore.tenants.length) {
+    try {
+      await tenantStore.fetchTenants()
+    } catch {
+      // Store exposes the user-facing error.
+    }
+  }
+})
 
 const hasFilters = computed(() => Boolean(search.value || statusFilter.value || structureFilter.value || dateFilter.value))
 const filteredTenants = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('tr-TR')
-  return tenants.value.filter((tenant) => {
+  return tenantStore.tenants.filter((tenant) => {
     const searchOk = !query || tenant.name.toLocaleLowerCase('tr-TR').includes(query) || tenant.slug.toLocaleLowerCase('tr-TR').includes(query)
     const statusOk = !statusFilter.value || tenant.status === statusFilter.value
     const structureOk = !structureFilter.value || tenant.onboarding_type === structureFilter.value
-    return searchOk && statusOk && structureOk
+    const dateOk = !dateFilter.value || (() => {
+      const days = Number(dateFilter.value)
+      return (Date.now() - new Date(tenant.created_at).getTime()) <= days * 24 * 60 * 60 * 1000
+    })()
+    return searchOk && statusOk && structureOk && dateOk
   })
 })
 const pageCount = computed(() => Math.max(1, Math.ceil(filteredTenants.value.length / itemsPerPage.value)))
@@ -130,7 +142,7 @@ const goToCreate = () => router.push('/tenants/new')
 const openTenant = (tenant: Tenant) => router.push(`/tenants/${tenant.id}`)
 const editTenant = (tenant: Tenant) => router.push(`/tenants/${tenant.id}/edit`)
 const getInitials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR')
-const structureLabel = (type: Tenant['onboarding_type']) => ({ holding: 'Holding', group: 'Grup', company: 'Şirket', brand: 'Marka' }[type])
-const structureTone = (type: Tenant['onboarding_type']) => ({ holding: 'brand', group: 'warning', company: 'success', brand: 'brand' }[type] as 'brand' | 'warning' | 'success')
+const structureLabel = (type: Tenant['onboarding_type']) => ({ holding: 'Holding', group: 'Grup', company: 'Şirket' }[type] || type)
+const structureTone = (type: Tenant['onboarding_type']) => ({ holding: 'brand', group: 'warning', company: 'success' }[type] as 'brand' | 'warning' | 'success')
 const formatDate = (value: string) => new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 </script>
