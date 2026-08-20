@@ -44,7 +44,7 @@ const handleSubmit = () => {
             </div>
 
             <div>
-              <label for="password" class="mb-2 block text-sm font-semibold text-slate-800">Şifre<span class="text-red-500">*</span></span></label>
+              <label for="password" class="mb-2 block text-sm font-semibold text-slate-800">Şifre<span class="text-red-500">*</span></label>
               <div class="relative">
                 <span aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">▣</span>
                 <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" required placeholder="Şifrenizi giriniz" class="h-14 w-full rounded-lg border border-slate-300 bg-white pl-12 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" />
