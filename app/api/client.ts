@@ -15,7 +15,7 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
 
   return $fetch<T>(path, {
     baseURL: config.public.apiBaseUrl,
-    credentials: 'include',
+    credentials: 'omit',
     timeout: 10000,
     ...options,
     headers,
