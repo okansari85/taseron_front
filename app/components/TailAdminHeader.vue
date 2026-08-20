@@ -16,11 +16,19 @@
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Bildirimler">
           <Bell :size="18" />
         </button>
-        <div class="hidden items-center gap-3 border-l border-gray-200 pl-3 sm:flex dark:border-gray-800">
-          <div class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">AY</div>
-          <div>
-            <p class="text-sm font-medium text-gray-800 dark:text-white/90">Ahmet Yılmaz</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Sistem Yöneticisi</p>
+        <div class="relative hidden sm:block">
+          <button class="flex items-center gap-3 border-l border-gray-200 pl-3 text-left dark:border-gray-800" title="Profil menüsü" @click="profileOpen = !profileOpen">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">{{ initials }}</div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ auth.user.value?.name || 'Kullanıcı' }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ roleLabel }}</p>
+            </div>
+          </button>
+
+          <div v-if="profileOpen" class="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <button class="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5" @click="handleLogout">
+              Çıkış Yap
+            </button>
           </div>
         </div>
       </div>
@@ -33,9 +41,32 @@ import { Bell, Menu, Moon, Sun } from '@lucide/vue'
 
 const { toggle, toggleMobile } = useTailAdminSidebar()
 const { isDark, toggle: toggleTheme } = useTailAdminTheme()
+const auth = useAuth()
+const router = useRouter()
+const profileOpen = ref(false)
+
+const initials = computed(() => {
+  const name = auth.user.value?.name?.trim() || 'K'
+  return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')
+})
+
+const roleLabel = computed(() => {
+  const role = auth.user.value?.roles?.[0]
+  const labels: Record<string, string> = {
+    'super-admin': 'Sistem Yöneticisi',
+    'tenant-admin': 'Tenant Yöneticisi',
+  }
+  return role ? labels[role] || role : 'Kullanıcı'
+})
 
 const handleSidebar = () => {
   if (import.meta.client && window.innerWidth < 1024) toggleMobile()
   else toggle()
+}
+
+const handleLogout = async () => {
+  profileOpen.value = false
+  await auth.logout()
+  await router.push('/login')
 }
 </script>
