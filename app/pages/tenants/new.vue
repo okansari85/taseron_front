@@ -111,6 +111,7 @@ async function submit() {
     organization: {
       name: form.value.orgName.trim(),
     },
+    logo: form.value.logoFile,
   }
 
   if (form.value.onboardingType === 'company') {
