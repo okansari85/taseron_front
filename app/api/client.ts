@@ -11,10 +11,12 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
   }
 
   headers.set('Accept', 'application/json')
+  headers.set('Content-Type', 'application/json')
 
   return $fetch<T>(path, {
     baseURL: config.public.apiBaseUrl,
     credentials: 'include',
+    timeout: 10000,
     ...options,
     headers,
   })
