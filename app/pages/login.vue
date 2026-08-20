@@ -76,8 +76,8 @@ const handleSubmit = async () => {
               {{ errorMessage }}
             </p>
 
-            <button type="submit" :disabled="auth.loading.value" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60">
-              {{ auth.loading.value ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
+            <button type="submit" :disabled="auth.loading" class="h-14 w-full rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60">
+              {{ auth.loading ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
             </button>
 
             <p class="text-sm text-slate-600">
