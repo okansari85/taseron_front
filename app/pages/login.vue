@@ -14,13 +14,25 @@ const errorMessage = ref('')
 const auth = useAuth()
 
 const handleSubmit = async () => {
+  if (auth.loading.value) return
+
   errorMessage.value = ''
 
   try {
     await auth.login(email.value, password.value)
     await navigateTo('/')
   } catch (error: any) {
-    errorMessage.value = error?.data?.message || 'E-posta veya şifre hatalı.'
+    const status = error?.response?.status || error?.statusCode
+
+    if (status === 401) {
+      errorMessage.value = 'E-posta veya şifre hatalı.'
+    } else if (status === 422) {
+      errorMessage.value = 'E-posta ve şifre bilgilerini kontrol edin.'
+    } else if (error?.name === 'FetchError' || error?.name === 'AbortError') {
+      errorMessage.value = 'Sunucuya bağlanılamadı. Backend servisinin çalıştığından emin olun.'
+    } else {
+      errorMessage.value = error?.data?.message || error?.message || 'Giriş sırasında bir hata oluştu.'
+    }
   }
 }
 </script>
