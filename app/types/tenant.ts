@@ -1,18 +1,23 @@
+export type TenantStatus = 'active' | 'passive'
+export type TenantOnboardingType = 'holding' | 'group' | 'company'
+export type CompanyType = 'individual' | 'corporate'
+
 export type Tenant = {
   id: number
   name: string
   slug: string
+  status: TenantStatus
+  onboarding_type: TenantOnboardingType
+  created_at: string
   [key: string]: unknown
 }
-
-export type TenantOnboardingType = 'holding' | 'group' | 'company'
-export type CompanyType = 'individual' | 'corporate'
 
 export type TenantOnboardingPayload = {
   onboarding_type: TenantOnboardingType
   tenant: {
     name: string
     slug: string
+    status?: TenantStatus
   }
   organization: {
     name: string
