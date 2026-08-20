@@ -8,6 +8,8 @@ export type Tenant = {
   slug: string
   status: TenantStatus
   onboarding_type: TenantOnboardingType
+  logo_path?: string | null
+  logo_url?: string | null
   created_at: string
   [key: string]: unknown
 }
@@ -29,6 +31,7 @@ export type TenantOnboardingPayload = {
   location?: {
     name: string
   }
+  logo?: File | null
 }
 
 export type TenantOnboardingResponse = {
