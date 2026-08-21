@@ -171,7 +171,7 @@ const groupInitial = (name: string) => (
         v-for="tab in tabs"
         :key="tab.path"
         :to="`/tenants/${tenantId}/organization/${tab.path}`"
-        class="relative flex h-11 shrink-0 items-center px-4 text-xs font-medium transition"
+        class="relative flex h-11 shrink-0 items-center px-4 font-medium transition"
         :class="route.path.includes(`/organization/${tab.path}`)
           ? 'text-brand-500'
           : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white/90'"
