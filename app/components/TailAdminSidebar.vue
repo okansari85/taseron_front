@@ -29,7 +29,6 @@
       </div>
 
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
-        <!-- Global navigation -->
         <div>
           <p
             v-if="isExpanded"
@@ -54,17 +53,13 @@
             >
               <component :is="item.icon" :size="18" />
 
-              <span
-                v-if="isExpanded"
-                class="truncate"
-              >
+              <span v-if="isExpanded" class="truncate">
                 {{ item.title }}
               </span>
             </NuxtLink>
           </div>
         </div>
 
-        <!-- Tenant workspace navigation -->
         <div
           v-if="isTenantWorkspace"
           class="mt-6 border-t border-gray-100 pt-5 dark:border-gray-800"
@@ -78,24 +73,40 @@
 
           <div
             v-if="isExpanded"
-            class="mb-4 rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-white/[0.03]"
+            class="mb-3 rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-white/[0.03]"
           >
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-              Aktif Tenant
-            </p>
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                  Aktif Workspace
+                </p>
 
-            <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">
-              {{ tenantName }}
-            </p>
+                <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                  {{ tenantName }}
+                </p>
+              </div>
 
-            <div
-              v-if="rootOrganization"
-              class="mt-2 flex items-center gap-1.5 text-xs text-success-600 dark:text-success-400"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
-              {{ rootOrganization.name }}
+              <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-50 px-2 py-1 text-[10px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
+                Aktif
+              </span>
             </div>
           </div>
+
+          <NuxtLink
+            v-if="isExpanded"
+            :to="`/tenants/${tenantId}/settings/workspace`"
+            :class="[
+              'mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition',
+              isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
+                ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white/90',
+            ]"
+            @click="closeMobile"
+          >
+            <Settings :size="14" />
+            <span>Workspace Ayarları</span>
+          </NuxtLink>
 
           <div class="flex flex-col gap-1">
             <template
@@ -116,10 +127,7 @@
               >
                 <component :is="item.icon" :size="17" />
 
-                <span
-                  v-if="isExpanded"
-                  class="truncate"
-                >
+                <span v-if="isExpanded" class="truncate">
                   {{ item.title }}
                 </span>
               </NuxtLink>
@@ -133,10 +141,7 @@
                 >
                   <component :is="item.icon" :size="17" />
 
-                  <span
-                    v-if="isExpanded"
-                    class="flex-1 truncate"
-                  >
+                  <span v-if="isExpanded" class="flex-1 truncate">
                     {{ item.title }}
                   </span>
 
@@ -182,10 +187,7 @@
               AY
             </div>
 
-            <div
-              v-if="isExpanded"
-              class="min-w-0"
-            >
+            <div v-if="isExpanded" class="min-w-0">
               <p class="truncate text-sm font-medium text-gray-800 dark:text-white/90">
                 Ahmet Yılmaz
               </p>
@@ -236,16 +238,9 @@ const tenantId = computed(() => {
 })
 
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
-
 const currentTenant = computed(() => tenantStore.currentTenant)
-
-const tenantName = computed(() => {
-  return currentTenant.value?.name ?? 'Tenant yükleniyor...'
-})
-
-const rootOrganization = computed(() => {
-  return currentTenant.value?.root_organization ?? null
-})
+const tenantName = computed(() => currentTenant.value?.name ?? 'Tenant yükleniyor...')
+const rootOrganization = computed(() => currentTenant.value?.root_organization ?? null)
 
 const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
   const id = tenantId.value
@@ -257,7 +252,7 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
   const basePath = `/tenants/${id}`
   const organizationPath = `${basePath}/organization`
 
-  const items: WorkspaceMenuItem[] = [
+  const menuItems: WorkspaceMenuItem[] = [
     {
       title: 'Ana Sayfa',
       path: basePath,
@@ -266,132 +261,64 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
   ]
 
   if (rootOrganization.value.type === 'holding') {
-    items.push({
+    menuItems.push({
       title: 'Organizasyon',
       path: organizationPath,
       icon: Building2,
       children: [
-        {
-          title: 'Gruplar',
-          path: `${organizationPath}/groups`,
-          icon: FolderTree,
-        },
-        {
-          title: 'Şirketler',
-          path: `${organizationPath}/companies`,
-          icon: Building2,
-        },
-        {
-          title: 'Markalar',
-          path: `${organizationPath}/brands`,
-          icon: LayoutGrid,
-        },
-        {
-          title: 'Lokasyonlar',
-          path: `${organizationPath}/locations`,
-          icon: LayoutGrid,
-        },
-        {
-          title: 'Hiyerarşi Görünümü',
-          path: `${organizationPath}/hierarchy`,
-          icon: FolderTree,
-        },
+        { title: 'Gruplar', path: `${organizationPath}/groups`, icon: FolderTree },
+        { title: 'Şirketler', path: `${organizationPath}/companies`, icon: Building2 },
+        { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
+        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
+        { title: 'Hiyerarşi Görünümü', path: `${organizationPath}/hierarchy`, icon: FolderTree },
       ],
     })
   }
 
   if (rootOrganization.value.type === 'group') {
-    items.push({
+    menuItems.push({
       title: 'Organizasyon',
       path: organizationPath,
       icon: Building2,
       children: [
-        {
-          title: 'Şirketler',
-          path: `${organizationPath}/companies`,
-          icon: Building2,
-        },
-        {
-          title: 'Markalar',
-          path: `${organizationPath}/brands`,
-          icon: LayoutGrid,
-        },
-        {
-          title: 'Lokasyonlar',
-          path: `${organizationPath}/locations`,
-          icon: LayoutGrid,
-        },
-        {
-          title: 'Hiyerarşi Görünümü',
-          path: `${organizationPath}/hierarchy`,
-          icon: FolderTree,
-        },
+        { title: 'Şirketler', path: `${organizationPath}/companies`, icon: Building2 },
+        { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
+        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
+        { title: 'Hiyerarşi Görünümü', path: `${organizationPath}/hierarchy`, icon: FolderTree },
       ],
     })
   }
 
   if (rootOrganization.value.type === 'company') {
-    items.push({
+    menuItems.push({
       title: 'Organizasyon',
       path: organizationPath,
       icon: Building2,
       children: [
-        {
-          title: 'Markalar',
-          path: `${organizationPath}/brands`,
-          icon: LayoutGrid,
-        },
-        {
-          title: 'Lokasyonlar',
-          path: `${organizationPath}/locations`,
-          icon: LayoutGrid,
-        },
+        { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
+        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
       ],
     })
   }
 
-  items.push(
-    {
-      title: 'Taşeronlar',
-      path: `${basePath}/contractors`,
-      icon: Users,
-    },
-    {
-      title: 'Kullanıcılar',
-      path: `${basePath}/users`,
-      icon: Users,
-    },
-    {
-      title: 'Raporlar',
-      path: `${basePath}/reports`,
-      icon: FileText,
-    },
-    {
-      title: 'Ayarlar',
-      path: `${basePath}/settings`,
-      icon: Settings,
-    },
+  menuItems.push(
+    { title: 'Taşeronlar', path: `${basePath}/contractors`, icon: Users },
+    { title: 'Kullanıcılar', path: `${basePath}/users`, icon: Users },
+    { title: 'Raporlar', path: `${basePath}/reports`, icon: FileText },
+    { title: 'Ayarlar', path: `${basePath}/settings`, icon: Settings },
   )
 
-  return items
+  return menuItems
 })
 
 watch(
   tenantId,
   async (id) => {
-    if (!id) {
-      return
-    }
+    if (!id) return
 
     const numericId = Number(id)
-
-    if (!Number.isInteger(numericId) || numericId <= 0) {
-      return
-    }
-
-    if (tenantStore.currentTenant?.id === numericId) {
-      return
-    }
+    if (!Number.isInteger(numericId) || numericId <= 0) return
+    if (tenantStore.currentTenant?.id === numericId) return
 
     await tenantStore.fetchTenant(numericId)
   },
