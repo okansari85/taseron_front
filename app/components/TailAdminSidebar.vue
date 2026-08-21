@@ -88,9 +88,12 @@
               {{ tenantName }}
             </p>
 
-            <div class="mt-2 flex items-center gap-1.5 text-xs text-success-600 dark:text-success-400">
+            <div
+              v-if="rootOrganization"
+              class="mt-2 flex items-center gap-1.5 text-xs text-success-600 dark:text-success-400"
+            >
               <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
-              Workspace aktif
+              {{ rootOrganization.name }}
             </div>
           </div>
 
@@ -218,6 +221,7 @@ type WorkspaceMenuItem = {
 }
 
 const route = useRoute()
+const tenantStore = useTenantStore()
 const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
 
 const items = [
@@ -233,87 +237,172 @@ const tenantId = computed(() => {
 
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
 
+const currentTenant = computed(() => tenantStore.currentTenant)
+
 const tenantName = computed(() => {
-  return 'Koç Holding'
+  return currentTenant.value?.name ?? 'Tenant yükleniyor...'
 })
 
-// Bu yapı API'den gelecek workspace menü response'una göre doldurulacak.
-// Şimdilik yeni workspace tasarımındaki menü yapısını varsayılan olarak gösteriyoruz.
-const workspaceItems = ref<WorkspaceMenuItem[]>([
-  {
-    title: 'Ana Sayfa',
-    path: '/tenants/1/workspace',
-    icon: Home,
-  },
-  {
-    title: 'Organizasyon',
-    path: '/tenants/1/organization',
-    icon: Building2,
-    children: [
-      {
-        title: 'Gruplar',
-        path: '/tenants/1/organization/groups',
-        icon: FolderTree,
-      },
-      {
-        title: 'Şirketler',
-        path: '/tenants/1/organization/companies',
-        icon: Building2,
-      },
-      {
-        title: 'Markalar',
-        path: '/tenants/1/organization/brands',
-        icon: LayoutGrid,
-      },
-      {
-        title: 'Lokasyonlar',
-        path: '/tenants/1/organization/locations',
-        icon: LayoutGrid,
-      },
-      {
-        title: 'Hiyerarşi Görünümü',
-        path: '/tenants/1/organization/hierarchy',
-        icon: FolderTree,
-      },
-    ],
-  },
-  {
-    title: 'Taşeronlar',
-    path: '/tenants/1/contractors',
-    icon: Users,
-  },
-  {
-    title: 'Kullanıcılar',
-    path: '/tenants/1/users',
-    icon: Users,
-  },
-  {
-    title: 'Raporlar',
-    path: '/tenants/1/reports',
-    icon: FileText,
-  },
-  {
-    title: 'Ayarlar',
-    path: '/tenants/1/settings',
-    icon: Settings,
-  },
-])
+const rootOrganization = computed(() => {
+  return currentTenant.value?.root_organization ?? null
+})
 
-const normalizePath = (path: string) => {
-  if (!tenantId.value) {
-    return path
+const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
+  const id = tenantId.value
+
+  if (!id || !rootOrganization.value) {
+    return []
   }
 
-  return path.replace('/tenants/1/', `/tenants/${tenantId.value}/`)
-}
+  const basePath = `/tenants/${id}`
+  const organizationPath = `${basePath}/organization`
+
+  const items: WorkspaceMenuItem[] = [
+    {
+      title: 'Ana Sayfa',
+      path: basePath,
+      icon: Home,
+    },
+  ]
+
+  if (rootOrganization.value.type === 'holding') {
+    items.push({
+      title: 'Organizasyon',
+      path: organizationPath,
+      icon: Building2,
+      children: [
+        {
+          title: 'Gruplar',
+          path: `${organizationPath}/groups`,
+          icon: FolderTree,
+        },
+        {
+          title: 'Şirketler',
+          path: `${organizationPath}/companies`,
+          icon: Building2,
+        },
+        {
+          title: 'Markalar',
+          path: `${organizationPath}/brands`,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Lokasyonlar',
+          path: `${organizationPath}/locations`,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Hiyerarşi Görünümü',
+          path: `${organizationPath}/hierarchy`,
+          icon: FolderTree,
+        },
+      ],
+    })
+  }
+
+  if (rootOrganization.value.type === 'group') {
+    items.push({
+      title: 'Organizasyon',
+      path: organizationPath,
+      icon: Building2,
+      children: [
+        {
+          title: 'Şirketler',
+          path: `${organizationPath}/companies`,
+          icon: Building2,
+        },
+        {
+          title: 'Markalar',
+          path: `${organizationPath}/brands`,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Lokasyonlar',
+          path: `${organizationPath}/locations`,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Hiyerarşi Görünümü',
+          path: `${organizationPath}/hierarchy`,
+          icon: FolderTree,
+        },
+      ],
+    })
+  }
+
+  if (rootOrganization.value.type === 'company') {
+    items.push({
+      title: 'Organizasyon',
+      path: organizationPath,
+      icon: Building2,
+      children: [
+        {
+          title: 'Markalar',
+          path: `${organizationPath}/brands`,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Lokasyonlar',
+          path: `${organizationPath}/locations`,
+          icon: LayoutGrid,
+        },
+      ],
+    })
+  }
+
+  items.push(
+    {
+      title: 'Taşeronlar',
+      path: `${basePath}/contractors`,
+      icon: Users,
+    },
+    {
+      title: 'Kullanıcılar',
+      path: `${basePath}/users`,
+      icon: Users,
+    },
+    {
+      title: 'Raporlar',
+      path: `${basePath}/reports`,
+      icon: FileText,
+    },
+    {
+      title: 'Ayarlar',
+      path: `${basePath}/settings`,
+      icon: Settings,
+    },
+  )
+
+  return items
+})
+
+watch(
+  tenantId,
+  async (id) => {
+    if (!id) {
+      return
+    }
+
+    const numericId = Number(id)
+
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return
+    }
+
+    if (tenantStore.currentTenant?.id === numericId) {
+      return
+    }
+
+    await tenantStore.fetchTenant(numericId)
+  },
+  { immediate: true },
+)
 
 const isActive = (path: string) => {
   return route.path === path || (path !== '/' && route.path.startsWith(`${path}/`))
 }
 
 const isWorkspaceItemActive = (path: string) => {
-  const resolvedPath = normalizePath(path)
-
-  return route.path === resolvedPath || route.path.startsWith(`${resolvedPath}/`)
+  return route.path === path || route.path.startsWith(`${path}/`)
 }
 </script>
