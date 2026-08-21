@@ -1,10 +1,6 @@
 <template>
   <div>
-    <div
-      v-if="isMobileOpen"
-      class="fixed inset-0 z-[9998] bg-black/30 lg:hidden"
-      @click="closeMobile"
-    ></div>
+    <div v-if="isMobileOpen" class="fixed inset-0 z-[9998] bg-black/30 lg:hidden" @click="closeMobile"></div>
 
     <aside
       :class="[
@@ -41,49 +37,10 @@
           </div>
         </div>
 
-        <div v-if="isTenantWorkspace" class="mt-6 border-t border-gray-100 pt-5 dark:border-gray-800">
+        <div v-if="isTenantWorkspace" class="mt-6 flex flex-col border-t border-gray-100 pt-5 dark:border-gray-800">
           <p v-if="isExpanded" class="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">Workspace</p>
 
-          <div
-            v-if="isExpanded"
-            class="mb-3 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                  <Building2 :size="10" />
-                  <span>Aktif Workspace</span>
-                </div>
-
-                <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">
-                  {{ tenantName }}
-                </p>
-              </div>
-
-              <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-50 px-2 py-1 text-[9px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400">
-                <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
-                Aktif
-              </span>
-            </div>
-
-            <div class="my-3 border-t border-gray-200 dark:border-gray-800"></div>
-
-            <NuxtLink
-              :to="`/tenants/${tenantId}/settings/workspace`"
-              :class="[
-                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
-                isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
-                  ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
-                  : 'text-brand-500 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10',
-              ]"
-              @click="closeMobile"
-            >
-              <Settings :size="12" />
-              <span>Workspace Ayarları</span>
-            </NuxtLink>
-          </div>
-
-          <div class="flex flex-col gap-1">
+          <div class="order-1 flex flex-col gap-1">
             <template v-for="item in workspaceItems" :key="item.path">
               <NuxtLink
                 v-if="!item.children"
@@ -126,6 +83,45 @@
                 </div>
               </div>
             </template>
+          </div>
+
+          <div
+            v-if="isExpanded"
+            class="order-2 mt-3 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                  <Building2 :size="10" />
+                  <span>Aktif Workspace</span>
+                </div>
+
+                <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                  {{ tenantName }}
+                </p>
+              </div>
+
+              <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-50 px-2 py-1 text-[9px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
+                Aktif
+              </span>
+            </div>
+
+            <div class="my-3 border-t border-gray-200 dark:border-gray-800"></div>
+
+            <NuxtLink
+              :to="`/tenants/${tenantId}/settings/workspace`"
+              :class="[
+                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
+                isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
+                  ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
+                  : 'text-brand-500 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10',
+              ]"
+              @click="closeMobile"
+            >
+              <Settings :size="12" />
+              <span>Workspace Ayarları</span>
+            </NuxtLink>
           </div>
         </div>
 
