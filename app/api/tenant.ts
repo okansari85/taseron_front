@@ -24,7 +24,36 @@ export const tenantApi = {
     return { ...response, data: normalizeTenant(response.data) }
   },
   update: async (id: number, payload: Record<string, unknown>) => {
-    const response = await apiClient<TenantResponse>(`/api/tenants/${id}`, { method: 'PUT', body: payload })
+    const logo = payload.logo
+
+    if (logo instanceof File) {
+      const formData = new FormData()
+
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || value === null) return
+        if (value instanceof File) {
+          formData.append(key, value)
+          return
+        }
+        formData.append(key, String(value))
+      })
+
+      // Laravel/PHP reliably parses multipart form data with method spoofing.
+      formData.append('_method', 'PUT')
+
+      const response = await apiClient<TenantResponse>(`/api/tenants/${id}`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      return { ...response, data: normalizeTenant(response.data) }
+    }
+
+    const response = await apiClient<TenantResponse>(`/api/tenants/${id}`, {
+      method: 'PUT',
+      body: payload,
+    })
+
     return { ...response, data: normalizeTenant(response.data) }
   },
   remove: (id: number) =>
