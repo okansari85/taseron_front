@@ -59,13 +59,30 @@
               </NuxtLink>
 
               <div v-else>
-                <div :class="['flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300', isExpanded ? 'justify-start' : 'justify-center']">
+                <button
+                  v-if="isExpanded"
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                  :aria-expanded="organizationMenuOpen"
+                  @click="organizationMenuOpen = !organizationMenuOpen"
+                >
                   <component :is="item.icon" :size="17" />
-                  <span v-if="isExpanded" class="flex-1 truncate">{{ item.title }}</span>
-                  <ChevronDown v-if="isExpanded" :size="15" class="rotate-180" />
+                  <span class="flex-1 truncate text-left">{{ item.title }}</span>
+                  <ChevronDown
+                    :size="15"
+                    class="transition-transform duration-200"
+                    :class="organizationMenuOpen ? 'rotate-180' : ''"
+                  />
+                </button>
+
+                <div v-else class="flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <component :is="item.icon" :size="17" />
                 </div>
 
-                <div v-if="isExpanded" class="ml-5 border-l border-gray-200 pl-3 dark:border-gray-800">
+                <div
+                  v-if="organizationMenuOpen && isExpanded"
+                  class="ml-5 border-l border-gray-200 pl-3 dark:border-gray-800"
+                >
                   <NuxtLink
                     v-for="child in item.children"
                     :key="child.path"
@@ -147,6 +164,7 @@ type WorkspaceMenuItem = { title: string; path: string; icon: unknown; children?
 const route = useRoute()
 const tenantStore = useTenantStore()
 const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
+const organizationMenuOpen = ref(true)
 
 const items = [
   { title: 'Ana Sayfa', path: '/', icon: Home },
