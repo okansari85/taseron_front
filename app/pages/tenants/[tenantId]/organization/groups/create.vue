@@ -105,7 +105,7 @@ const saveGroup = async () => {
 
 <template>
   <div class="font-outfit">
-    <div class="mx-auto w-full max-w-[1250px]">
+    <div class="mx-auto w-full max-w-[1400px]">
       <div class="mb-5 flex items-center gap-2 text-xs text-gray-400">
         <span>Organizasyon</span>
         <ChevronRight :size="14" />
