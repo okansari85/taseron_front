@@ -21,7 +21,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 mx-auto w-full max-w-[1400px]">
     <div>
       <div class="mb-3 flex items-center gap-2 text-sm text-gray-400">
         <NuxtLink

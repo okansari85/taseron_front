@@ -152,8 +152,8 @@ const groupInitial = (name: string) => name.trim().charAt(0).toLocaleUpperCase('
 </script>
 
 <template>
-  <div class="font-outfit">
-    <div class="mx-auto w-full max-w-[1250px]">
+  <div>
+    <div class="mx-auto w-full max-w-[1400px]">
       <!-- Page heading -->
       <div class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white/90">
@@ -185,7 +185,7 @@ const groupInitial = (name: string) => name.trim().charAt(0).toLocaleUpperCase('
 
       <!-- Toolbar heading -->
       <div class="mb-5 flex items-center justify-between gap-4">
-        <p class="text-xs text-gray-500 dark:text-gray-400">
+        <p class=" text-gray-500 dark:text-gray-400">
           Organizasyon yapınızda yer alan grupları görüntüleyin ve yönetin.
         </p>
 
