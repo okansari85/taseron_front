@@ -7,6 +7,11 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        'lucide-vue-next': '@lucide/vue',
+      },
+    },
   },
   runtimeConfig: {
     public: {
