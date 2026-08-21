@@ -43,11 +43,65 @@
       </div>
       <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800"><span class="text-xs leading-5 text-gray-500 dark:text-gray-400">Toplam {{ filteredTenants.length }} kayıt</span><div class="flex items-center justify-center gap-1"><button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === 1" @click="page--"><ChevronLeft :size="16" /></button><button v-for="p in pageCount" :key="p" :class="['h-9 min-w-9 rounded-lg border px-2 text-xs font-medium leading-5 transition', p === page ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5']" @click="page = p">{{ p }}</button><button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition disabled:opacity-40 dark:border-gray-800 dark:text-gray-400" :disabled="page === pageCount" @click="page++"><ChevronRight :size="16" /></button></div><select v-model="itemsPerPage" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs leading-5 text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select></div>
     </div>
+
+    <div v-if="editOpen" class="fixed inset-0 z-[100]">
+      <button aria-label="Düzenleme panelini kapat" class="absolute inset-0 h-full w-full cursor-default bg-slate-950/35 backdrop-blur-[1px]" @click="closeEdit"></button>
+      <aside class="absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col bg-white shadow-2xl dark:bg-gray-950">
+        <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5 dark:border-gray-800">
+          <div class="flex items-start gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10"><Pencil :size="20" /></div>
+            <div><h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">Tenant Düzenle</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Tenant bilgilerini güncelleyebilirsiniz.</p></div>
+          </div>
+          <button class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/5 dark:hover:text-white" aria-label="Kapat" @click="closeEdit"><X :size="22" /></button>
+        </div>
+
+        <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="saveEdit">
+          <div class="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Logo</label>
+              <div class="flex items-center gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+                <div class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+                  <img v-if="editTenantData?.logo_url" :src="editTenantData.logo_url" :alt="`${editTenantData.name} logosu`" class="max-h-full max-w-full object-contain" />
+                  <span v-else class="text-xl font-semibold text-gray-400">{{ editTenantData ? getInitials(editTenantData.name) : '' }}</span>
+                </div>
+                <div><p class="text-sm font-medium text-gray-800 dark:text-white/90">Mevcut tenant logosu</p><p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">PNG, JPG veya SVG · Maks. 2MB</p><span class="mt-2 inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-400 dark:border-gray-700">Logo değiştirme ayrı bir işlem olarak yönetilecek.</span></div>
+              </div>
+            </div>
+
+            <div>
+              <label for="edit-tenant-name" class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Tenant Adı <span class="text-red-500">*</span></label>
+              <input id="edit-tenant-name" v-model="editForm.name" required maxlength="255" class="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+              <p class="mt-1.5 text-right text-xs text-gray-400">{{ editForm.name.length }}/255</p>
+            </div>
+
+            <div>
+              <label for="edit-tenant-slug" class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Slug <span class="text-red-500">*</span></label>
+              <input id="edit-tenant-slug" v-model="editForm.slug" required maxlength="255" class="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+              <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Sistemde benzersiz olmalıdır.</p>
+            </div>
+
+            <div>
+              <label for="edit-tenant-status" class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Durum <span class="text-red-500">*</span></label>
+              <div class="relative"><select id="edit-tenant-status" v-model="editForm.status" class="h-12 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 pr-10 text-sm text-gray-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"><option value="active">Aktif</option><option value="passive">Pasif</option></select><ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" :size="18" /></div>
+            </div>
+
+            <div class="rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-4 dark:border-brand-500/20 dark:bg-brand-500/5">
+              <div class="flex gap-3"><Info :size="18" class="mt-0.5 shrink-0 text-brand-500" /><p class="text-sm leading-6 text-gray-600 dark:text-gray-300">Tenant ile ilgili organizasyon, grup, şirket ve lokasyon yönetimi <span class="font-semibold text-brand-600 dark:text-brand-400">Organizasyon Yönetimi</span> sayfasından yapılmaktadır.</p></div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 border-t border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-950">
+            <button type="button" class="h-12 flex-1 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5" :disabled="tenantStore.saving" @click="closeEdit">İptal</button>
+            <button type="submit" class="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60" :disabled="tenantStore.saving"><Loader2 v-if="tenantStore.saving" class="animate-spin" :size="18" /><Save v-else :size="18" />{{ tenantStore.saving ? 'Kaydediliyor...' : 'Kaydet' }}</button>
+          </div>
+        </form>
+      </aside>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft, ChevronRight, Plus } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, Info, Loader2, Pencil, Plus, Save, X } from '@lucide/vue'
 import type { Tenant } from '~/types/tenant'
 
 const router = useRouter()
@@ -58,6 +112,9 @@ const structureFilter = ref('')
 const dateFilter = ref('')
 const page = ref(1)
 const itemsPerPage = ref(10)
+const editOpen = ref(false)
+const editTenantData = ref<Tenant | null>(null)
+const editForm = reactive({ name: '', slug: '', status: 'active' as Tenant['status'] })
 
 onMounted(async () => {
   if (!tenantStore.tenants.length) {
@@ -83,7 +140,27 @@ watch(pageCount, (count) => { if (page.value > count) page.value = count })
 const clearFilters = () => { search.value = ''; statusFilter.value = ''; structureFilter.value = ''; dateFilter.value = '' }
 const goToCreate = () => router.push('/tenants/new')
 const openTenant = (tenant: Tenant) => router.push(`/tenants/${tenant.id}`)
-const editTenant = (tenant: Tenant) => router.push(`/tenants/${tenant.id}/edit`)
+const editTenant = (tenant: Tenant) => {
+  editTenantData.value = tenant
+  editForm.name = tenant.name
+  editForm.slug = tenant.slug
+  editForm.status = tenant.status
+  editOpen.value = true
+}
+const closeEdit = () => { if (!tenantStore.saving) editOpen.value = false }
+const saveEdit = async () => {
+  if (!editTenantData.value) return
+  try {
+    await tenantStore.updateTenant(editTenantData.value.id, {
+      name: editForm.name.trim(),
+      slug: editForm.slug.trim(),
+      status: editForm.status === 'active',
+    })
+    editOpen.value = false
+  } catch {
+    // Store exposes the user-facing error.
+  }
+}
 const getInitials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR')
 const structureLabel = (type: Tenant['onboarding_type']) => ({ holding: 'Holding', group: 'Grup', company: 'Şirket' }[type] || type)
 const structureTone = (type: Tenant['onboarding_type']) => ({ holding: 'brand', group: 'warning', company: 'success' }[type] as 'brand' | 'warning' | 'success')
