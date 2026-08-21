@@ -129,7 +129,7 @@
             <NuxtLink
               :to="`/tenants/${tenantId}/settings/workspace`"
               :class="[
-                'flex items-center gap-2 rounded-lg px-2  py-1.5 text-[10px] font-medium transition',
+                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
                 isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
                   ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
                   : 'text-brand-500 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10',
@@ -157,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { Building2, ChevronDown, FileText, FolderTree, Home, LayoutGrid, Settings, Users } from '@lucide/vue'
+import { Building2, ChevronDown, FileText, FolderTree, Home, LayoutGrid, MapPin, Settings, Users } from '@lucide/vue'
 
 type WorkspaceMenuItem = { title: string; path: string; icon: unknown; children?: WorkspaceMenuItem[] }
 
@@ -196,7 +196,6 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
         { title: 'Gruplar', path: `${organizationPath}/groups`, icon: FolderTree },
         { title: 'Şirketler', path: `${organizationPath}/companies`, icon: Building2 },
         { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
-        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
         { title: 'Hiyerarşi Görünümü', path: `${organizationPath}/hierarchy`, icon: FolderTree },
       ],
     })
@@ -208,7 +207,6 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
       children: [
         { title: 'Şirketler', path: `${organizationPath}/companies`, icon: Building2 },
         { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
-        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
         { title: 'Hiyerarşi Görünümü', path: `${organizationPath}/hierarchy`, icon: FolderTree },
       ],
     })
@@ -219,12 +217,12 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
       title: 'Organizasyon', path: organizationPath, icon: Building2,
       children: [
         { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
-        { title: 'Lokasyonlar', path: `${organizationPath}/locations`, icon: LayoutGrid },
       ],
     })
   }
 
   menuItems.push(
+    { title: 'Lokasyonlar', path: `${basePath}/locations`, icon: MapPin },
     { title: 'Taşeronlar', path: `${basePath}/contractors`, icon: Users },
     { title: 'Kullanıcılar', path: `${basePath}/users`, icon: Users },
     { title: 'Raporlar', path: `${basePath}/reports`, icon: FileText },
