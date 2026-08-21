@@ -15,14 +15,21 @@ export const tenantApi = {
     const response = await apiClient<TenantListResponse>('/api/tenants')
     return { ...response, data: response.data.map(normalizeTenant) }
   },
+
   get: async (id: number) => {
     const response = await apiClient<TenantResponse>(`/api/tenants/${id}`)
     return { ...response, data: normalizeTenant(response.data) }
   },
+
   create: async (payload: Record<string, unknown>) => {
-    const response = await apiClient<TenantResponse>('/api/tenants', { method: 'POST', body: payload })
+    const response = await apiClient<TenantResponse>('/api/tenants', {
+      method: 'POST',
+      body: payload,
+    })
+
     return { ...response, data: normalizeTenant(response.data) }
   },
+
   update: async (id: number, payload: Record<string, unknown>) => {
     const logo = payload.logo
 
@@ -31,10 +38,17 @@ export const tenantApi = {
 
       Object.entries(payload).forEach(([key, value]) => {
         if (value === undefined || value === null) return
+
         if (value instanceof File) {
           formData.append(key, value)
           return
         }
+
+        if (typeof value === 'boolean') {
+          formData.append(key, value ? '1' : '0')
+          return
+        }
+
         formData.append(key, String(value))
       })
 
@@ -56,6 +70,9 @@ export const tenantApi = {
 
     return { ...response, data: normalizeTenant(response.data) }
   },
+
   remove: (id: number) =>
-    apiClient<TenantDeleteResponse>(`/api/tenants/${id}`, { method: 'DELETE' }),
+    apiClient<TenantDeleteResponse>(`/api/tenants/${id}`, {
+      method: 'DELETE',
+    }),
 }
