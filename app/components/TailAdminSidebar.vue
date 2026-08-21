@@ -104,7 +104,7 @@
 
           <div
             v-if="isExpanded"
-            class="order-2 mt-3 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+            class="order-2 mt-3 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 mb-5 dark:border-gray-800 dark:bg-white/[0.03]"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
@@ -129,7 +129,7 @@
             <NuxtLink
               :to="`/tenants/${tenantId}/settings/workspace`"
               :class="[
-                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
+                'flex items-center gap-2 rounded-lg px-2  py-1.5 text-[10px] font-medium transition',
                 isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
                   ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
                   : 'text-brand-500 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10',
@@ -187,7 +187,7 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
 
   const basePath = `/tenants/${id}`
   const organizationPath = `${basePath}/organization`
-  const menuItems: WorkspaceMenuItem[] = [{ title: 'Ana Sayfa', path: basePath, icon: Home }]
+  const menuItems: WorkspaceMenuItem[] = [{ title: 'Genel Durum', path: basePath, icon: Home }]
 
   if (rootOrganization.value.type === 'holding') {
     menuItems.push({
