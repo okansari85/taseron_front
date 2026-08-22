@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, Save, X } from 'lucide-vue-next'
-import { slugify } from '~/utils/slugify'
 
 definePageMeta({ layout: 'default' })
 
@@ -9,8 +8,6 @@ const tenantId = computed(() => String(route.params.tenantId ?? ''))
 
 const companyName = ref('')
 const shortName = ref('')
-const slug = ref('')
-const slugManuallyEdited = ref(false)
 const group = ref('')
 const description = ref('')
 const isActive = ref(true)
@@ -23,22 +20,12 @@ const groups = [
   { id: '3', name: 'Enerji Grubu' },
 ]
 
-watch(companyName, (value) => {
-  if (!slugManuallyEdited.value) slug.value = slugify(value)
-  if (!shortName.value || shortName.value === slug.value) shortName.value = slug.value
-})
-
-watch(slug, (value) => {
-  if (!shortName.value || shortName.value === slugify(companyName.value)) shortName.value = value
-})
-
 const cancel = () => navigateTo(`/tenants/${tenantId.value}/organization/companies`)
 
 const saveCompany = () => {
   const payload = {
     name: companyName.value,
     short_name: shortName.value,
-    slug: slug.value,
     group_id: group.value || null,
     description: description.value,
     is_active: isActive.value,
@@ -87,12 +74,6 @@ const saveCompany = () => {
                 </select>
                 <ChevronDown :size="16" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
-            </div>
-
-            <div>
-              <label class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Slug <span class="text-error-500">*</span></label>
-              <input v-model="slug" type="text" placeholder="Şirket slug giriniz" class="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" @input="slugManuallyEdited = true" />
-              <p class="mt-1.5 text-xs text-gray-400">URL ve sistem içi kısa referans için kullanılır.</p>
             </div>
 
             <div class="md:col-span-2">
