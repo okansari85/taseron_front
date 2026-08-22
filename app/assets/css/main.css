@@ -63,6 +63,39 @@
   button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
 }
 
+@layer components {
+  /* Keep data tables visually consistent in dark mode, including pages that use inline table markup. */
+  .dark table thead {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: var(--color-gray-800);
+  }
+
+  .dark table thead th {
+    color: var(--color-gray-400);
+  }
+
+  /* Inline status/category badges used by organization tables. */
+  .dark table .bg-success-50 {
+    background-color: rgba(18, 183, 106, 0.15);
+  }
+
+  .dark table .text-success-600 {
+    color: #32d583;
+  }
+
+  .dark table .bg-gray-100 {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .dark table .text-gray-500 {
+    color: var(--color-gray-400);
+  }
+
+  .dark table .bg-brand-50 {
+    background-color: rgba(70, 95, 255, 0.15);
+  }
+}
+
 @utility menu-item { @apply relative flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium text-theme-sm; }
 @utility menu-item-active { @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400; }
 @utility menu-item-inactive { @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5; }
