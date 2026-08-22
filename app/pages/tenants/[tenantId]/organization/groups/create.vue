@@ -5,7 +5,6 @@ import {
   FolderTree,
   Info,
   Save,
-  Upload,
   X,
 } from 'lucide-vue-next'
 import { slugify } from '~/utils/slugify'
@@ -25,9 +24,6 @@ const displayOrder = ref(0)
 const isActive = ref(true)
 const parentGroup = ref('')
 const selectedColor = ref('#465FFF')
-
-const selectedFile = ref<File | null>(null)
-const previewUrl = ref<string | null>(null)
 
 const tenantId = computed(() => Number(route.params.tenantId))
 
@@ -61,31 +57,6 @@ watch(groupName, (value) => {
     slug.value = slugify(value)
   }
 })
-
-const handleFileChange = (event: Event) => {
-  const input = event.target as HTMLInputElement
-
-  if (!input.files?.length) {
-    return
-  }
-
-  selectedFile.value = input.files[0]
-
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-  }
-
-  previewUrl.value = URL.createObjectURL(selectedFile.value)
-}
-
-const removeFile = () => {
-  selectedFile.value = null
-
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = null
-  }
-}
 
 const saveGroup = async () => {
   const payload = {
@@ -261,30 +232,8 @@ const saveGroup = async () => {
           </section>
 
           <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Görsel</h2>
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Görünüm</h2>
             <div class="mt-5">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Grup Logosu</label>
-              <input id="group-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" @change="handleFileChange" />
-              <label for="group-logo" class="mt-3 flex h-48 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50/50 transition hover:border-brand-300 hover:bg-brand-50/30 dark:border-gray-700 dark:bg-white/[0.02]">
-                <template v-if="previewUrl">
-                  <img :src="previewUrl" alt="Grup logosu" class="h-32 max-w-[180px] object-contain" />
-                </template>
-                <template v-else>
-                  <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm dark:bg-gray-800">
-                    <Upload :size="18" />
-                  </div>
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Logo yükleyin</span>
-                  <span class="mt-1 text-xs text-gray-400">PNG, JPG veya SVG</span>
-                  <span class="text-xs text-gray-400">Maks. 2MB</span>
-                </template>
-              </label>
-
-              <button v-if="selectedFile" type="button" class="mt-2 text-xs font-medium text-error-500 hover:text-error-700" @click="removeFile">
-                Görseli kaldır
-              </button>
-            </div>
-
-            <div class="mt-7">
               <label class="text-sm font-medium text-gray-700 dark:text-gray-300">İkon Rengi</label>
               <div class="mt-3 flex items-center gap-3">
                 <button
