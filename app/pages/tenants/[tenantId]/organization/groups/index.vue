@@ -40,7 +40,6 @@ const tabs = [
   { label: 'Gruplar', path: 'groups' },
   { label: 'Şirketler', path: 'companies' },
   { label: 'Markalar', path: 'brands' },
-  { label: 'Lokasyonlar', path: 'locations' },
   { label: 'Hiyerarşi Görünümü', path: 'hierarchy' },
 ]
 
@@ -439,7 +438,7 @@ const groupInitial = (name: string) => (
             Bilgilendirme
           </h2>
           <p class="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">
-            Organizasyon yapınızı Gruplar, Şirketler, Markalar ve Lokasyonlar olarak yönetebilirsiniz.
+            Organizasyon yapınızı Gruplar, Şirketler ve Markalar olarak yönetebilirsiniz.
           </p>
         </div>
       </div>
