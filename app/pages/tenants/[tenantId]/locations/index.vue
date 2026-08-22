@@ -4,14 +4,21 @@ import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Eye, Filter, 
 definePageMeta({ layout: 'default' })
 
 type LocationStatus = 'active' | 'passive'
-type LocationCompany = { id: number; name: string; shortName: string; logo: string }
+type LogoTone = 'arcelik' | 'beko' | 'neutral'
+type LocationBusinessEntity = {
+  id: number
+  companyName: string
+  brandName?: string
+  logoText: string
+  logoTone: LogoTone
+}
 type Location = {
   id: number
   name: string
   city: string
   district: string
   address: string
-  companies: LocationCompany[]
+  businessEntities: LocationBusinessEntity[]
   contractorCount: number
   status: LocationStatus
   image: string
@@ -26,20 +33,21 @@ const statusFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
 
-// Mock data. In the real API, companies and their logos will come from the
-// location business entity/company assignment, not from the company master alone.
+// Mock data only. In production this list will be built from LocationBusinessEntity.
+// A business entity determines which company + brand combination is shown for a location.
+// Example: Beylikduzu has Arçelik A.Ş. using the Beko brand and Arçelik Pazarlama A.Ş.
+// using the Arçelik brand, so the logo shown is not inferred from the company master.
 const locations = ref<Location[]>([
   {
     id: 1,
     name: 'Beylikdüzü Kampüsü',
     city: 'İstanbul',
     district: 'Beylikdüzü',
-    address: 'Beylikdüzü OSB Mah. Cumhuriyet Cad. No:1 Beylikdüzü / İstanbul',
-    companies: [
-      { id: 1, name: 'Arçelik A.Ş.', shortName: 'arcelik', logo: 'AR' },
-      { id: 2, name: 'Beko Elektronik A.Ş.', shortName: 'beko', logo: 'BE' },
-      { id: 3, name: 'Bıçakçılar A.Ş.', shortName: 'bicakcilar', logo: 'B' },
-      { id: 4, name: 'Arçelik Pazarlama A.Ş.', shortName: 'arcelik-pazarlama', logo: 'AP' },
+    address: 'Beylikdüzü Kampüsü, Beylikdüzü / İstanbul',
+    businessEntities: [
+      { id: 1, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+      { id: 2, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 3, companyName: 'Bıçakçılar A.Ş.', logoText: 'Bıçakçılar', logoTone: 'neutral' },
     ],
     contractorCount: 6,
     status: 'active',
@@ -47,82 +55,123 @@ const locations = ref<Location[]>([
   },
   {
     id: 2,
-    name: 'Forum İstanbul',
-    city: 'İstanbul',
-    district: 'Bayrampaşa',
-    address: 'Kocatepe Mah. Paşa Cad. No:22 Bayrampaşa / İstanbul',
-    companies: [
-      { id: 5, name: 'Arçelik A.Ş.', shortName: 'arcelik', logo: 'AR' },
-      { id: 6, name: 'Beko Elektronik A.Ş.', shortName: 'beko', logo: 'BE' },
-    ],
-    contractorCount: 2,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 3,
-    name: 'Kıraç Depo',
-    city: 'İstanbul',
-    district: 'Esenyurt',
-    address: 'Kıraç OSB Mah. 6. Cad. No:12 Esenyurt / İstanbul',
-    companies: [
-      { id: 7, name: 'Bıçakçılar A.Ş.', shortName: 'bicakcilar', logo: 'B' },
-    ],
-    contractorCount: 1,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 4,
-    name: 'Sütlüce Genel Merkez',
+    name: 'Sütlüce Genel Müdürlük',
     city: 'İstanbul',
     district: 'Beyoğlu',
-    address: 'Sütlüce Mah. İmrahor Cad. No:42/2 Beyoğlu / İstanbul',
-    companies: [
-      { id: 8, name: 'Arçelik A.Ş.', shortName: 'arcelik', logo: 'AR' },
+    address: 'Karaağaç Caddesi No:2-6, Sütlüce, Beyoğlu / İstanbul',
+    businessEntities: [
+      { id: 4, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 5, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
     ],
     contractorCount: 4,
     status: 'active',
     image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=320&q=80',
   },
   {
-    id: 5,
-    name: 'Çerkezköy Üretim Tesisi',
-    city: 'Tekirdağ',
-    district: 'Çerkezköy',
-    address: 'Veliköy OSB Mah. 1. Cad. No:5 Çerkezköy / Tekirdağ',
-    companies: [
-      { id: 9, name: 'Arçelik A.Ş.', shortName: 'arcelik', logo: 'AR' },
-      { id: 10, name: 'Beko Elektronik A.Ş.', shortName: 'beko', logo: 'BE' },
+    id: 3,
+    name: 'Çayırova Kampüsü',
+    city: 'İstanbul',
+    district: 'Tuzla',
+    address: 'Şifa Mahallesi, Şifa Yanyol Cad. No:4, Tuzla / İstanbul',
+    businessEntities: [
+      { id: 6, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
     ],
-    contractorCount: 3,
-    status: 'passive',
-    image: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?auto=format&fit=crop&w=320&q=80',
+    contractorCount: 8,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
   },
   {
-    id: 6,
+    id: 4,
     name: 'Eskişehir Kampüsü',
     city: 'Eskişehir',
     district: 'Odunpazarı',
-    address: 'Organize Sanayi Bölgesi 12. Cad. No:10 Odunpazarı / Eskişehir',
-    companies: [
-      { id: 11, name: 'Arçelik A.Ş.', shortName: 'arcelik', logo: 'AR' },
+    address: '75. Yıl OSB Mah. 1. Cadde No:1, Odunpazarı / Eskişehir',
+    businessEntities: [
+      { id: 7, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
     ],
     contractorCount: 24,
     status: 'active',
     image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
   },
+  {
+    id: 5,
+    name: 'Çerkezköy Kampüsü',
+    city: 'Tekirdağ',
+    district: 'Kapaklı',
+    address: 'Çerkezköy Organize Sanayi Bölgesi, Karaağaç Mah. 8. Sokak No:1A, Kapaklı / Tekirdağ',
+    businessEntities: [
+      { id: 8, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+      { id: 9, companyName: 'Arçelik A.Ş.', brandName: 'Grundig', logoText: 'GRUNDIG', logoTone: 'neutral' },
+    ],
+    contractorCount: 9,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    id: 6,
+    name: 'Manisa Kampüsü',
+    city: 'Manisa',
+    district: 'Yunusemre',
+    address: 'Manisa Organize Sanayi Bölgesi, Yunusemre / Manisa',
+    businessEntities: [
+      { id: 10, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 11, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+    ],
+    contractorCount: 7,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    id: 7,
+    name: 'Bolu Pişirici Cihazlar İşletmesi',
+    city: 'Bolu',
+    district: 'Merkez',
+    address: 'Yukarı Soku Mahallesi, Arçelik Sk. No:1, Merkez / Bolu',
+    businessEntities: [
+      { id: 12, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+    ],
+    contractorCount: 5,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    id: 8,
+    name: 'Ankara Bulaşık Makinesi İşletmesi',
+    city: 'Ankara',
+    district: 'Sincan',
+    address: '1. OSB, Altınordu Cad. No:3, Sincan / Ankara',
+    businessEntities: [
+      { id: 13, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+    ],
+    contractorCount: 5,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    id: 9,
+    name: 'Arçelik-LG Klima',
+    city: 'Kocaeli',
+    district: 'Gebze',
+    address: 'Gebze / Kocaeli',
+    businessEntities: [
+      { id: 14, companyName: 'Arçelik-LG Klima San. ve Tic. A.Ş.', brandName: 'Arçelik-LG', logoText: 'Arçelik-LG', logoTone: 'neutral' },
+    ],
+    contractorCount: 3,
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1581091870622-3c8d4b0d1c3b?auto=format&fit=crop&w=320&q=80',
+  },
 ])
 
-const companyOptions = computed(() => [...new Set(locations.value.flatMap(location => location.companies.map(company => company.name)))])
+const companyOptions = computed(() => [...new Set(locations.value.flatMap(location => location.businessEntities.map(entity => entity.companyName)))])
 const cityOptions = computed(() => [...new Set(locations.value.map(location => location.city))])
 
 const filteredLocations = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
   return locations.value.filter(location => {
-    const haystack = `${location.name} ${location.city} ${location.district} ${location.address}`.toLocaleLowerCase('tr-TR')
+    const entityText = location.businessEntities.map(entity => `${entity.companyName} ${entity.brandName ?? ''}`).join(' ')
+    const haystack = `${location.name} ${location.city} ${location.district} ${location.address} ${entityText}`.toLocaleLowerCase('tr-TR')
     const matchesSearch = !term || haystack.includes(term)
-    const matchesCompany = companyFilter.value === 'all' || location.companies.some(company => company.name === companyFilter.value)
+    const matchesCompany = companyFilter.value === 'all' || location.businessEntities.some(entity => entity.companyName === companyFilter.value)
     const matchesCity = cityFilter.value === 'all' || location.city === cityFilter.value
     const matchesStatus = statusFilter.value === 'all' || location.status === statusFilter.value
     return matchesSearch && matchesCompany && matchesCity && matchesStatus
@@ -214,18 +263,20 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
                   <button type="button" class="flex min-w-[245px] items-center gap-3 text-left" @click="goToLocation(location.id)">
                     <img :src="location.image" :alt="location.name" class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
                     <span class="min-w-0">
-                      <span class="block truncate text-sm font-semibold text-gray-800 dark:text-white/90">{{ location.name }}</span>
+                      <span class="block text-sm font-semibold text-gray-800 dark:text-white/90">{{ location.name }}</span>
                       <span class="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><MapPin :size="12" />{{ location.district }} / {{ location.city }}</span>
                     </span>
                   </button>
                 </td>
-                <td class="max-w-[320px] px-4 py-3.5 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ location.address }}</td>
+                <td class="max-w-[340px] px-4 py-3.5 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ location.address }}</td>
                 <td class="px-4 py-3.5">
                   <div class="flex items-center">
-                    <div v-for="(company, index) in location.companies.slice(0, 3)" :key="company.id" class="relative -ml-2 first:ml-0" :style="{ zIndex: 10 - index }" :title="company.name">
-                      <span class="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-[9px] font-bold text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">{{ company.logo }}</span>
+                    <div v-for="(entity, index) in location.businessEntities.slice(0, 3)" :key="entity.id" class="relative -ml-2 first:ml-0" :style="{ zIndex: 10 - index }" :title="`${entity.companyName}${entity.brandName ? ` · ${entity.brandName}` : ''}`">
+                      <span v-if="entity.logoTone === 'arcelik'" class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[10px] font-bold tracking-tight text-[#e21b2d] shadow-sm dark:border-gray-700 dark:bg-gray-900">{{ entity.logoText }}</span>
+                      <span v-else-if="entity.logoTone === 'beko'" class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[10px] font-bold tracking-tight text-[#0875c9] shadow-sm dark:border-gray-700 dark:bg-gray-900">{{ entity.logoText }}</span>
+                      <span v-else class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[8px] font-semibold text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ entity.logoText }}</span>
                     </div>
-                    <span v-if="location.companies.length > 3" class="relative -ml-2 flex h-11 w-11 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-xs font-semibold text-brand-500 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">+{{ location.companies.length - 3 }}</span>
+                    <span v-if="location.businessEntities.length > 3" class="relative -ml-2 flex h-11 w-11 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-xs font-semibold text-brand-500 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">+{{ location.businessEntities.length - 3 }}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3.5 text-center"><span class="inline-flex min-w-8 items-center justify-center rounded-lg bg-brand-50 px-2 py-1.5 text-xs font-semibold text-brand-500 dark:bg-brand-500/10 dark:text-brand-300">{{ location.contractorCount }}</span></td>
