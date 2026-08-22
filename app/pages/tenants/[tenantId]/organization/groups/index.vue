@@ -36,13 +36,6 @@ const parentFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
 
-const tabs = [
-  { label: 'Gruplar', path: 'groups' },
-  { label: 'Şirketler', path: 'companies' },
-  { label: 'Markalar', path: 'brands' },
-  { label: 'Hiyerarşi Görünümü', path: 'hierarchy' },
-]
-
 const groups = ref<Group[]>([
   {
     id: 1,
@@ -165,23 +158,7 @@ const groupInitial = (name: string) => (
       </p>
     </div>
 
-    <div class="mb-5 flex overflow-x-auto rounded-xl border border-gray-200 bg-white px-2 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-      <NuxtLink
-        v-for="tab in tabs"
-        :key="tab.path"
-        :to="`/tenants/${tenantId}/organization/${tab.path}`"
-        class="relative flex h-11 shrink-0 items-center px-4 font-medium transition"
-        :class="route.path.includes(`/organization/${tab.path}`)
-          ? 'text-brand-500'
-          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white/90'"
-      >
-        {{ tab.label }}
-        <span
-          v-if="route.path.includes(`/organization/${tab.path}`)"
-          class="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand-500"
-        />
-      </NuxtLink>
-    </div>
+    <OrganizationTabs />
 
     <div class="mb-5 flex items-center justify-between gap-4">
       <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -264,24 +241,12 @@ const groupInitial = (name: string) => (
         <table class="w-full min-w-[900px] text-left">
           <thead class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.02]">
             <tr>
-              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                Grup Adı
-              </th>
-              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                Ebeveyn Grup
-              </th>
-              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                Açıklama
-              </th>
-              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                Durum
-              </th>
-              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                Oluşturulma Tarihi
-              </th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
-                İşlemler
-              </th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Grup Adı</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Ebeveyn Grup</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Açıklama</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Oluşturulma Tarihi</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th>
             </tr>
           </thead>
 
@@ -301,23 +266,14 @@ const groupInitial = (name: string) => (
                     {{ groupInitial(group.name) }}
                   </span>
                   <span class="min-w-0">
-                    <span class="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
-                      {{ group.name }}
-                    </span>
-                    <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                      {{ group.code }}
-                    </span>
+                    <span class="block truncate text-sm font-medium text-gray-800 dark:text-white/90">{{ group.name }}</span>
+                    <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ group.code }}</span>
                   </span>
                 </button>
               </td>
 
-              <td class="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">
-                {{ group.parent ?? '—' }}
-              </td>
-
-              <td class="max-w-[250px] px-4 py-3.5 text-sm leading-5 text-gray-500 dark:text-gray-400">
-                {{ group.description }}
-              </td>
+              <td class="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">{{ group.parent ?? '—' }}</td>
+              <td class="max-w-[250px] px-4 py-3.5 text-sm leading-5 text-gray-500 dark:text-gray-400">{{ group.description }}</td>
 
               <td class="px-4 py-3.5">
                 <span
@@ -334,9 +290,7 @@ const groupInitial = (name: string) => (
                 </span>
               </td>
 
-              <td class="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">
-                {{ group.createdAt }}
-              </td>
+              <td class="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">{{ group.createdAt }}</td>
 
               <td class="px-4 py-3.5">
                 <div class="flex items-center justify-end gap-2">
@@ -363,12 +317,8 @@ const groupInitial = (name: string) => (
                 <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800">
                   <FolderTree :size="18" />
                 </div>
-                <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Grup bulunamadı.
-                </p>
-                <p class="mt-1 text-sm text-gray-400">
-                  Arama veya filtre kriterlerinizi değiştirmeyi deneyin.
-                </p>
+                <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">Grup bulunamadı.</p>
+                <p class="mt-1 text-sm text-gray-400">Arama veya filtre kriterlerinizi değiştirmeyi deneyin.</p>
               </td>
             </tr>
           </tbody>
@@ -376,16 +326,15 @@ const groupInitial = (name: string) => (
       </div>
 
       <div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
-        <span class="text-xs text-gray-500 dark:text-gray-400">
-          Toplam {{ filteredGroups.length }} kayıt
-        </span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Toplam {{ filteredGroups.length }} kayıt</p>
 
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-2">
           <button
             type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-white/5"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
             :disabled="currentPage === 1"
-            @click="currentPage--"
+            aria-label="Önceki sayfa"
+            @click="currentPage -= 1"
           >
             <ChevronLeft :size="15" />
           </button>
@@ -394,8 +343,8 @@ const groupInitial = (name: string) => (
             v-for="page in visiblePages"
             :key="page"
             type="button"
-            class="flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition"
-            :class="currentPage === page
+            class="flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium transition"
+            :class="page === currentPage
               ? 'bg-brand-500 text-white'
               : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'"
             @click="currentPage = page"
@@ -405,41 +354,25 @@ const groupInitial = (name: string) => (
 
           <button
             type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-white/5"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
             :disabled="currentPage === totalPages"
-            @click="currentPage++"
+            aria-label="Sonraki sayfa"
+            @click="currentPage += 1"
           >
             <ChevronRight :size="15" />
           </button>
-        </div>
 
-        <label class="relative self-start sm:self-auto">
-          <select
-            v-model.number="perPage"
-            class="h-8 appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-8 text-xs text-gray-600 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
-          >
-            <option :value="10">10 / sayfa</option>
-            <option :value="25">25 / sayfa</option>
-            <option :value="50">50 / sayfa</option>
-          </select>
-          <ChevronDown
-            :size="13"
-            class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-        </label>
-      </div>
-    </section>
-
-    <section class="mt-5 rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-3.5 dark:border-brand-500/20 dark:bg-brand-500/5">
-      <div class="flex items-start gap-3">
-        <Info :size="17" class="mt-0.5 shrink-0 text-brand-500" />
-        <div>
-          <h2 class="text-sm font-semibold text-brand-600 dark:text-brand-400">
-            Bilgilendirme
-          </h2>
-          <p class="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">
-            Organizasyon yapınızı Gruplar, Şirketler ve Markalar olarak yönetebilirsiniz.
-          </p>
+          <div class="ml-2 flex items-center gap-2">
+            <span class="text-xs text-gray-400">Sayfa</span>
+            <select
+              v-model.number="perPage"
+              class="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-600 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
+            >
+              <option :value="10">10 / sayfa</option>
+              <option :value="25">25 / sayfa</option>
+              <option :value="50">50 / sayfa</option>
+            </select>
+          </div>
         </div>
       </div>
     </section>
