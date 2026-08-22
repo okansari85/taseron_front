@@ -4,13 +4,12 @@ import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Eye, Filter, 
 definePageMeta({ layout: 'default' })
 
 type LocationStatus = 'active' | 'passive'
-type LogoTone = 'arcelik' | 'beko' | 'neutral'
+type LogoTone = 'arcelik' | 'beko' | 'bicakcilar' | 'grundig' | 'arcelikLg'
 type LocationBusinessEntity = {
   id: number
   companyName: string
   brandName?: string
-  logoText: string
-  logoTone: LogoTone
+  logoUrl: string
 }
 type Location = {
   id: number
@@ -33,10 +32,16 @@ const statusFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
 
-// Mock data only. In production this list will be built from LocationBusinessEntity.
-// A business entity determines which company + brand combination is shown for a location.
-// Example: Beylikduzu has Arçelik A.Ş. using the Beko brand and Arçelik Pazarlama A.Ş.
-// using the Arçelik brand, so the logo shown is not inferred from the company master.
+// Mock data. Production response will come from LocationBusinessEntity.
+// The logo is determined by the company + brand assignment on that location.
+const logos = {
+  arcelik: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg',
+  beko: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Beko_logo.svg',
+  grundig: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Grundig_Logo_2019.svg',
+  bicakcilar: 'https://www.massiad.org.tr/dosya/uye/bicakcilar-tibbi-cihaz-san-ve-tic-a-s-IyYgxJ.jpg',
+  arcelikLg: 'https://s3.eu-central-1.amazonaws.com/stajim/media/images/company/photos/origin/r_9157_20240506133829.jpg',
+}
+
 const locations = ref<Location[]>([
   {
     id: 1,
@@ -45,13 +50,13 @@ const locations = ref<Location[]>([
     district: 'Beylikdüzü',
     address: 'Beylikdüzü Kampüsü, Beylikdüzü / İstanbul',
     businessEntities: [
-      { id: 1, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
-      { id: 2, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
-      { id: 3, companyName: 'Bıçakçılar A.Ş.', logoText: 'Bıçakçılar', logoTone: 'neutral' },
+      { id: 1, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko },
+      { id: 2, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
+      { id: 3, companyName: 'Bıçakçılar A.Ş.', logoUrl: logos.bicakcilar },
     ],
     contractorCount: 6,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=320&q=80',
+    image: 'https://s1.dmcdn.net/v/OrN9e1eobEe84Yfu6/x720',
   },
   {
     id: 2,
@@ -60,25 +65,25 @@ const locations = ref<Location[]>([
     district: 'Beyoğlu',
     address: 'Karaağaç Caddesi No:2-6, Sütlüce, Beyoğlu / İstanbul',
     businessEntities: [
-      { id: 4, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
-      { id: 5, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 4, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
+      { id: 5, companyName: 'Arçelik Pazarlama A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
     ],
     contractorCount: 4,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=320&q=80',
+    image: 'https://avatars.mds.yandex.net/get-altay/14731058/2a00000194b37f714a325289aa7cc5ff0976/XXL_height',
   },
   {
     id: 3,
     name: 'Çayırova Kampüsü',
     city: 'İstanbul',
     district: 'Tuzla',
-    address: 'Şifa Mahallesi, Şifa Yanyol Cad. No:4, Tuzla / İstanbul',
+    address: 'Şifa Mahallesi 34950, Tuzla / İstanbul',
     businessEntities: [
-      { id: 6, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+      { id: 6, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko },
     ],
     contractorCount: 8,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
+    image: 'https://static.daktilo.com/sites/302/uploads/2022/01/20/arcelik-fabrika.jpg',
   },
   {
     id: 4,
@@ -87,11 +92,11 @@ const locations = ref<Location[]>([
     district: 'Odunpazarı',
     address: '75. Yıl OSB Mah. 1. Cadde No:1, Odunpazarı / Eskişehir',
     businessEntities: [
-      { id: 7, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 7, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
     ],
     contractorCount: 24,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
+    image: 'https://stendustricomtr.teimg.com/stendustri-com-tr/images/haberler/2020/06/arcelik_eskisehir_buzdolabi_ve_kompresor_tesisine_tse_covid_19_guvenli_uretim_belgesi_h106580_8fef3.png',
   },
   {
     id: 5,
@@ -100,12 +105,12 @@ const locations = ref<Location[]>([
     district: 'Kapaklı',
     address: 'Çerkezköy Organize Sanayi Bölgesi, Karaağaç Mah. 8. Sokak No:1A, Kapaklı / Tekirdağ',
     businessEntities: [
-      { id: 8, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
-      { id: 9, companyName: 'Arçelik A.Ş.', brandName: 'Grundig', logoText: 'GRUNDIG', logoTone: 'neutral' },
+      { id: 8, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko },
+      { id: 9, companyName: 'Arçelik A.Ş.', brandName: 'Grundig', logoUrl: logos.grundig },
     ],
     contractorCount: 9,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?auto=format&fit=crop&w=320&q=80',
+    image: 'https://turkishtimedergi.com/wp-content/uploads/2018/10/arcelik.jpg',
   },
   {
     id: 6,
@@ -114,12 +119,12 @@ const locations = ref<Location[]>([
     district: 'Yunusemre',
     address: 'Manisa Organize Sanayi Bölgesi, Yunusemre / Manisa',
     businessEntities: [
-      { id: 10, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
-      { id: 11, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+      { id: 10, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
+      { id: 11, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko },
     ],
     contractorCount: 7,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=320&q=80',
+    image: 'https://hemelektrik.com.tr/Assets/Images/arcelik-camasir-bulasik-makinesi-fabrikasi-b.jpg',
   },
   {
     id: 7,
@@ -128,11 +133,11 @@ const locations = ref<Location[]>([
     district: 'Merkez',
     address: 'Yukarı Soku Mahallesi, Arçelik Sk. No:1, Merkez / Bolu',
     businessEntities: [
-      { id: 12, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoText: 'arçelik', logoTone: 'arcelik' },
+      { id: 12, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik },
     ],
     contractorCount: 5,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=320&q=80',
+    image: 'https://bthaber.com/SFolder/ckeditor/images/Arcelik_Bolu_Pisirici_Cihazlar_Isletmesi_1.jpg',
   },
   {
     id: 8,
@@ -141,24 +146,24 @@ const locations = ref<Location[]>([
     district: 'Sincan',
     address: '1. OSB, Altınordu Cad. No:3, Sincan / Ankara',
     businessEntities: [
-      { id: 13, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoText: 'beko', logoTone: 'beko' },
+      { id: 13, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko },
     ],
     contractorCount: 5,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=320&q=80',
+    image: 'https://i.gazeteoksijen.com/2/850/478/storage/files/images/2026/05/08/arcelikin-ankaradaki-fabrikasi-469-saniyede-bir-bulasik-makinesi-uretiliyor-54-ulkeye-ihrac-ediliyor-a5dd.jpg',
   },
   {
     id: 9,
     name: 'Arçelik-LG Klima',
     city: 'Kocaeli',
     district: 'Gebze',
-    address: 'Gebze / Kocaeli',
+    address: 'Gebze Organize Sanayi Bölgesi / Kocaeli',
     businessEntities: [
-      { id: 14, companyName: 'Arçelik-LG Klima San. ve Tic. A.Ş.', brandName: 'Arçelik-LG', logoText: 'Arçelik-LG', logoTone: 'neutral' },
+      { id: 14, companyName: 'Arçelik-LG Klima San. ve Tic. A.Ş.', brandName: 'Arçelik-LG', logoUrl: logos.arcelikLg },
     ],
     contractorCount: 3,
     status: 'active',
-    image: 'https://images.unsplash.com/photo-1581091870622-3c8d4b0d1c3b?auto=format&fit=crop&w=320&q=80',
+    image: 'https://s3.eu-central-1.amazonaws.com/stajim/media/images/company/photos/origin/r_9157_20240506133829.jpg',
   },
 ])
 
@@ -170,11 +175,10 @@ const filteredLocations = computed(() => {
   return locations.value.filter(location => {
     const entityText = location.businessEntities.map(entity => `${entity.companyName} ${entity.brandName ?? ''}`).join(' ')
     const haystack = `${location.name} ${location.city} ${location.district} ${location.address} ${entityText}`.toLocaleLowerCase('tr-TR')
-    const matchesSearch = !term || haystack.includes(term)
-    const matchesCompany = companyFilter.value === 'all' || location.businessEntities.some(entity => entity.companyName === companyFilter.value)
-    const matchesCity = cityFilter.value === 'all' || location.city === cityFilter.value
-    const matchesStatus = statusFilter.value === 'all' || location.status === statusFilter.value
-    return matchesSearch && matchesCompany && matchesCity && matchesStatus
+    return (!term || haystack.includes(term))
+      && (companyFilter.value === 'all' || location.businessEntities.some(entity => entity.companyName === companyFilter.value))
+      && (cityFilter.value === 'all' || location.city === cityFilter.value)
+      && (statusFilter.value === 'all' || location.status === statusFilter.value)
   })
 })
 
@@ -204,8 +208,7 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
           <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">Tenant içerisindeki fiziksel lokasyonları görüntüleyin ve yönetin.</p>
         </div>
         <button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600" @click="goToCreate">
-          <Plus :size="16" />
-          Yeni Lokasyon
+          <Plus :size="16" /> Yeni Lokasyon
         </button>
       </div>
 
@@ -238,8 +241,7 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
             <ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
           <button type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06]" @click="resetFilters">
-            <Filter :size="15" />
-            Filtreleri Temizle
+            <Filter :size="15" /> Filtreleri Temizle
           </button>
         </div>
       </section>
@@ -251,7 +253,7 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
               <tr>
                 <th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Lokasyon</th>
                 <th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Adres</th>
-                <th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Şirketler</th>
+                <th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Şirketler / Markalar</th>
                 <th class="px-4 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Taşeron</th>
                 <th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
                 <th class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th>
@@ -260,21 +262,21 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               <tr v-for="location in paginatedLocations" :key="location.id" class="transition hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                 <td class="px-4 py-3.5">
-                  <button type="button" class="flex min-w-[245px] items-center gap-3 text-left" @click="goToLocation(location.id)">
-                    <img :src="location.image" :alt="location.name" class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
+                  <button type="button" class="flex min-w-[255px] items-center gap-3 text-left" @click="goToLocation(location.id)">
+                    <img :src="location.image" :alt="location.name" class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700" loading="lazy" />
                     <span class="min-w-0">
                       <span class="block text-sm font-semibold text-gray-800 dark:text-white/90">{{ location.name }}</span>
                       <span class="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><MapPin :size="12" />{{ location.district }} / {{ location.city }}</span>
                     </span>
                   </button>
                 </td>
-                <td class="max-w-[340px] px-4 py-3.5 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ location.address }}</td>
+                <td class="max-w-[360px] px-4 py-3.5 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ location.address }}</td>
                 <td class="px-4 py-3.5">
-                  <div class="flex items-center">
-                    <div v-for="(entity, index) in location.businessEntities.slice(0, 3)" :key="entity.id" class="relative -ml-2 first:ml-0" :style="{ zIndex: 10 - index }" :title="`${entity.companyName}${entity.brandName ? ` · ${entity.brandName}` : ''}`">
-                      <span v-if="entity.logoTone === 'arcelik'" class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[10px] font-bold tracking-tight text-[#e21b2d] shadow-sm dark:border-gray-700 dark:bg-gray-900">{{ entity.logoText }}</span>
-                      <span v-else-if="entity.logoTone === 'beko'" class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[10px] font-bold tracking-tight text-[#0875c9] shadow-sm dark:border-gray-700 dark:bg-gray-900">{{ entity.logoText }}</span>
-                      <span v-else class="flex h-11 min-w-11 items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-[8px] font-semibold text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ entity.logoText }}</span>
+                  <div class="flex items-center gap-1">
+                    <div v-for="(entity, index) in location.businessEntities.slice(0, 3)" :key="entity.id" class="relative -ml-2 first:ml-0" :style="{ zIndex: 10 - index }" :title="entity.companyName + (entity.brandName ? ' • ' + entity.brandName : '')">
+                      <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-950">
+                        <img :src="entity.logoUrl" :alt="entity.brandName || entity.companyName" class="max-h-7 max-w-9 object-contain" loading="lazy" />
+                      </span>
                     </div>
                     <span v-if="location.businessEntities.length > 3" class="relative -ml-2 flex h-11 w-11 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-xs font-semibold text-brand-500 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">+{{ location.businessEntities.length - 3 }}</span>
                   </div>
