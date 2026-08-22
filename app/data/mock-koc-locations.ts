@@ -1,0 +1,46 @@
+export type MockKocLocation = {
+  id: number
+  name: string
+  city: string
+  district: string
+  address: string
+  companyName: string
+  brandName?: string
+  contractorCount: number
+  status: 'active' | 'passive'
+  image: string
+  logoUrl: string
+}
+
+/**
+ * Koç Topluluğu için lokasyon listeleme ekranında kullanılacak mock veri.
+ * Kapsam: fiziksel tesis/fabrika/terminal/genel merkez gibi operasyonel lokasyonlar.
+ * Banka şubeleri, bayi ağı ve tüm perakende mağazalar dahil değildir.
+ */
+export const mockKocLocations: MockKocLocation[] = [
+  { id: 1, name: 'Beylikdüzü Kampüsü', city: 'İstanbul', district: 'Beylikdüzü', address: 'Beylikdüzü Kampüsü, Beylikdüzü / İstanbul', companyName: 'Arçelik A.Ş.', brandName: 'Beko', contractorCount: 6, status: 'active', image: '/images/locations/beylikduzu.jpg', logoUrl: '/images/brands/beko.png' },
+  { id: 2, name: 'Sütlüce Genel Müdürlük', city: 'İstanbul', district: 'Beyoğlu', address: 'Karaağaç Caddesi No:2-6, Sütlüce, Beyoğlu / İstanbul', companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', contractorCount: 4, status: 'active', image: '/images/locations/sutluce.jpg', logoUrl: '/images/brands/arcelik.png' },
+  { id: 3, name: 'Çayırova Kampüsü', city: 'İstanbul', district: 'Tuzla', address: 'Şifa Mahallesi, Tuzla / İstanbul', companyName: 'Arçelik A.Ş.', brandName: 'Beko', contractorCount: 8, status: 'active', image: '/images/locations/cayirova.jpg', logoUrl: '/images/brands/beko.png' },
+  { id: 4, name: 'Eskişehir Kampüsü', city: 'Eskişehir', district: 'Odunpazarı', address: '75. Yıl OSB Mah. 1. Cadde No:1, Odunpazarı / Eskişehir', companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', contractorCount: 24, status: 'active', image: '/images/locations/eskisehir.jpg', logoUrl: '/images/brands/arcelik.png' },
+  { id: 5, name: 'Çerkezköy Kampüsü', city: 'Tekirdağ', district: 'Kapaklı', address: 'Çerkezköy Organize Sanayi Bölgesi, Karaağaç Mah. 8. Sokak No:1A, Kapaklı / Tekirdağ', companyName: 'Arçelik A.Ş.', brandName: 'Beko', contractorCount: 9, status: 'active', image: '/images/locations/cerkezkoy.jpg', logoUrl: '/images/brands/beko.png' },
+  { id: 6, name: 'Manisa Kampüsü', city: 'Manisa', district: 'Yunusemre', address: 'Manisa Organize Sanayi Bölgesi, Yunusemre / Manisa', companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', contractorCount: 7, status: 'active', image: '/images/locations/manisa.jpg', logoUrl: '/images/brands/arcelik.png' },
+  { id: 7, name: 'Bolu Pişirici Cihazlar İşletmesi', city: 'Bolu', district: 'Merkez', address: 'Yukarı Soku Mahallesi, Arçelik Sk. No:1, Merkez / Bolu', companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', contractorCount: 5, status: 'active', image: '/images/locations/bolu.jpg', logoUrl: '/images/brands/arcelik.png' },
+  { id: 8, name: 'Ankara Bulaşık Makinesi İşletmesi', city: 'Ankara', district: 'Sincan', address: '1. OSB, Altınordu Cad. No:3, Sincan / Ankara', companyName: 'Arçelik A.Ş.', brandName: 'Beko', contractorCount: 5, status: 'active', image: '/images/locations/ankara.jpg', logoUrl: '/images/brands/beko.png' },
+  { id: 9, name: 'Arçelik-LG Klima', city: 'Kocaeli', district: 'Gebze', address: 'Gebze / Kocaeli', companyName: 'Arçelik-LG Klima San. ve Tic. A.Ş.', brandName: 'Arçelik-LG', contractorCount: 3, status: 'active', image: '/images/locations/arcelik-lg.jpg', logoUrl: '/images/brands/arcelik-lg.png' },
+  { id: 10, name: 'Ford Otosan Gölcük Fabrikası', city: 'Kocaeli', district: 'Gölcük', address: 'Gölcük / Kocaeli', companyName: 'Ford Otomotiv San. A.Ş.', brandName: 'Ford', contractorCount: 14, status: 'active', image: '/images/locations/ford-golcuk.jpg', logoUrl: '/images/brands/ford.png' },
+  { id: 11, name: 'Ford Otosan Yeniköy Fabrikası', city: 'Kocaeli', district: 'Başiskele', address: 'Yeniköy, Başiskele / Kocaeli', companyName: 'Ford Otomotiv San. A.Ş.', brandName: 'Ford', contractorCount: 10, status: 'active', image: '/images/locations/ford-yenikoy.jpg', logoUrl: '/images/brands/ford.png' },
+  { id: 12, name: 'Ford Otosan Eskişehir Fabrikası', city: 'Eskişehir', district: 'Odunpazarı', address: 'Organize Sanayi Bölgesi, Eskişehir', companyName: 'Ford Otomotiv San. A.Ş.', brandName: 'Ford', contractorCount: 8, status: 'active', image: '/images/locations/ford-eskisehir.jpg', logoUrl: '/images/brands/ford.png' },
+  { id: 13, name: 'Tofaş Bursa Fabrikası', city: 'Bursa', district: 'Osmangazi', address: 'Yeni Yalova Yolu No:574, Osmangazi / Bursa', companyName: 'Tofaş Türk Otomobil Fabrikası A.Ş.', brandName: 'Fiat', contractorCount: 16, status: 'active', image: '/images/locations/tofas-bursa.jpg', logoUrl: '/images/brands/fiat.png' },
+  { id: 14, name: 'Otokar Sakarya Fabrikası', city: 'Sakarya', district: 'Arifiye', address: 'Atatürk Cad. No:6, Arifiye / Sakarya', companyName: 'Otokar Otomotiv ve Savunma Sanayi A.Ş.', brandName: 'Otokar', contractorCount: 9, status: 'active', image: '/images/locations/otokar-sakarya.jpg', logoUrl: '/images/brands/otokar.png' },
+  { id: 15, name: 'TürkTraktör Ankara Fabrikası', city: 'Ankara', district: 'Yenimahalle', address: 'Gazi Mahallesi Anadolu Bulvarı No:52-52A, Yenimahalle / Ankara', companyName: 'TürkTraktör ve Ziraat Makineleri A.Ş.', brandName: 'TürkTraktör', contractorCount: 11, status: 'active', image: '/images/locations/turktraktor-ankara.jpg', logoUrl: '/images/brands/turktraktor.png' },
+  { id: 16, name: 'TürkTraktör Erenler Fabrikası', city: 'Sakarya', district: 'Erenler', address: 'Bekirpaşa Mah. Kozluk Cad. No:130, Erenler / Sakarya', companyName: 'TürkTraktör ve Ziraat Makineleri A.Ş.', brandName: 'TürkTraktör', contractorCount: 8, status: 'active', image: '/images/locations/turktraktor-erenler.jpg', logoUrl: '/images/brands/turktraktor.png' },
+  { id: 17, name: 'TürkTraktör Akyurt Satış Sonrası Hizmetler Merkezi', city: 'Ankara', district: 'Akyurt', address: 'Büğdüz Mah. Çankırı Bulvarı Yolu No:111/2-3-4, Akyurt / Ankara', companyName: 'TürkTraktör ve Ziraat Makineleri A.Ş.', brandName: 'TürkTraktör', contractorCount: 4, status: 'active', image: '/images/locations/turktraktor-akyurt.jpg', logoUrl: '/images/brands/turktraktor.png' },
+  { id: 18, name: 'TürkTraktör İzmir İş Makineleri Tesisi', city: 'İzmir', district: 'Kemalpaşa', address: 'KOSBİ Ansızca Sanayi Sitesi No:327/A-B-C-D, Kemalpaşa / İzmir', companyName: 'TürkTraktör ve Ziraat Makineleri A.Ş.', brandName: 'TürkTraktör', contractorCount: 3, status: 'active', image: '/images/locations/turktraktor-izmir.jpg', logoUrl: '/images/brands/turktraktor.png' },
+  { id: 19, name: 'TürkTraktör Adana İş Makineleri Tesisi', city: 'Adana', district: 'Seyhan', address: 'Zeytinli Mah. Turhan Cemal Beriker Bulvarı No:786/2, Seyhan / Adana', companyName: 'TürkTraktör ve Ziraat Makineleri A.Ş.', brandName: 'TürkTraktör', contractorCount: 3, status: 'active', image: '/images/locations/turktraktor-adana.jpg', logoUrl: '/images/brands/turktraktor.png' },
+  { id: 20, name: 'Opet Körfez Terminali', city: 'Kocaeli', district: 'Körfez', address: 'Funda Sok. No:76, Tütünçiftlik, Körfez / Kocaeli', companyName: 'Opet Petrolcülük A.Ş.', brandName: 'Opet', contractorCount: 7, status: 'active', image: '/images/locations/opet-korfez.jpg', logoUrl: '/images/brands/opet.png' },
+  { id: 21, name: 'Opet Mersin Terminali', city: 'Mersin', district: 'Akdeniz', address: 'Karaduvar Mah. 65182 Sokak No:2, Akdeniz / Mersin', companyName: 'Opet Petrolcülük A.Ş.', brandName: 'Opet', contractorCount: 6, status: 'active', image: '/images/locations/opet-mersin.jpg', logoUrl: '/images/brands/opet.png' },
+  { id: 22, name: 'Opet Giresun Terminali', city: 'Giresun', district: 'Espiye', address: 'Karadere Mah. Kızılçay Mevkii, Espiye / Giresun', companyName: 'Opet Petrolcülük A.Ş.', brandName: 'Opet', contractorCount: 4, status: 'active', image: '/images/locations/opet-giresun.jpg', logoUrl: '/images/brands/opet.png' },
+  { id: 23, name: 'Opet Marmara Terminali', city: 'Tekirdağ', district: 'Marmaraereğlisi', address: 'Sultanköy Mah. Ereğli Cad. No:78, Marmaraereğlisi / Tekirdağ', companyName: 'Opet Petrolcülük A.Ş.', brandName: 'Opet', contractorCount: 6, status: 'active', image: '/images/locations/opet-marmara.jpg', logoUrl: '/images/brands/opet.png' },
+  { id: 24, name: 'Opet Antalya Terminali', city: 'Antalya', district: 'Konyaaltı', address: 'Liman Mah. Akdeniz Bulvarı 64. Sokak No:2, Konyaaltı / Antalya', companyName: 'Opet Petrolcülük A.Ş.', brandName: 'Opet', contractorCount: 5, status: 'active', image: '/images/locations/opet-antalya.jpg', logoUrl: '/images/brands/opet.png' },
+  { id: 25, name: 'Koç Holding Genel Merkez', city: 'İstanbul', district: 'Kuzguncuk', address: 'Nakkaştepe, Azizbey Sokak No:1, Kuzguncuk / İstanbul', companyName: 'Koç Holding A.Ş.', brandName: 'Koç Holding', contractorCount: 5, status: 'active', image: '/images/locations/koc-nakkastepe.jpg', logoUrl: '/images/brands/koc-holding.png' },
+]
