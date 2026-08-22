@@ -76,12 +76,12 @@ const saveCompany = () => {
               </div>
             </div>
 
-            <div class="md:col-span-2">
+            <div>
               <div class="mb-2 flex items-center justify-between">
                 <label class="block text-sm font-semibold text-gray-800 dark:text-white/90">Açıklama</label>
                 <span class="text-xs text-gray-400">{{ description.length }} / 500</span>
               </div>
-              <textarea v-model="description" maxlength="500" rows="4" placeholder="Şirket ile ilgili açıklama giriniz (isteğe bağlı)" class="w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+              <textarea v-model="description" maxlength="500" rows="3" placeholder="Şirket ile ilgili açıklama giriniz (isteğe bağlı)" class="w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
             </div>
           </div>
 
