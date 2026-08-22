@@ -10,7 +10,7 @@ definePageMeta({
 type OrgNode = {
   id: string
   title: string
-  member: []
+  member?: []
   children?: OrgNode[]
   meta: {
     type: 'Holding' | 'Grup' | 'Şirket' | 'Marka'
@@ -89,7 +89,6 @@ const orgData = computed<OrgNode>(() => ({
 const totalCompanies = computed(() => groups.reduce((total, group) => total + group.companies.length, 0))
 const totalBrands = computed(() => groups.reduce((total, group) => total + group.companies.reduce((sum, company) => sum + company.brands.length, 0), 0))
 
-const chartWrap = ref<HTMLElement | null>(null)
 const zoom = ref(1)
 const pan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
@@ -157,22 +156,22 @@ const toneClasses = {
 
     <OrganizationTabs />
 
-    <div class="mb-5 grid grid-cols-3 gap-3">
-      <div class="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+    <div class="mb-5 flex w-full flex-col gap-3 md:flex-row">
+      <div class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center gap-3">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><Layers3 :size="18" /></span>
           <div><p class="text-xs font-medium text-gray-500 dark:text-gray-400">Grup</p><p class="mt-0.5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ groups.length }}</p></div>
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center gap-3">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400"><Building2 :size="18" /></span>
           <div><p class="text-xs font-medium text-gray-500 dark:text-gray-400">Şirket</p><p class="mt-0.5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ totalCompanies }}</p></div>
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center gap-3">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-light-50 text-blue-light-600 dark:bg-blue-light-500/10 dark:text-blue-light-400"><Network :size="18" /></span>
           <div><p class="text-xs font-medium text-gray-500 dark:text-gray-400">Marka</p><p class="mt-0.5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ totalBrands }}</p></div>
@@ -196,7 +195,6 @@ const toneClasses = {
       </div>
 
       <div
-        ref="chartWrap"
         class="relative h-[620px] overflow-hidden bg-gray-50/60 dark:bg-gray-900/40"
         :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
         @wheel="onWheel"
@@ -208,20 +206,22 @@ const toneClasses = {
         <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_55%)]" />
 
         <div class="absolute left-1/2 top-8 origin-top-left" :style="chartTransform">
-          <OrganizationChart :data="orgData" :default-expand-all="true" class="hierarchy-org-chart">
-            <template #node-title="{ node }">
-              <div class="flex min-w-[190px] flex-col items-center gap-2 rounded-xl border bg-white px-5 py-4 text-center shadow-theme-xs dark:bg-gray-900" :class="toneClasses[node.meta?.tone ?? 'purple']">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-current/10 text-current">
-                  <Network v-if="node.meta?.type === 'Holding'" :size="18" />
-                  <Layers3 v-else-if="node.meta?.type === 'Grup'" :size="18" />
-                  <Building2 v-else-if="node.meta?.type === 'Şirket'" :size="18" />
-                  <span v-else class="text-sm font-bold">◆</span>
+          <ClientOnly>
+            <OrganizationChart :data="orgData" :default-expand-all="true" class="hierarchy-org-chart">
+              <template #node-title="{ node }">
+                <div class="flex min-w-[190px] flex-col items-center gap-2 rounded-xl border bg-white px-5 py-4 text-center shadow-theme-xs dark:bg-gray-900" :class="toneClasses[node.meta?.tone ?? 'purple']">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-current/10 text-current">
+                    <Network v-if="node.meta?.type === 'Holding'" :size="18" />
+                    <Layers3 v-else-if="node.meta?.type === 'Grup'" :size="18" />
+                    <Building2 v-else-if="node.meta?.type === 'Şirket'" :size="18" />
+                    <span v-else class="text-sm font-bold">◆</span>
+                  </div>
+                  <div class="max-w-[210px] text-sm font-semibold leading-5 text-gray-800 dark:text-white/90">{{ node.title }}</div>
+                  <div class="text-[11px] font-medium" :class="node.meta?.tone === 'green' ? 'text-success-600 dark:text-success-400' : node.meta?.tone === 'blue' ? 'text-blue-light-600 dark:text-blue-light-400' : 'text-brand-600 dark:text-brand-400'">{{ node.meta?.type }}</div>
                 </div>
-                <div class="max-w-[210px] text-sm font-semibold leading-5 text-gray-800 dark:text-white/90">{{ node.title }}</div>
-                <div class="text-[11px] font-medium" :class="node.meta?.tone === 'green' ? 'text-success-600 dark:text-success-400' : node.meta?.tone === 'blue' ? 'text-blue-light-600 dark:text-blue-light-400' : 'text-brand-600 dark:text-brand-400'">{{ node.meta?.type }}</div>
-              </div>
-            </template>
-          </OrganizationChart>
+              </template>
+            </OrganizationChart>
+          </ClientOnly>
         </div>
 
         <div class="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-xs text-gray-500 shadow-theme-xs backdrop-blur dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-400">
