@@ -270,15 +270,15 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
                     </span>
                   </button>
                 </td>
-                <td class="max-w-[360px] px-4 py-3.5 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ location.address }}</td>
+                <td class="max-w-[360px] px-4 py-3.5 align-middle text-sm leading-5 text-gray-600 dark:text-gray-400"><span class="line-clamp-3">{{ location.address }}</span></td>
                 <td class="px-4 py-3.5">
                   <div class="flex items-center gap-1">
                     <div v-for="(entity, index) in location.businessEntities.slice(0, 3)" :key="entity.id" class="relative -ml-2 first:ml-0" :style="{ zIndex: 10 - index }" :title="entity.companyName + (entity.brandName ? ' • ' + entity.brandName : '')">
-                      <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-950">
-                        <img :src="entity.logoUrl" :alt="entity.brandName || entity.companyName" class="max-h-7 max-w-9 object-contain" loading="lazy" />
+                      <span class="flex h-13 w-13 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-2.5 shadow-sm dark:border-gray-700 dark:bg-gray-950">
+                        <img :src="entity.logoUrl" :alt="entity.brandName || entity.companyName" class="max-h-9 max-w-11 object-contain" loading="lazy" />
                       </span>
                     </div>
-                    <span v-if="location.businessEntities.length > 3" class="relative -ml-2 flex h-11 w-11 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-xs font-semibold text-brand-500 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">+{{ location.businessEntities.length - 3 }}</span>
+                    <span v-if="location.businessEntities.length > 3" class="relative -ml-2 flex h-13 w-13 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-xs font-semibold text-brand-500 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">+{{ location.businessEntities.length - 3 }}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3.5 text-center"><span class="inline-flex min-w-8 items-center justify-center rounded-lg bg-brand-50 px-2 py-1.5 text-xs font-semibold text-brand-500 dark:bg-brand-500/10 dark:text-brand-300">{{ location.contractorCount }}</span></td>
