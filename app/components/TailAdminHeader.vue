@@ -5,10 +5,11 @@
         <button class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 lg:h-11 lg:w-11" @click="handleSidebar">
           <Menu :size="20" />
         </button>
+
         <div class="hidden min-w-0 sm:block">
           <div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <template v-for="(item, index) in breadcrumbs" :key="`${item.type}-${item.id}`">
-              <button type="button" class="truncate transition hover:text-brand-500" :class="index === breadcrumbs.length - 1 ? 'font-medium text-gray-600 dark:text-gray-300' : ''" @click="goToBreadcrumb(item.type, item.id)">
+            <template v-for="(item, index) in breadcrumbs" :key="`${item.kind}-${item.id}`">
+              <button type="button" class="truncate transition hover:text-brand-500" :class="index === breadcrumbs.length - 1 ? 'font-medium text-gray-600 dark:text-gray-300' : ''" @click="goToBreadcrumb(item.kind)">
                 {{ item.name }}
               </button>
               <span v-if="index < breadcrumbs.length - 1" class="text-gray-300 dark:text-gray-700">/</span>
@@ -19,29 +20,17 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <div v-if="isTenantWorkspace" class="relative hidden lg:flex items-center gap-2">
-          <button
-            v-if="previousScope"
-            type="button"
-            class="flex min-w-[170px] max-w-[210px] items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40"
-            :title="`Geri dön: ${previousScope.name}`"
-            @click="goBackOneLevel"
-          >
-            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
-              <component :is="previousScope.icon" :size="14" />
-            </span>
-            <span class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ previousScope.name }}</span>
-            <ChevronLeft :size="14" class="shrink-0 text-gray-400" />
-          </button>
-
+        <div v-if="isTenantWorkspace && allowedKinds.length" class="relative hidden lg:block">
           <button
             type="button"
-            class="flex min-w-[220px] max-w-[260px] items-center justify-between gap-3 rounded-lg border border-brand-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-400 dark:border-brand-500/40 dark:bg-gray-900 dark:hover:border-brand-500/70"
+            class="flex min-w-[230px] max-w-[320px] items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40"
             :title="`Kapsam: ${currentScopeName}`"
             @click="scopeSelectorOpen = !scopeSelectorOpen"
           >
             <span class="flex min-w-0 items-center gap-2.5">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><component :is="currentScopeIcon" :size="15" /></span>
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
+                <component :is="currentScopeIcon" :size="15" />
+              </span>
               <span class="min-w-0">
                 <span class="block text-[9px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ currentScopeLabel }}</span>
                 <span class="block truncate text-xs font-semibold text-gray-800 dark:text-white/90">{{ currentScopeName }}</span>
@@ -50,15 +39,45 @@
             <ChevronDown :size="15" class="shrink-0 text-gray-400 transition-transform" :class="scopeSelectorOpen ? 'rotate-180' : ''" />
           </button>
 
-          <div v-if="scopeSelectorOpen" class="absolute right-0 top-full z-[1000] mt-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-            <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{{ nextScopeLabel }} seçin</p>
-            <button v-for="option in currentScopeOptions" :key="option.id" type="button" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-white/5" @click="selectScopeOption(option)">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400"><component :is="option.icon" :size="13" /></span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ option.name }}</span>
-                <span class="block text-[10px] text-gray-400">{{ option.description }}</span>
-              </span>
-            </button>
+          <div v-if="scopeSelectorOpen" class="absolute right-0 top-full z-[1000] mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+            <div class="border-b border-gray-100 px-3 py-2.5 dark:border-gray-800">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{{ moduleTitle }} kapsamı</p>
+              <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Bu sayfada veriyi hangi kapsamda görmek istediğini seç.</p>
+            </div>
+
+            <div class="flex gap-1 p-2">
+              <button
+                v-for="kind in allowedKinds"
+                :key="kind"
+                type="button"
+                class="flex-1 rounded-lg px-2 py-2 text-[10px] font-semibold transition"
+                :class="selectedKind === kind ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'"
+                @click="selectedKind = kind"
+              >
+                {{ scopeKindLabel(kind) }}
+              </button>
+            </div>
+
+            <div class="max-h-72 overflow-y-auto px-1.5 pb-1.5">
+              <button
+                v-for="option in selectorOptions"
+                :key="option.id"
+                type="button"
+                class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-white/5"
+                :class="isOptionSelected(option) ? 'bg-brand-50/70 dark:bg-brand-500/10' : ''"
+                @click="selectOption(option)"
+              >
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                  <component :is="option.icon" :size="13" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ option.name }}</span>
+                  <span class="block text-[10px] text-gray-400">{{ option.description }}</span>
+                </span>
+                <Check v-if="isOptionSelected(option)" :size="14" class="shrink-0 text-brand-500" />
+              </button>
+              <div v-if="!selectorOptions.length" class="px-3 py-5 text-center text-xs text-gray-400">Bu kapsam için seçim bulunamadı.</div>
+            </div>
           </div>
         </div>
 
@@ -86,11 +105,11 @@
 </template>
 
 <script setup lang="ts">
-import { Bell, Building2, ChevronDown, ChevronLeft, Factory, Layers3, Menu, Moon, Sun, Tag } from '@lucide/vue'
+import { Bell, Check, ChevronDown, Menu, Moon, Sun } from '@lucide/vue'
+import type { Component } from 'vue'
 
-type ScopeLevel = 'tenant' | 'group' | 'company' | 'brand' | 'location'
-type ScopeOption = { id: string | number; name: string; description: string; icon: unknown }
-type Breadcrumb = { type: ScopeLevel; id: string | number; name: string }
+type ScopeKind = 'tenant' | 'group' | 'company' | 'brand' | 'location'
+type ScopeOption = { id: string | number; name: string; description: string; icon: Component }
 
 const route = useRoute()
 const router = useRouter()
@@ -98,196 +117,82 @@ const { toggle, toggleMobile } = useTailAdminSidebar()
 const { isDark, toggle: toggleTheme } = useTailAdminTheme()
 const auth = useAuth()
 const tenantStore = useTenantStore()
+const {
+  moduleKey,
+  allowedKinds,
+  currentScope,
+  currentTenant,
+  scopeKindLabel,
+  scopeIcon,
+  optionsForKind,
+  setScope,
+  breadcrumbs,
+  goToBreadcrumb,
+} = useOrganizationScope()
 
 const profileOpen = ref(false)
 const scopeSelectorOpen = ref(false)
-const scopeLevel = useState<ScopeLevel>('organization-scope-level', () => 'tenant')
-const selectedGroup = useState<ScopeOption | null>('organization-scope-group', () => null)
-const selectedCompany = useState<ScopeOption | null>('organization-scope-company', () => null)
-const selectedBrand = useState<ScopeOption | null>('organization-scope-brand', () => null)
-const selectedLocation = useState<ScopeOption | null>('organization-scope-location', () => null)
+const selectedKind = ref<ScopeKind>('group')
 
 const tenantId = computed(() => {
   const value = route.params.tenantId
   return Array.isArray(value) ? value[0] : value
 })
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
-const currentTenant = computed(() => tenantStore.currentTenant)
+const currentScopeName = computed(() => currentScope.value?.name || currentTenant.value?.name || 'Kapsam seçin')
+const currentScopeLabel = computed(() => currentScope.value ? scopeKindLabel(currentScope.value.id === currentTenant.value?.id ? 'tenant' : selectedKind.value) : 'Kapsam')
+const currentScopeIcon = computed(() => scopeIcon(selectedKind.value))
+const moduleTitle = computed(() => ({
+  dashboard: 'Genel Bakış',
+  groups: 'Gruplar',
+  companies: 'Şirketler',
+  brands: 'Markalar',
+  locations: 'Lokasyonlar',
+  hierarchy: 'Hiyerarşi',
+}[moduleKey.value]))
 
-const groupOptions: ScopeOption[] = [
-  { id: 'durable', name: 'Dayanıklı Tüketim Grubu', description: 'Grup kapsamına geç', icon: Layers3 },
-  { id: 'automotive', name: 'Otomotiv Grubu', description: 'Grup kapsamına geç', icon: Layers3 },
-  { id: 'energy', name: 'Enerji Grubu', description: 'Grup kapsamına geç', icon: Layers3 },
-]
+const selectorOptions = computed<ScopeOption[]>(() => optionsForKind(selectedKind.value) as ScopeOption[])
 
-const companyOptions: Record<string, ScopeOption[]> = {
-  durable: [
-    { id: 'arcelik', name: 'Arçelik A.Ş.', description: 'Şirket kapsamına geç', icon: Building2 },
-    { id: 'arcelik-pazarlama', name: 'Arçelik Pazarlama A.Ş.', description: 'Şirket kapsamına geç', icon: Building2 },
-    { id: 'beko', name: 'Beko Elektronik A.Ş.', description: 'Şirket kapsamına geç', icon: Building2 },
-  ],
-  automotive: [
-    { id: 'ford', name: 'Ford Otosan', description: 'Şirket kapsamına geç', icon: Building2 },
-    { id: 'tofas', name: 'Tofaş Türk Otomobil Fabrikası A.Ş.', description: 'Şirket kapsamına geç', icon: Building2 },
-  ],
-  energy: [
-    { id: 'tupras', name: 'Tüpraş', description: 'Şirket kapsamına geç', icon: Building2 },
-    { id: 'aygaz', name: 'Aygaz', description: 'Şirket kapsamına geç', icon: Building2 },
-  ],
+const isOptionSelected = (option: ScopeOption) => {
+  const current = currentScope.value
+  return current?.id === option.id && selectedKind.value !== 'tenant'
 }
 
-const brandOptions: Record<string, ScopeOption[]> = {
-  arcelik: [
-    { id: 'arcelik-brand', name: 'Arçelik', description: 'Marka kapsamına geç', icon: Tag },
-    { id: 'beko-brand', name: 'Beko', description: 'Marka kapsamına geç', icon: Tag },
-  ],
-  'arcelik-pazarlama': [
-    { id: 'arcelik-pazarlama-brand', name: 'Arçelik', description: 'Marka kapsamına geç', icon: Tag },
-    { id: 'beko-pazarlama-brand', name: 'Beko', description: 'Marka kapsamına geç', icon: Tag },
-  ],
-  beko: [
-    { id: 'beko-electronic-brand', name: 'Beko', description: 'Marka kapsamına geç', icon: Tag },
-  ],
-}
-
-const locationOptions: Record<string, ScopeOption[]> = {
-  'arcelik-brand': [
-    { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-    { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-  ],
-  'beko-brand': [
-    { id: 'beylikduzu-beko', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-    { id: 'cayirova', name: 'Çayırova Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-  ],
-  'arcelik-pazarlama-brand': [
-    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Lokasyon kapsamına geç', icon: Factory },
-  ],
-  'beko-pazarlama-brand': [
-    { id: 'beylikduzu-pazarlama', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-  ],
-  'beko-electronic-brand': [
-    { id: 'cayirova-electronic', name: 'Çayırova Kampüsü', description: 'Lokasyon kapsamına geç', icon: Factory },
-  ],
-}
-
-const currentScopeLabel = computed(() => ({ tenant: 'Workspace', group: 'Grup', company: 'Şirket', brand: 'Marka', location: 'Lokasyon' }[scopeLevel.value]))
-const currentScopeName = computed(() => {
-  if (scopeLevel.value === 'tenant') return currentTenant.value?.name || 'Tenant seçin'
-  if (scopeLevel.value === 'group') return selectedGroup.value?.name || 'Grup seçin'
-  if (scopeLevel.value === 'company') return selectedCompany.value?.name || 'Şirket seçin'
-  if (scopeLevel.value === 'brand') return selectedBrand.value?.name || 'Marka seçin'
-  return selectedLocation.value?.name || 'Lokasyon seçin'
-})
-const currentScopeIcon = computed(() => ({ tenant: Building2, group: Layers3, company: Building2, brand: Tag, location: Factory }[scopeLevel.value]))
-const nextScopeLabel = computed(() => ({ tenant: 'Grup', group: 'Şirket', company: 'Marka', brand: 'Lokasyon', location: 'Lokasyon' }[scopeLevel.value]))
-const currentScopeOptions = computed<ScopeOption[]>(() => {
-  if (scopeLevel.value === 'tenant') return groupOptions
-  if (scopeLevel.value === 'group') return companyOptions[selectedGroup.value?.id as string] || []
-  if (scopeLevel.value === 'company') return brandOptions[selectedCompany.value?.id as string] || []
-  if (scopeLevel.value === 'brand') return locationOptions[selectedBrand.value?.id as string] || []
-  return []
-})
-
-const previousScope = computed<ScopeOption | null>(() => {
-  if (scopeLevel.value === 'group' && currentTenant.value) return { id: currentTenant.value.id, name: currentTenant.value.name, description: '', icon: Building2 }
-  if (scopeLevel.value === 'company' && selectedGroup.value) return selectedGroup.value
-  if (scopeLevel.value === 'brand' && selectedCompany.value) return selectedCompany.value
-  if (scopeLevel.value === 'location' && selectedBrand.value) return selectedBrand.value
-  return null
-})
-
-const breadcrumbs = computed<Breadcrumb[]>(() => {
-  const items: Breadcrumb[] = []
-  if (currentTenant.value) items.push({ type: 'tenant', id: currentTenant.value.id, name: currentTenant.value.name })
-  if (selectedGroup.value && scopeLevel.value !== 'tenant') items.push({ type: 'group', id: selectedGroup.value.id, name: selectedGroup.value.name })
-  if (selectedCompany.value && ['company', 'brand', 'location'].includes(scopeLevel.value)) items.push({ type: 'company', id: selectedCompany.value.id, name: selectedCompany.value.name })
-  if (selectedBrand.value && ['brand', 'location'].includes(scopeLevel.value)) items.push({ type: 'brand', id: selectedBrand.value.id, name: selectedBrand.value.name })
-  if (selectedLocation.value && scopeLevel.value === 'location') items.push({ type: 'location', id: selectedLocation.value.id, name: selectedLocation.value.name })
-  return items
-})
-
-const selectScopeOption = (option: ScopeOption) => {
-  if (scopeLevel.value === 'tenant') {
-    selectedGroup.value = option
-    selectedCompany.value = null
-    selectedBrand.value = null
-    selectedLocation.value = null
-    scopeLevel.value = 'group'
-  } else if (scopeLevel.value === 'group') {
-    selectedCompany.value = option
-    selectedBrand.value = null
-    selectedLocation.value = null
-    scopeLevel.value = 'company'
-  } else if (scopeLevel.value === 'company') {
-    selectedBrand.value = option
-    selectedLocation.value = null
-    scopeLevel.value = 'brand'
-  } else if (scopeLevel.value === 'brand') {
-    selectedLocation.value = option
-    scopeLevel.value = 'location'
-  }
+const selectOption = (option: ScopeOption) => {
+  setScope(selectedKind.value, option)
   scopeSelectorOpen.value = false
 }
 
-const goBackOneLevel = () => {
-  if (scopeLevel.value === 'group') goToBreadcrumb('tenant', currentTenant.value?.id ?? '')
-  else if (scopeLevel.value === 'company') goToBreadcrumb('group', selectedGroup.value?.id ?? '')
-  else if (scopeLevel.value === 'brand') goToBreadcrumb('company', selectedCompany.value?.id ?? '')
-  else if (scopeLevel.value === 'location') goToBreadcrumb('brand', selectedBrand.value?.id ?? '')
-}
+watch(allowedKinds, (kinds) => {
+  if (!kinds.length) return
+  if (!kinds.includes(selectedKind.value)) selectedKind.value = kinds[0]
+}, { immediate: true })
 
-const goToBreadcrumb = (type: ScopeLevel, _id: string | number) => {
-  if (type === 'tenant') {
-    scopeLevel.value = 'tenant'
-    selectedGroup.value = null
-    selectedCompany.value = null
-    selectedBrand.value = null
-    selectedLocation.value = null
-  } else if (type === 'group') {
-    scopeLevel.value = 'group'
-    selectedCompany.value = null
-    selectedBrand.value = null
-    selectedLocation.value = null
-  } else if (type === 'company') {
-    scopeLevel.value = 'company'
-    selectedBrand.value = null
-    selectedLocation.value = null
-  } else if (type === 'brand') {
-    scopeLevel.value = 'brand'
-    selectedLocation.value = null
-  } else {
-    scopeLevel.value = 'location'
-  }
+watch(moduleKey, () => {
   scopeSelectorOpen.value = false
-}
-
-const initials = computed(() => {
-  const name = auth.user.value?.name?.trim() || 'K'
-  return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')
-})
-const roleLabel = computed(() => {
-  const role = auth.user.value?.roles?.[0]
-  const labels: Record<string, string> = { 'super-admin': 'Sistem Yöneticisi', 'tenant-admin': 'Tenant Yöneticisi' }
-  return role ? labels[role] || role : 'Kullanıcı'
-})
+}, { immediate: true })
 
 watch(isTenantWorkspace, async (enabled) => {
   if (!enabled || tenantStore.tenants.length > 0) return
   await tenantStore.fetchTenants()
 }, { immediate: true })
 
-watch(tenantId, () => {
-  scopeLevel.value = 'tenant'
-  selectedGroup.value = null
-  selectedCompany.value = null
-  selectedBrand.value = null
-  selectedLocation.value = null
-}, { immediate: true })
+const initials = computed(() => {
+  const name = auth.user.value?.name?.trim() || 'K'
+  return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')
+})
+
+const roleLabel = computed(() => {
+  const role = auth.user.value?.roles?.[0]
+  const labels: Record<string, string> = { 'super-admin': 'Sistem Yöneticisi', 'tenant-admin': 'Tenant Yöneticisi' }
+  return role ? labels[role] || role : 'Kullanıcı'
+})
 
 const handleSidebar = () => {
   if (import.meta.client && window.innerWidth < 1024) toggleMobile()
   else toggle()
 }
+
 const handleLogout = async () => {
   profileOpen.value = false
   await auth.logout()
