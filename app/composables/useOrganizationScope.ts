@@ -1,23 +1,9 @@
 import { Building2, Factory, Layers3, Tag } from '@lucide/vue'
 
 type ScopeKind = 'tenant' | 'group' | 'company' | 'brand' | 'location'
-
-type ScopeOption = {
-  id: string | number
-  name: string
-  description: string
-  icon: unknown
-}
-
-type ModuleKey = 'dashboard' | 'groups' | 'companies' | 'brands' | 'locations' | 'hierarchy'
-
-type ScopeState = {
-  kind: ScopeKind
-  group: ScopeOption | null
-  company: ScopeOption | null
-  brand: ScopeOption | null
-  location: ScopeOption | null
-}
+type ScopeOption = { id: string | number; name: string; description: string; icon: unknown }
+type ModuleKey = 'dashboard' | 'groups' | 'companies' | 'brands' | 'locations' | 'hierarchy' | 'contractors' | 'users' | 'reports' | 'settings'
+type ScopeState = { kind: ScopeKind; group: ScopeOption | null; company: ScopeOption | null; brand: ScopeOption | null; location: ScopeOption | null }
 
 const groupOptions: ScopeOption[] = [
   { id: 'durable', name: 'Dayanıklı Tüketim Grubu', description: 'Grup kapsamı', icon: Layers3 },
@@ -50,9 +36,7 @@ const brandOptions: Record<string, ScopeOption[]> = {
     { id: 'arcelik-pazarlama-brand', name: 'Arçelik', description: 'Marka kapsamı', icon: Tag },
     { id: 'beko-pazarlama-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag },
   ],
-  beko: [
-    { id: 'beko-electronic-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag },
-  ],
+  beko: [{ id: 'beko-electronic-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag }],
 }
 
 const locationOptions: Record<string, ScopeOption[]> = {
@@ -73,9 +57,7 @@ const locationOptions: Record<string, ScopeOption[]> = {
     { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
     { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
   ],
-  'arcelik-pazarlama': [
-    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
-  ],
+  'arcelik-pazarlama': [{ id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Şirket kapsamındaki lokasyon', icon: Factory }],
   'arcelik-brand': [
     { id: 'eskisehir-brand', name: 'Eskişehir Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
     { id: 'beylikduzu-brand', name: 'Beylikdüzü Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
@@ -93,26 +75,23 @@ const moduleConfig: Record<ModuleKey, ScopeKind[]> = {
   brands: ['group', 'company'],
   locations: ['group', 'company', 'brand'],
   hierarchy: ['group', 'company'],
+  contractors: ['group', 'company', 'location'],
+  users: ['group', 'company', 'location'],
+  reports: ['tenant', 'group', 'company', 'location'],
+  settings: ['tenant'],
 }
 
 export const useOrganizationScope = () => {
   const route = useRoute()
   const tenantStore = useTenantStore()
-
-  const scope = useState<ScopeState>('organization-scope', () => ({
-    kind: 'tenant',
-    group: null,
-    company: null,
-    brand: null,
-    location: null,
-  }))
+  const scope = useState<ScopeState>('organization-scope', () => ({ kind: 'tenant', group: null, company: null, brand: null, location: null }))
 
   const tenantId = computed(() => {
     const value = route.params.tenantId
     return Array.isArray(value) ? value[0] : value
   })
-
   const currentTenant = computed(() => tenantStore.currentTenant)
+
   const moduleKey = computed<ModuleKey>(() => {
     const path = route.path
     if (path.includes('/organization/companies')) return 'companies'
@@ -120,6 +99,10 @@ export const useOrganizationScope = () => {
     if (path.includes('/organization/hierarchy')) return 'hierarchy'
     if (path.includes('/organization/groups')) return 'groups'
     if (path.includes('/locations')) return 'locations'
+    if (path.includes('/contractors')) return 'contractors'
+    if (path.includes('/users')) return 'users'
+    if (path.includes('/reports')) return 'reports'
+    if (path.includes('/settings')) return 'settings'
     return 'dashboard'
   })
 
@@ -145,7 +128,6 @@ export const useOrganizationScope = () => {
       if (scope.value.brand) return locationOptions[String(scope.value.brand.id)] || []
       if (scope.value.company) return locationOptions[String(scope.value.company.id)] || []
       if (scope.value.group) return locationOptions[String(scope.value.group.id)] || []
-      return []
     }
     return []
   }
