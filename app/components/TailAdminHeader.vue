@@ -5,7 +5,6 @@
         <button class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 lg:h-11 lg:w-11" @click="handleSidebar">
           <Menu :size="20" />
         </button>
-
         <div class="hidden min-w-0 sm:block">
           <div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
             <template v-for="(item, index) in breadcrumbs" :key="`${item.kind}-${item.id}`">
@@ -45,7 +44,7 @@
               <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Bu sayfada veriyi hangi kapsamda görmek istediğini seç.</p>
             </div>
 
-            <div class="flex gap-1 p-2">
+            <div v-if="allowedKinds.length > 1" class="flex gap-1 p-2">
               <button
                 v-for="kind in allowedKinds"
                 :key="kind"
@@ -117,18 +116,7 @@ const { toggle, toggleMobile } = useTailAdminSidebar()
 const { isDark, toggle: toggleTheme } = useTailAdminTheme()
 const auth = useAuth()
 const tenantStore = useTenantStore()
-const {
-  moduleKey,
-  allowedKinds,
-  currentScope,
-  currentTenant,
-  scopeKindLabel,
-  scopeIcon,
-  optionsForKind,
-  setScope,
-  breadcrumbs,
-  goToBreadcrumb,
-} = useOrganizationScope()
+const { moduleKey, allowedKinds, currentScope, currentTenant, scopeKindLabel, scopeIcon, optionsForKind, setScope, breadcrumbs, goToBreadcrumb } = useOrganizationScope()
 
 const profileOpen = ref(false)
 const scopeSelectorOpen = ref(false)
@@ -139,24 +127,14 @@ const tenantId = computed(() => {
   return Array.isArray(value) ? value[0] : value
 })
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
-const currentScopeName = computed(() => currentScope.value?.name || currentTenant.value?.name || 'Kapsam seçin')
-const currentScopeLabel = computed(() => currentScope.value ? scopeKindLabel(currentScope.value.id === currentTenant.value?.id ? 'tenant' : selectedKind.value) : 'Kapsam')
-const currentScopeIcon = computed(() => scopeIcon(selectedKind.value))
-const moduleTitle = computed(() => ({
-  dashboard: 'Genel Bakış',
-  groups: 'Gruplar',
-  companies: 'Şirketler',
-  brands: 'Markalar',
-  locations: 'Lokasyonlar',
-  hierarchy: 'Hiyerarşi',
-}[moduleKey.value]))
-
+const currentScopeName = computed(() => currentScope.value?.name || 'Kapsam seçin')
+const currentScopeLabel = computed(() => currentScope.value ? scopeKindLabel(currentScopeKind.value) : 'Kapsam')
+const currentScopeIcon = computed(() => scopeIcon(currentScopeKind.value))
+const currentScopeKind = computed<ScopeKind>(() => currentScope.value ? (currentScope.value.id === currentTenant.value?.id ? 'tenant' : selectedKind.value) : selectedKind.value)
+const moduleTitle = computed(() => ({ dashboard: 'Genel Bakış', groups: 'Gruplar', companies: 'Şirketler', brands: 'Markalar', locations: 'Lokasyonlar', hierarchy: 'Hiyerarşi' }[moduleKey.value]))
 const selectorOptions = computed<ScopeOption[]>(() => optionsForKind(selectedKind.value) as ScopeOption[])
 
-const isOptionSelected = (option: ScopeOption) => {
-  const current = currentScope.value
-  return current?.id === option.id && selectedKind.value !== 'tenant'
-}
+const isOptionSelected = (option: ScopeOption) => currentScope.value?.id === option.id && currentScopeKind.value === selectedKind.value
 
 const selectOption = (option: ScopeOption) => {
   setScope(selectedKind.value, option)
@@ -168,9 +146,7 @@ watch(allowedKinds, (kinds) => {
   if (!kinds.includes(selectedKind.value)) selectedKind.value = kinds[0]
 }, { immediate: true })
 
-watch(moduleKey, () => {
-  scopeSelectorOpen.value = false
-}, { immediate: true })
+watch(moduleKey, () => { scopeSelectorOpen.value = false })
 
 watch(isTenantWorkspace, async (enabled) => {
   if (!enabled || tenantStore.tenants.length > 0) return
