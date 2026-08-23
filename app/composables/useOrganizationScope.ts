@@ -56,20 +56,33 @@ const brandOptions: Record<string, ScopeOption[]> = {
 }
 
 const locationOptions: Record<string, ScopeOption[]> = {
+  durable: [
+    { id: 'eskisehir-group', name: 'Eskişehir Kampüsü', description: 'Grup içindeki lokasyon', icon: Factory },
+    { id: 'beylikduzu-group', name: 'Beylikdüzü Kampüsü', description: 'Grup içindeki lokasyon', icon: Factory },
+    { id: 'sutluce-group', name: 'Sütlüce Genel Müdürlük', description: 'Grup içindeki lokasyon', icon: Factory },
+  ],
+  automotive: [
+    { id: 'golcuk-group', name: 'Gölcük Fabrikası', description: 'Grup içindeki lokasyon', icon: Factory },
+    { id: 'yenikoy-group', name: 'Yeniköy Fabrikası', description: 'Grup içindeki lokasyon', icon: Factory },
+  ],
+  energy: [
+    { id: 'izmit-group', name: 'İzmit Rafinerisi', description: 'Grup içindeki lokasyon', icon: Factory },
+    { id: 'aliaga-group', name: 'Aliağa Tesisi', description: 'Grup içindeki lokasyon', icon: Factory },
+  ],
   arcelik: [
-    { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
-    { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
+    { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
+    { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
   ],
   'arcelik-pazarlama': [
-    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Lokasyon kapsamı', icon: Factory },
+    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
   ],
   'arcelik-brand': [
-    { id: 'eskisehir-brand', name: 'Eskişehir Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
-    { id: 'beylikduzu-brand', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
+    { id: 'eskisehir-brand', name: 'Eskişehir Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
+    { id: 'beylikduzu-brand', name: 'Beylikdüzü Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
   ],
   'beko-brand': [
-    { id: 'beylikduzu-beko', name: 'Beylikdüzü Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
-    { id: 'cayirova', name: 'Çayırova Kampüsü', description: 'Lokasyon kapsamı', icon: Factory },
+    { id: 'beylikduzu-beko', name: 'Beylikdüzü Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
+    { id: 'cayirova', name: 'Çayırova Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
   ],
 }
 
@@ -112,6 +125,7 @@ export const useOrganizationScope = () => {
 
   const allowedKinds = computed(() => moduleConfig[moduleKey.value])
   const currentScope = computed(() => {
+    if (!allowedKinds.value.includes(scope.value.kind)) return null
     if (scope.value.kind === 'tenant') return currentTenant.value ? { id: currentTenant.value.id, name: currentTenant.value.name, description: 'Workspace kapsamı', icon: Building2 } : null
     if (scope.value.kind === 'group') return scope.value.group
     if (scope.value.kind === 'company') return scope.value.company
@@ -119,21 +133,8 @@ export const useOrganizationScope = () => {
     return scope.value.location
   })
 
-  const scopeKindLabel = (kind: ScopeKind) => ({
-    tenant: 'Workspace',
-    group: 'Grup',
-    company: 'Şirket',
-    brand: 'Marka',
-    location: 'Lokasyon',
-  }[kind])
-
-  const scopeIcon = (kind: ScopeKind) => ({
-    tenant: Building2,
-    group: Layers3,
-    company: Building2,
-    brand: Tag,
-    location: Factory,
-  }[kind])
+  const scopeKindLabel = (kind: ScopeKind) => ({ tenant: 'Workspace', group: 'Grup', company: 'Şirket', brand: 'Marka', location: 'Lokasyon' }[kind])
+  const scopeIcon = (kind: ScopeKind) => ({ tenant: Building2, group: Layers3, company: Building2, brand: Tag, location: Factory }[kind])
 
   const optionsForKind = (kind: ScopeKind): ScopeOption[] => {
     if (kind === 'tenant') return currentTenant.value ? [{ id: currentTenant.value.id, name: currentTenant.value.name, description: 'Workspace kapsamı', icon: Building2 }] : []
@@ -143,6 +144,7 @@ export const useOrganizationScope = () => {
     if (kind === 'location') {
       if (scope.value.brand) return locationOptions[String(scope.value.brand.id)] || []
       if (scope.value.company) return locationOptions[String(scope.value.company.id)] || []
+      if (scope.value.group) return locationOptions[String(scope.value.group.id)] || []
       return []
     }
     return []
@@ -153,22 +155,19 @@ export const useOrganizationScope = () => {
       scope.value = { kind, group: null, company: null, brand: null, location: null }
       return
     }
-
     if (kind === 'group') {
       scope.value = { kind, group: option, company: null, brand: null, location: null }
       return
     }
-
     if (kind === 'company') {
-      scope.value = { kind, group: scope.value.group, company: option, brand: null, location: null }
+      const parentGroup = scope.value.group || groupOptions.find(group => (companyOptions[String(group.id)] || []).some(company => company.id === option.id)) || null
+      scope.value = { kind, group: parentGroup, company: option, brand: null, location: null }
       return
     }
-
     if (kind === 'brand') {
       scope.value = { kind, group: scope.value.group, company: scope.value.company, brand: option, location: null }
       return
     }
-
     scope.value = { ...scope.value, kind, location: option }
   }
 
@@ -196,19 +195,5 @@ export const useOrganizationScope = () => {
 
   watch(tenantId, () => resetForTenant(), { immediate: true })
 
-  return {
-    scope,
-    moduleKey,
-    allowedKinds,
-    currentScope,
-    currentTenant,
-    tenantId,
-    scopeKindLabel,
-    scopeIcon,
-    optionsForKind,
-    setScope,
-    resetForTenant,
-    breadcrumbs,
-    goToBreadcrumb,
-  }
+  return { scope, moduleKey, allowedKinds, currentScope, currentTenant, tenantId, scopeKindLabel, scopeIcon, optionsForKind, setScope, resetForTenant, breadcrumbs, goToBreadcrumb }
 }
