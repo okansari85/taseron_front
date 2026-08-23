@@ -40,7 +40,7 @@
         <div v-if="isTenantWorkspace" class="mt-6 flex flex-col border-t border-gray-100 pt-5 dark:border-gray-800">
           <p v-if="isExpanded" class="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">Workspace</p>
 
-          <div class="order-1 flex flex-col gap-1">
+          <div class="flex flex-col gap-1">
             <template v-for="item in workspaceItems" :key="item.path">
               <NuxtLink
                 v-if="!item.children"
@@ -68,21 +68,14 @@
                 >
                   <component :is="item.icon" :size="17" />
                   <span class="flex-1 truncate text-left">{{ item.title }}</span>
-                  <ChevronDown
-                    :size="15"
-                    class="transition-transform duration-200"
-                    :class="organizationMenuOpen ? 'rotate-180' : ''"
-                  />
+                  <ChevronDown :size="15" class="transition-transform duration-200" :class="organizationMenuOpen ? 'rotate-180' : ''" />
                 </button>
 
                 <div v-else class="flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <component :is="item.icon" :size="17" />
                 </div>
 
-                <div
-                  v-if="organizationMenuOpen && isExpanded"
-                  class="ml-5 border-l border-gray-200 pl-3 dark:border-gray-800"
-                >
+                <div v-if="organizationMenuOpen && isExpanded" class="ml-5 border-l border-gray-200 pl-3 dark:border-gray-800">
                   <NuxtLink
                     v-for="child in item.children"
                     :key="child.path"
@@ -104,7 +97,7 @@
 
           <div
             v-if="isExpanded"
-            class="order-2 mt-3 mb-5 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+            class="mt-3 mb-5 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
@@ -112,10 +105,7 @@
                   <Building2 :size="10" />
                   <span>Aktif Workspace</span>
                 </div>
-
-                <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">
-                  {{ tenantName }}
-                </p>
+                <p class="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-white/90">{{ tenantName }}</p>
               </div>
 
               <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-50 px-2 py-1 text-[9px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400">
@@ -124,54 +114,12 @@
               </span>
             </div>
 
-            <div class="my-3 border-t border-gray-200 dark:border-gray-800"></div>
-
-            <div class="relative">
-              <div class="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                <Layers3 :size="11" />
-                <span>Organizasyon Kapsamı</span>
-              </div>
-
-              <button
-                type="button"
-                class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-white/[0.03] dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5"
-                :aria-expanded="scopeMenuOpen"
-                @click="scopeMenuOpen = !scopeMenuOpen"
-              >
-                <span class="min-w-0">
-                  <span class="block truncate text-[11px] font-semibold text-gray-800 dark:text-white/90">{{ activeScopeName }}</span>
-                  <span class="block truncate text-[9px] text-gray-400 dark:text-gray-500">Tüm organizasyon ekranlarına uygulanır</span>
-                </span>
-                <ChevronDown :size="13" class="shrink-0 text-gray-400 transition-transform" :class="scopeMenuOpen ? 'rotate-180' : ''" />
-              </button>
-
-              <div
-                v-if="scopeMenuOpen"
-                class="absolute bottom-full left-0 z-20 mb-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-              >
-                <button
-                  v-for="scope in organizationScopes"
-                  :key="scope.id"
-                  type="button"
-                  class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] transition hover:bg-gray-50 dark:hover:bg-white/5"
-                  :class="activeScopeId === scope.id ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-600 dark:text-gray-300'"
-                  @click="selectScope(scope)"
-                >
-                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" :class="activeScopeId === scope.id ? 'bg-brand-100 dark:bg-brand-500/20' : 'bg-gray-100 dark:bg-white/5'">
-                    <Check v-if="activeScopeId === scope.id" :size="12" />
-                    <Building2 v-else :size="12" />
-                  </span>
-                  <span class="min-w-0 flex-1 truncate font-medium">{{ scope.name }}</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="my-3 border-t border-gray-200 dark:border-gray-800"></div>
+            <div class="mt-3 border-t border-gray-200 dark:border-gray-800"></div>
 
             <NuxtLink
               :to="`/tenants/${tenantId}/settings/workspace`"
               :class="[
-                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
+                'mt-3 flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition',
                 isWorkspaceItemActive(`/tenants/${tenantId}/settings/workspace`)
                   ? 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400'
                   : 'text-brand-500 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10',
@@ -199,31 +147,14 @@
 </template>
 
 <script setup lang="ts">
-import { Building2, Check, ChevronDown, FileText, FolderTree, Home, Layers3, LayoutGrid, MapPin, Settings, Users } from '@lucide/vue'
+import { Building2, ChevronDown, FileText, FolderTree, Home, LayoutGrid, MapPin, Settings, Users } from '@lucide/vue'
 
 type WorkspaceMenuItem = { title: string; path: string; icon: unknown; children?: WorkspaceMenuItem[] }
-type OrganizationScope = { id: string; name: string }
 
 const route = useRoute()
 const tenantStore = useTenantStore()
 const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
 const organizationMenuOpen = ref(true)
-const scopeMenuOpen = ref(false)
-
-const organizationScopes: OrganizationScope[] = [
-  { id: 'all', name: 'Tüm Organizasyonlar' },
-  { id: 'durable', name: 'Dayanıklı Tüketim Grubu' },
-  { id: 'automotive', name: 'Otomotiv Grubu' },
-  { id: 'energy', name: 'Enerji Grubu' },
-]
-
-const activeScopeId = useState<string>('organization-scope', () => 'all')
-const activeScopeName = computed(() => organizationScopes.find(scope => scope.id === activeScopeId.value)?.name ?? 'Tüm Organizasyonlar')
-
-const selectScope = (scope: OrganizationScope) => {
-  activeScopeId.value = scope.id
-  scopeMenuOpen.value = false
-}
 
 const items = [
   { title: 'Ana Sayfa', path: '/', icon: Home },
@@ -274,9 +205,7 @@ const workspaceItems = computed<WorkspaceMenuItem[]>(() => {
   if (rootOrganization.value.type === 'company') {
     menuItems.push({
       title: 'Organizasyon', path: organizationPath, icon: Building2,
-      children: [
-        { title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid },
-      ],
+      children: [{ title: 'Markalar', path: `${organizationPath}/brands`, icon: LayoutGrid }],
     })
   }
 
