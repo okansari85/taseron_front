@@ -1,117 +1,61 @@
 import { Building2, Factory, Layers3, Tag } from '@lucide/vue'
 
-type ScopeKind = 'tenant' | 'group' | 'company' | 'brand' | 'location'
-
-type ScopeOption = {
-  id: string | number
-  name: string
-  description: string
-  icon: unknown
-}
-
+type ScopeKind = 'tenant' | 'group' | 'company' | 'brand' | 'location' | 'area'
+type ScopeOption = { id: string | number; name: string; description: string; icon: unknown }
 type ModuleKey = 'dashboard' | 'groups' | 'companies' | 'brands' | 'locations' | 'hierarchy'
-
-type ScopeState = {
-  kind: ScopeKind
-  group: ScopeOption | null
-  company: ScopeOption | null
-  brand: ScopeOption | null
-  location: ScopeOption | null
-}
+type ScopeState = { kind: ScopeKind; group: ScopeOption | null; company: ScopeOption | null; brand: ScopeOption | null; location: ScopeOption | null; area: ScopeOption | null }
 
 const groupOptions: ScopeOption[] = [
-  { id: 'durable', name: 'Dayanıklı Tüketim Grubu', description: 'Grup kapsamı', icon: Layers3 },
-  { id: 'automotive', name: 'Otomotiv Grubu', description: 'Grup kapsamı', icon: Layers3 },
-  { id: 'energy', name: 'Enerji Grubu', description: 'Grup kapsamı', icon: Layers3 },
+  { id: 'durable', name: 'Dayanıklı Tüketim Grubu', description: 'Grup', icon: Layers3 },
+  { id: 'automotive', name: 'Otomotiv Grubu', description: 'Grup', icon: Layers3 },
+  { id: 'energy', name: 'Enerji Grubu', description: 'Grup', icon: Layers3 },
 ]
-
 const companyOptions: Record<string, ScopeOption[]> = {
   durable: [
-    { id: 'arcelik', name: 'Arçelik A.Ş.', description: 'Şirket kapsamı', icon: Building2 },
-    { id: 'arcelik-pazarlama', name: 'Arçelik Pazarlama A.Ş.', description: 'Şirket kapsamı', icon: Building2 },
-    { id: 'beko', name: 'Beko Elektronik A.Ş.', description: 'Şirket kapsamı', icon: Building2 },
-  ],
-  automotive: [
-    { id: 'ford', name: 'Ford Otosan', description: 'Şirket kapsamı', icon: Building2 },
-    { id: 'tofas', name: 'Tofaş Türk Otomobil Fabrikası A.Ş.', description: 'Şirket kapsamı', icon: Building2 },
-  ],
-  energy: [
-    { id: 'tupras', name: 'Tüpraş', description: 'Şirket kapsamı', icon: Building2 },
-    { id: 'aygaz', name: 'Aygaz', description: 'Şirket kapsamı', icon: Building2 },
+    { id: 'arcelik', name: 'Arçelik A.Ş.', description: 'Şirket', icon: Building2 },
+    { id: 'arcelik-pazarlama', name: 'Arçelik Pazarlama A.Ş.', description: 'Şirket', icon: Building2 },
+    { id: 'beko', name: 'Beko Elektronik A.Ş.', description: 'Şirket', icon: Building2 },
   ],
 }
-
 const brandOptions: Record<string, ScopeOption[]> = {
   arcelik: [
-    { id: 'arcelik-brand', name: 'Arçelik', description: 'Marka kapsamı', icon: Tag },
-    { id: 'beko-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag },
-  ],
-  'arcelik-pazarlama': [
-    { id: 'arcelik-pazarlama-brand', name: 'Arçelik', description: 'Marka kapsamı', icon: Tag },
-    { id: 'beko-pazarlama-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag },
-  ],
-  beko: [
-    { id: 'beko-electronic-brand', name: 'Beko', description: 'Marka kapsamı', icon: Tag },
+    { id: 'arcelik-brand', name: 'Arçelik', description: 'Marka', icon: Tag },
+    { id: 'beko-brand', name: 'Beko', description: 'Marka', icon: Tag },
   ],
 }
-
 const locationOptions: Record<string, ScopeOption[]> = {
   durable: [
-    { id: 'eskisehir-group', name: 'Eskişehir Kampüsü', description: 'Grup içindeki lokasyon', icon: Factory },
-    { id: 'beylikduzu-group', name: 'Beylikdüzü Kampüsü', description: 'Grup içindeki lokasyon', icon: Factory },
-    { id: 'sutluce-group', name: 'Sütlüce Genel Müdürlük', description: 'Grup içindeki lokasyon', icon: Factory },
-  ],
-  automotive: [
-    { id: 'golcuk-group', name: 'Gölcük Fabrikası', description: 'Grup içindeki lokasyon', icon: Factory },
-    { id: 'yenikoy-group', name: 'Yeniköy Fabrikası', description: 'Grup içindeki lokasyon', icon: Factory },
-  ],
-  energy: [
-    { id: 'izmit-group', name: 'İzmit Rafinerisi', description: 'Grup içindeki lokasyon', icon: Factory },
-    { id: 'aliaga-group', name: 'Aliağa Tesisi', description: 'Grup içindeki lokasyon', icon: Factory },
+    { id: 'eskisehir-group', name: 'Eskişehir Kampüsü', description: 'Tesis', icon: Factory },
+    { id: 'beylikduzu-group', name: 'Beylikdüzü Kampüsü', description: 'Tesis', icon: Factory },
+    { id: 'sutluce-group', name: 'Sütlüce Genel Müdürlük', description: 'Tesis', icon: Factory },
   ],
   arcelik: [
-    { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
-    { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
+    { id: 'eskisehir', name: 'Eskişehir Kampüsü', description: 'Tesis', icon: Factory },
+    { id: 'beylikduzu', name: 'Beylikdüzü Kampüsü', description: 'Tesis', icon: Factory },
   ],
   'arcelik-pazarlama': [
-    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Şirket kapsamındaki lokasyon', icon: Factory },
-  ],
-  'arcelik-brand': [
-    { id: 'eskisehir-brand', name: 'Eskişehir Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
-    { id: 'beylikduzu-brand', name: 'Beylikdüzü Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
-  ],
-  'beko-brand': [
-    { id: 'beylikduzu-beko', name: 'Beylikdüzü Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
-    { id: 'cayirova', name: 'Çayırova Kampüsü', description: 'Marka ilişkisindeki lokasyon', icon: Factory },
+    { id: 'sutluce', name: 'Sütlüce Genel Müdürlük', description: 'Tesis', icon: Factory },
   ],
 }
-
-const moduleConfig: Record<ModuleKey, ScopeKind[]> = {
-  dashboard: ['tenant'],
-  groups: ['tenant'],
-  companies: ['group'],
-  brands: ['group', 'company'],
-  locations: ['group', 'company', 'brand'],
-  hierarchy: ['group', 'company'],
+const areaOptions: Record<string, ScopeOption[]> = {
+  eskisehir: [
+    { id: 'assembly', name: 'Montaj Alanı', description: 'Operasyonel alan', icon: Layers3 },
+    { id: 'warehouse', name: 'Depo Alanı', description: 'Operasyonel alan', icon: Layers3 },
+  ],
+  beylikduzu: [
+    { id: 'production', name: 'Üretim Alanı', description: 'Operasyonel alan', icon: Layers3 },
+    { id: 'maintenance', name: 'Bakım Alanı', description: 'Operasyonel alan', icon: Layers3 },
+  ],
+  sutluce: [
+    { id: 'office', name: 'Ofis Alanı', description: 'Operasyonel alan', icon: Layers3 },
+  ],
 }
 
 export const useOrganizationScope = () => {
   const route = useRoute()
   const tenantStore = useTenantStore()
-
-  const scope = useState<ScopeState>('organization-scope', () => ({
-    kind: 'tenant',
-    group: null,
-    company: null,
-    brand: null,
-    location: null,
-  }))
-
-  const tenantId = computed(() => {
-    const value = route.params.tenantId
-    return Array.isArray(value) ? value[0] : value
-  })
-
+  const scope = useState<ScopeState>('organization-scope', () => ({ kind: 'tenant', group: null, company: null, brand: null, location: null, area: null }))
+  const tenantId = computed(() => Array.isArray(route.params.tenantId) ? route.params.tenantId[0] : route.params.tenantId)
   const currentTenant = computed(() => tenantStore.currentTenant)
   const moduleKey = computed<ModuleKey>(() => {
     const path = route.path
@@ -123,58 +67,37 @@ export const useOrganizationScope = () => {
     return 'dashboard'
   })
 
-  const allowedKinds = computed(() => moduleConfig[moduleKey.value])
-  const currentScope = computed(() => {
-    if (!allowedKinds.value.includes(scope.value.kind)) return null
-    if (scope.value.kind === 'tenant') return currentTenant.value ? { id: currentTenant.value.id, name: currentTenant.value.name, description: 'Workspace kapsamı', icon: Building2 } : null
-    if (scope.value.kind === 'group') return scope.value.group
-    if (scope.value.kind === 'company') return scope.value.company
-    if (scope.value.kind === 'brand') return scope.value.brand
-    return scope.value.location
-  })
+  const currentTenantOption = computed<ScopeOption | null>(() => currentTenant.value ? { id: currentTenant.value.id, name: currentTenant.value.name, description: 'Tenant', icon: Building2 } : null)
+  const tenantLocationContext = computed(() => scope.value.location)
+  const operationalAreaContext = computed(() => scope.value.area)
 
-  const scopeKindLabel = (kind: ScopeKind) => ({ tenant: 'Workspace', group: 'Grup', company: 'Şirket', brand: 'Marka', location: 'Lokasyon' }[kind])
-  const scopeIcon = (kind: ScopeKind) => ({ tenant: Building2, group: Layers3, company: Building2, brand: Tag, location: Factory }[kind])
+  const scopeKindLabel = (kind: ScopeKind) => ({ tenant: 'Tenant', group: 'Grup', company: 'Şirket', brand: 'Marka', location: 'Tesis', area: 'Operasyonel Alan' }[kind])
+  const scopeIcon = (kind: ScopeKind) => ({ tenant: Building2, group: Layers3, company: Building2, brand: Tag, location: Factory, area: Layers3 }[kind])
 
   const optionsForKind = (kind: ScopeKind): ScopeOption[] => {
-    if (kind === 'tenant') return currentTenant.value ? [{ id: currentTenant.value.id, name: currentTenant.value.name, description: 'Workspace kapsamı', icon: Building2 }] : []
+    if (kind === 'tenant') return currentTenantOption.value ? [currentTenantOption.value] : []
     if (kind === 'group') return groupOptions
-    if (kind === 'company') return scope.value.group ? (companyOptions[String(scope.value.group.id)] || []) : groupOptions.flatMap(group => companyOptions[String(group.id)] || [])
-    if (kind === 'brand') return scope.value.company ? (brandOptions[String(scope.value.company.id)] || []) : []
+    if (kind === 'company') return scope.value.group ? companyOptions[String(scope.value.group.id)] || [] : []
+    if (kind === 'brand') return scope.value.company ? brandOptions[String(scope.value.company.id)] || [] : []
     if (kind === 'location') {
-      if (scope.value.brand) return locationOptions[String(scope.value.brand.id)] || []
       if (scope.value.company) return locationOptions[String(scope.value.company.id)] || []
       if (scope.value.group) return locationOptions[String(scope.value.group.id)] || []
       return []
     }
+    if (kind === 'area') return scope.value.location ? areaOptions[String(scope.value.location.id)] || [] : []
     return []
   }
 
   const setScope = (kind: ScopeKind, option: ScopeOption) => {
-    if (kind === 'tenant') {
-      scope.value = { kind, group: null, company: null, brand: null, location: null }
-      return
-    }
-    if (kind === 'group') {
-      scope.value = { kind, group: option, company: null, brand: null, location: null }
-      return
-    }
-    if (kind === 'company') {
-      const parentGroup = scope.value.group || groupOptions.find(group => (companyOptions[String(group.id)] || []).some(company => company.id === option.id)) || null
-      scope.value = { kind, group: parentGroup, company: option, brand: null, location: null }
-      return
-    }
-    if (kind === 'brand') {
-      scope.value = { kind, group: scope.value.group, company: scope.value.company, brand: option, location: null }
-      return
-    }
-    scope.value = { ...scope.value, kind, location: option }
+    if (kind === 'tenant') scope.value = { kind, group: null, company: null, brand: null, location: null, area: null }
+    else if (kind === 'group') scope.value = { kind, group: option, company: null, brand: null, location: null, area: null }
+    else if (kind === 'company') scope.value = { kind, group: scope.value.group, company: option, brand: null, location: null, area: null }
+    else if (kind === 'brand') scope.value = { kind, group: scope.value.group, company: scope.value.company, brand: option, location: null, area: null }
+    else if (kind === 'location') scope.value = { ...scope.value, kind, location: option, area: null }
+    else scope.value = { ...scope.value, kind, area: option }
   }
 
-  const resetForTenant = () => {
-    scope.value = { kind: 'tenant', group: null, company: null, brand: null, location: null }
-  }
-
+  const resetForTenant = () => { scope.value = { kind: 'tenant', group: null, company: null, brand: null, location: null, area: null } }
   const breadcrumbs = computed(() => {
     const items: { kind: ScopeKind; id: string | number; name: string }[] = []
     if (currentTenant.value) items.push({ kind: 'tenant', id: currentTenant.value.id, name: currentTenant.value.name })
@@ -182,18 +105,16 @@ export const useOrganizationScope = () => {
     if (scope.value.company) items.push({ kind: 'company', id: scope.value.company.id, name: scope.value.company.name })
     if (scope.value.brand) items.push({ kind: 'brand', id: scope.value.brand.id, name: scope.value.brand.name })
     if (scope.value.location) items.push({ kind: 'location', id: scope.value.location.id, name: scope.value.location.name })
+    if (scope.value.area) items.push({ kind: 'area', id: scope.value.area.id, name: scope.value.area.name })
     return items
   })
-
   const goToBreadcrumb = (kind: ScopeKind) => {
     if (kind === 'tenant') return resetForTenant()
-    if (kind === 'group' && scope.value.group) return setScope('group', scope.value.group)
-    if (kind === 'company' && scope.value.company) return setScope('company', scope.value.company)
-    if (kind === 'brand' && scope.value.brand) return setScope('brand', scope.value.brand)
-    if (kind === 'location' && scope.value.location) return setScope('location', scope.value.location)
+    const value = scope.value[kind === 'group' ? 'group' : kind === 'company' ? 'company' : kind === 'brand' ? 'brand' : kind === 'location' ? 'location' : 'area']
+    if (value) setScope(kind, value)
   }
 
-  watch(tenantId, () => resetForTenant(), { immediate: true })
+  watch(tenantId, resetForTenant, { immediate: true })
 
-  return { scope, moduleKey, allowedKinds, currentScope, currentTenant, tenantId, scopeKindLabel, scopeIcon, optionsForKind, setScope, resetForTenant, breadcrumbs, goToBreadcrumb }
+  return { scope, moduleKey, currentTenant, currentTenantOption, tenantLocationContext, operationalAreaContext, scopeKindLabel, scopeIcon, optionsForKind, setScope, resetForTenant, breadcrumbs, goToBreadcrumb }
 }
