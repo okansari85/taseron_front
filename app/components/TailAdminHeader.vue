@@ -57,6 +57,7 @@ const isTenantWorkspace = computed(() => Boolean(tenantId.value))
 const displayBreadcrumbs = computed(() => {
   if (route.path.includes('/locations/') && tenantLocationContext.value) {
     return [
+      ...(currentTenantOption.value ? [{ kind: 'tenant' as const, id: currentTenantOption.value.id, name: currentTenantOption.value.name }] : []),
       { kind: 'locations' as const, id: 'locations', name: 'Lokasyonlar' },
       { kind: 'location' as const, id: tenantLocationContext.value.id, name: tenantLocationContext.value.name },
     ]
