@@ -26,10 +26,6 @@ export default defineNuxtPlugin((nuxtApp) => {
         top: 14px !important;
       }
 
-      .location-detail-refinement + * {
-        margin-top: 16px !important;
-      }
-
       .location-detail-refinement .mb-4.flex.items-center.justify-end {
         justify-content: flex-start !important;
       }
