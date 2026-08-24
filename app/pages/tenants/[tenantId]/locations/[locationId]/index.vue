@@ -135,38 +135,52 @@ const companyOptions = [
   <div class="font-outfit mx-auto w-full max-w-[1400px]">
     <!-- Existing global header/breadcrumb/context is intentionally provided by the default layout. -->
     <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid lg:grid-cols-[300px_minmax(0,1fr)_300px]">
-        <div class="h-[210px] overflow-hidden border-b border-gray-100 lg:h-[220px] lg:border-b-0 lg:border-r dark:border-gray-800">
-          <img :src="location.image" :alt="location.name" class="h-full w-full object-cover" />
+      <div class="grid items-stretch lg:grid-cols-[252px_minmax(0,1fr)_360px]">
+        <div class="p-3 lg:p-4">
+          <div class="h-[178px] overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-900">
+            <img :src="location.image" :alt="location.name" class="h-full w-full object-cover" />
+          </div>
         </div>
-        <div class="min-w-0 p-5 lg:p-6">
+
+        <div class="min-w-0 border-gray-100 px-4 py-5 lg:border-r lg:px-5 dark:border-gray-800">
           <div class="flex flex-wrap items-center gap-2">
-            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white/90">{{ location.name }}</h1>
+            <h1 class="text-[19px] font-semibold tracking-tight text-gray-900 dark:text-white/90">{{ location.name }}</h1>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span>
           </div>
-          <div class="mt-5 grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-gray-300">
-            <div class="flex items-start gap-2.5"><MapPin :size="16" class="mt-0.5 shrink-0 text-brand-500" /><span>{{ location.district }} / {{ location.city }}</span></div>
-            <div class="flex items-start gap-2.5"><Building2 :size="16" class="mt-0.5 shrink-0 text-brand-500" /><span>Organizasyon: {{ location.organization }}</span></div>
-            <div class="flex items-start gap-2.5"><CalendarDays :size="16" class="mt-0.5 shrink-0 text-brand-500" /><span>Oluşturulma: {{ location.createdAt }}</span></div>
-            <div class="flex items-start gap-2.5"><CalendarDays :size="16" class="mt-0.5 shrink-0 text-brand-500" /><span>Son güncelleme: {{ location.updatedAt }}</span></div>
+
+          <div class="mt-7 space-y-5 text-[12px] text-gray-600 dark:text-gray-300">
+            <div class="flex items-center gap-3"><MapPin :size="16" class="shrink-0 text-gray-500 dark:text-gray-400" /><span>{{ location.district }} / {{ location.city }}</span></div>
+            <div class="flex items-center gap-3"><Building2 :size="16" class="shrink-0 text-gray-500 dark:text-gray-400" /><span>Organizasyon: {{ location.organization }}</span></div>
+            <div class="flex items-center gap-3"><CalendarDays :size="16" class="shrink-0 text-gray-500 dark:text-gray-400" /><span>Oluşturulma: {{ location.createdAt }} <span class="mx-1.5 text-gray-300 dark:text-gray-600">•</span> Son güncelleme: {{ location.updatedAt }}</span></div>
           </div>
         </div>
-        <div class="border-t border-gray-100 p-5 lg:border-l lg:border-t-0 lg:p-6 dark:border-gray-800">
-          <div class="flex items-center justify-between gap-3">
-            <div><p class="text-xs font-semibold text-gray-800 dark:text-gray-200">Adres</p><p class="mt-1.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ location.address }}</p></div>
+
+        <div class="relative border-t border-gray-100 px-5 py-4 lg:border-t-0 dark:border-gray-800">
+          <div class="absolute right-4 top-4 flex items-center gap-2">
+            <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-4 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Pencil :size="14" /> Düzenle</button>
+            <button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06]"><EllipsisVertical :size="16" /></button>
           </div>
-          <div class="mt-4 space-y-2.5 text-xs text-gray-600 dark:text-gray-300">
-            <p><span class="font-semibold text-gray-800 dark:text-gray-200">Telefon</span> <span class="ml-2">{{ location.phone }}</span></p>
-            <p class="break-all"><span class="font-semibold text-gray-800 dark:text-gray-200">E-posta</span> <span class="ml-2">{{ location.email }}</span></p>
+
+          <div class="pt-1 pr-1 lg:pt-0">
+            <div class="pr-28">
+              <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">Adres</p>
+              <p class="mt-1.5 max-w-[250px] text-[11px] leading-4.5 text-gray-500 dark:text-gray-400">{{ location.address }}</p>
+            </div>
+
+            <div class="mt-4 space-y-3 text-[11px] text-gray-600 dark:text-gray-300">
+              <div class="flex items-center gap-3"><span class="flex w-5 shrink-0 justify-center"><span class="text-gray-500 dark:text-gray-400">☎</span></span><span><strong class="font-semibold text-gray-800 dark:text-gray-200">Telefon</strong><span class="ml-3">{{ location.phone }}</span></span></div>
+              <div class="flex items-center gap-3"><Mail :size="15" class="ml-0.5 shrink-0 text-gray-500 dark:text-gray-400" /><span><strong class="font-semibold text-gray-800 dark:text-gray-200">E-posta</strong><span class="ml-3">{{ location.email }}</span></span></div>
+            </div>
           </div>
-          <div class="mt-4 h-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-900">
-            <div class="flex h-full items-center justify-center bg-[radial-gradient(circle_at_60%_45%,rgba(99,102,241,.18),transparent_30%),linear-gradient(135deg,#eef2ff,#f8fafc)] dark:bg-[radial-gradient(circle_at_60%_45%,rgba(99,102,241,.22),transparent_30%),linear-gradient(135deg,#111827,#0f172a)]"><MapPin :size="22" class="text-brand-500" /></div>
+
+          <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-900">
+            <div class="relative h-[96px] bg-[linear-gradient(135deg,#edf2f7,#f8fafc)] dark:bg-[linear-gradient(135deg,#111827,#0f172a)]">
+              <div class="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_30%_30%,rgba(148,163,184,.24),transparent_28%),radial-gradient(circle_at_72%_70%,rgba(148,163,184,.18),transparent_30%)]" />
+              <div class="absolute left-[56%] top-[42%] flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand-500/15"><MapPin :size="22" class="text-brand-500" /></div>
+            </div>
           </div>
+          <button type="button" class="mt-2.5 inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold text-brand-500 hover:bg-brand-50 dark:border-gray-700 dark:bg-gray-900 dark:text-brand-400 dark:hover:bg-white/[0.04]"><MapPin :size="14" /> Haritada Görüntüle</button>
         </div>
-      </div>
-      <div class="flex justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-800">
-        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.06]"><Pencil :size="14" /> Düzenle</button>
-        <button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.06]"><EllipsisVertical :size="16" /></button>
       </div>
     </section>
 
