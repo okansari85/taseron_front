@@ -64,54 +64,40 @@
 }
 
 @layer components {
-  /* Keep data tables visually consistent in dark mode, including pages that use inline table markup. */
-  .dark table thead {
-    background-color: rgba(255, 255, 255, 0.02);
-    border-color: var(--color-gray-800);
-  }
+  .dark table thead { background-color: rgba(255, 255, 255, 0.02); border-color: var(--color-gray-800); }
+  .dark table thead th { color: var(--color-gray-400); }
+  .dark table .bg-success-50 { background-color: rgba(18, 183, 106, 0.15); }
+  .dark table .text-success-600 { color: #32d583; }
+  .dark table .bg-gray-100 { background-color: rgba(255, 255, 255, 0.05); }
+  .dark table .text-gray-500 { color: var(--color-gray-400); }
+  .dark table .bg-brand-50 { background-color: rgba(70, 95, 255, 0.15); }
 
-  .dark table thead th {
-    color: var(--color-gray-400);
-  }
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > section:first-child { margin-bottom: 16px; }
 
-  /* Inline status/category badges used by organization tables. */
-  .dark table .bg-success-50 {
-    background-color: rgba(18, 183, 106, 0.15);
-  }
-
-  .dark table .text-success-600 {
-    color: #32d583;
-  }
-
-  .dark table .bg-gray-100 {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-
-  .dark table .text-gray-500 {
-    color: var(--color-gray-400);
-  }
-
-  .dark table .bg-brand-50 {
-    background-color: rgba(70, 95, 255, 0.15);
-  }
-
-  /* Location detail: keep the profile card visually separated from the tabs. */
-  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > section:first-child {
-    margin-bottom: 16px;
-  }
-
-  /* Location detail actions follow the same description + action pattern as organization pages. */
+  /* Keep the location action description on the left and the blue action buttons on the right. */
   div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > div:nth-child(3) {
+    display: flex;
     align-items: center;
     justify-content: space-between;
     min-height: 40px;
+    width: 100%;
   }
-
   div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > div:nth-child(3)::before {
     content: 'Lokasyonda yer alan kayıtları görüntüleyin ve yönetin.';
+    display: block;
+    margin-right: auto;
     color: var(--color-gray-500);
     font-size: 12px;
     line-height: 18px;
+    text-align: left;
+  }
+
+  /* Keep Düzenle / more actions above the map without changing the card layout. */
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > section:first-child > div > div:nth-child(3) > div:first-child {
+    z-index: 20;
+  }
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > section:first-child > div > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) {
+    padding-top: 56px;
   }
 }
 
