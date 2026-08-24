@@ -94,6 +94,25 @@
   .dark table .bg-brand-50 {
     background-color: rgba(70, 95, 255, 0.15);
   }
+
+  /* Location detail: keep the profile card visually separated from the tabs. */
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > section:first-child {
+    margin-bottom: 16px;
+  }
+
+  /* Location detail actions follow the same description + action pattern as organization pages. */
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > div:nth-child(3) {
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+  }
+
+  div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > div:nth-child(3)::before {
+    content: 'Lokasyonda yer alan kayıtları görüntüleyin ve yönetin.';
+    color: var(--color-gray-500);
+    font-size: 12px;
+    line-height: 18px;
+  }
 }
 
 @utility menu-item { @apply relative flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium text-theme-sm; }
