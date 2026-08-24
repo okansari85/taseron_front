@@ -33,6 +33,34 @@ export default defineNuxtPlugin((nuxtApp) => {
       .location-detail-refinement .mb-4.flex.items-center.justify-end > button {
         margin-left: auto;
       }
+
+      /* Contact block: keep phone/e-mail aligned with the organization/date rows. */
+      .location-detail-refinement > section:first-child > div > div:nth-child(3) > div:first-child > div:first-child > p:first-child,
+      .location-detail-refinement > section:first-child > div > div:nth-child(3) > div:first-child > div:first-child > p:nth-child(2) {
+        transform: translateY(8px);
+      }
+
+      .location-detail-refinement > section:first-child > div > div:nth-child(3) > div:first-child > div:first-child > .mt-5 {
+        margin-top: 12px !important;
+      }
+
+      /* Make the contact icons visually consistent. */
+      .location-detail-refinement > section:first-child > div > div:nth-child(3) > div:first-child > div:first-child > .space-y-4 > div > span:first-child {
+        display: flex !important;
+        width: 20px !important;
+        height: 20px !important;
+        flex-shrink: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+        line-height: 1 !important;
+      }
+
+      .location-detail-refinement > section:first-child > div > div:nth-child(3) > div:first-child > div:first-child > .space-y-4 svg {
+        width: 14px !important;
+        height: 14px !important;
+        flex-shrink: 0 !important;
+      }
     `
     document.head.appendChild(style)
   }
