@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Building2, CalendarDays, Check, ChevronDown, EllipsisVertical, Mail, MapPin, Pencil, Plus, Search, ShieldCheck, UserRound, Users, X } from 'lucide-vue-next'
+import { Building2, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Filter, Mail, MapPin, Pencil, Plus, Search, UserRound, X } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'default' })
 
@@ -51,7 +51,17 @@ const location = computed(() => ({
 }))
 
 const activeTab = ref<'companies' | 'contractors' | 'areas'>('companies')
+const locationTabs = [
+  { label: 'Firmalar', key: 'companies' },
+  { label: 'Taşeronlar', key: 'contractors' },
+  { label: 'Operasyonel Alanlar', key: 'areas' },
+]
+
 const search = ref('')
+const statusFilter = ref<'all' | 'active' | 'passive'>('all')
+const currentPage = ref(1)
+const perPage = ref(10)
+
 const showCompanyModal = ref(false)
 const selectedCompany = ref('')
 const selectedArea = ref('Üretim Alanı')
@@ -77,18 +87,57 @@ const areas = ref<OperationalArea[]>([
   { id: 3, name: 'İdari Alan', description: 'Ofis ve idari faaliyetlerin yürütüldüğü alan.', status: 'active' },
 ])
 
+const currentItems = computed(() => {
+  if (activeTab.value === 'companies') return companies.value
+  if (activeTab.value === 'contractors') return contractors.value
+  return areas.value
+})
+
 const filteredCompanies = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
-  return companies.value.filter(item => !term || `${item.name} ${item.operationalArea} ${item.nace} ${item.sgk}`.toLocaleLowerCase('tr-TR').includes(term))
+  return companies.value.filter(item => {
+    const matchesSearch = !term || `${item.name} ${item.operationalArea} ${item.nace} ${item.sgk}`.toLocaleLowerCase('tr-TR').includes(term)
+    const matchesStatus = statusFilter.value === 'all' || item.status === statusFilter.value
+    return matchesSearch && matchesStatus
+  })
 })
+
 const filteredContractors = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
-  return contractors.value.filter(item => !term || `${item.name} ${item.type} ${item.company}`.toLocaleLowerCase('tr-TR').includes(term))
+  return contractors.value.filter(item => {
+    const matchesSearch = !term || `${item.name} ${item.type} ${item.company} ${item.sgk}`.toLocaleLowerCase('tr-TR').includes(term)
+    const matchesStatus = statusFilter.value === 'all' || item.status === statusFilter.value
+    return matchesSearch && matchesStatus
+  })
 })
+
 const filteredAreas = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
-  return areas.value.filter(item => !term || `${item.name} ${item.description}`.toLocaleLowerCase('tr-TR').includes(term))
+  return areas.value.filter(item => {
+    const matchesSearch = !term || `${item.name} ${item.description}`.toLocaleLowerCase('tr-TR').includes(term)
+    const matchesStatus = statusFilter.value === 'all' || item.status === statusFilter.value
+    return matchesSearch && matchesStatus
+  })
 })
+
+const filteredItems = computed(() => {
+  if (activeTab.value === 'companies') return filteredCompanies.value
+  if (activeTab.value === 'contractors') return filteredContractors.value
+  return filteredAreas.value
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / perPage.value)))
+const paginatedItems = computed(() => filteredItems.value.slice((currentPage.value - 1) * perPage.value, currentPage.value * perPage.value))
+const visiblePages = computed(() => Array.from({ length: Math.min(5, totalPages.value) }, (_, index) => Math.min(Math.max(1, currentPage.value - 2) + index, totalPages.value)).filter((page, index, pages) => pages.indexOf(page) === index))
+
+watch([search, statusFilter, perPage, activeTab], () => {
+  currentPage.value = 1
+})
+
+const resetFilters = () => {
+  search.value = ''
+  statusFilter.value = 'all'
+}
 
 onMounted(() => {
   setScope('location', {
@@ -133,16 +182,16 @@ const companyOptions = [
 
 <template>
   <div class="font-outfit mx-auto w-full max-w-[1400px]">
-    <!-- Global header, tenant context and breadcrumb are supplied by the default layout. -->
+    <!-- Global header, tenant context and existing breadcrumb are supplied by the default layout. -->
     <section class="overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid min-h-[207px] items-stretch lg:grid-cols-[252px_minmax(0,1fr)_minmax(390px,1.08fr)]">
+      <div class="grid min-h-[207px] items-stretch lg:grid-cols-[252px_320px_minmax(0,1fr)]">
         <div class="p-3.5 lg:p-4">
           <div class="h-[178px] overflow-hidden rounded-[8px] bg-gray-100 dark:bg-gray-900">
             <img :src="location.image" :alt="location.name" class="h-full w-full object-cover" />
           </div>
         </div>
 
-        <div class="min-w-0 px-4 py-4 lg:border-r lg:border-gray-100 lg:px-5 dark:lg:border-gray-800">
+        <div class="min-w-0 border-r border-gray-100 px-4 py-4 lg:px-5 dark:border-gray-800">
           <div class="flex items-center gap-2">
             <h1 class="text-[19px] font-semibold leading-6 tracking-tight text-gray-900 dark:text-white/90">{{ location.name }}</h1>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[10px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span>
@@ -155,17 +204,17 @@ const companyOptions = [
           </div>
         </div>
 
-        <div class="relative px-4 py-3.5 lg:px-5">
-          <div class="absolute right-4 top-3.5 flex items-center gap-2">
+        <div class="relative min-w-0 px-4 py-3.5 lg:px-5">
+          <div class="absolute right-4 top-3.5 z-10 flex items-center gap-2">
             <button type="button" class="inline-flex h-9 items-center gap-2 rounded-[7px] bg-brand-500 px-4 text-[11px] font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Pencil :size="13" /> Düzenle</button>
             <button type="button" class="flex h-9 w-9 items-center justify-center rounded-[7px] border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"><EllipsisVertical :size="15" /></button>
           </div>
 
-          <div class="grid h-full grid-cols-[minmax(0,1fr)_288px] gap-4">
-            <div class="min-w-0 pt-1 pr-1">
-              <div class="pr-28">
+          <div class="grid h-full grid-cols-[minmax(0,1fr)_288px]">
+            <div class="min-w-0 pt-1 pr-6">
+              <div class="max-w-[330px]">
                 <p class="text-[11px] font-semibold text-gray-800 dark:text-gray-200">Adres</p>
-                <p class="mt-1 max-w-[285px] text-[10px] leading-4 text-gray-500 dark:text-gray-400">Şifa Mahallesi 34950, Tudaş Caddesi No:2-6<br />Beylikdüzü / İstanbul</p>
+                <p class="mt-1 text-[10px] leading-4 text-gray-500 dark:text-gray-400">Şifa Mahallesi 34950, Tudaş Caddesi No:2-6<br />Beylikdüzü / İstanbul</p>
               </div>
 
               <div class="mt-5 space-y-4 text-[10px] text-gray-600 dark:text-gray-300">
@@ -174,7 +223,7 @@ const companyOptions = [
               </div>
             </div>
 
-            <div class="pt-7">
+            <div class="border-l border-gray-100 pl-4 pt-7 dark:border-gray-800">
               <div class="h-[96px] overflow-hidden rounded-[7px] border border-gray-200 bg-[#edf2f7] dark:border-gray-700 dark:bg-gray-900">
                 <div class="relative h-full w-full bg-[linear-gradient(135deg,#edf2f7,#f8fafc)] dark:bg-[linear-gradient(135deg,#111827,#0f172a)]">
                   <div class="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_24%_35%,rgba(148,163,184,.25),transparent_24%),radial-gradient(circle_at_74%_65%,rgba(148,163,184,.2),transparent_28%)]" />
@@ -188,44 +237,51 @@ const companyOptions = [
       </div>
     </section>
 
-    <section class="mt-5 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="flex overflow-x-auto border-b border-gray-200 px-2 dark:border-gray-800">
-        <button v-for="tab in [{ key: 'companies', label: 'Firmalar' }, { key: 'contractors', label: 'Taşeronlar' }, { key: 'areas', label: 'Operasyonel Alanlar' }]" :key="tab.key" type="button" class="whitespace-nowrap border-b-2 px-5 py-3.5 text-sm font-semibold transition" :class="activeTab === tab.key ? 'border-brand-500 text-brand-500' : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'" @click="activeTab = tab.key as typeof activeTab">
-          {{ tab.label }}
-        </button>
-      </div>
+    <OrganizationTabs v-model="activeTab" :tabs="locationTabs" />
 
-      <div class="p-4 md:p-5">
-        <div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div class="relative w-full sm:max-w-xs">
-            <Search :size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input v-model="search" type="search" :placeholder="activeTab === 'companies' ? 'Firma ara...' : activeTab === 'contractors' ? 'Taşeron ara...' : 'Alan ara...'" class="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-          </div>
-          <button v-if="activeTab === 'companies'" type="button" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" @click="openCompanyModal"><Plus :size="16" /> Firma Ekle</button>
-          <button v-else-if="activeTab === 'contractors'" type="button" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Plus :size="16" /> Alt Yüklenici Ekle</button>
-          <button v-else type="button" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Plus :size="16" /> Operasyonel Alan Ekle</button>
-        </div>
-
-        <div v-if="activeTab === 'companies'" class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
-          <table class="min-w-[950px] w-full text-left">
-            <thead class="bg-gray-50 dark:bg-white/[0.03]"><tr class="border-b border-gray-200 dark:border-gray-800"><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Firma</th><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Operasyonel Alan</th><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">NACE Kodu</th><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Tehlike Sınıfı</th><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">SGK Sicil No</th><th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Durum</th><th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">İşlemler</th></tr></thead>
-            <tbody><tr v-for="company in filteredCompanies" :key="company.id" class="border-b border-gray-100 last:border-0 dark:border-gray-800/70"><td class="px-4 py-4"><div class="flex items-center gap-3"><div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1.5 dark:border-gray-700"><img :src="company.logo" :alt="company.name" class="h-full w-full object-contain" /></div><span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ company.name }}</span></div></td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ company.operationalArea }}</td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ company.nace }}</td><td class="px-4 py-4"><span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="company.dangerClass === 'Çok Tehlikeli' ? 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400' : company.dangerClass === 'Tehlikeli' ? 'bg-warning-50 text-warning-600 dark:bg-warning-500/10 dark:text-warning-400' : 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400'">{{ company.dangerClass }}</span></td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ company.sgk }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"><UserRound :size="14" /> Uzman Ata</button></td></tr></tbody>
-          </table>
-          <div v-if="filteredCompanies.length === 0" class="px-4 py-10 text-center text-sm text-gray-500">Kayıt bulunamadı.</div>
-        </div>
-
-        <div v-else-if="activeTab === 'contractors'" class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
-          <table class="min-w-[850px] w-full text-left"><thead class="bg-gray-50 dark:bg-white/[0.03]"><tr class="border-b border-gray-200 dark:border-gray-800"><th class="px-4 py-3 text-xs font-semibold text-gray-500">Alt Yüklenici</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">Tür</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">Bağlı Firma</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">SGK Sicil No</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">Durum</th><th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">İşlemler</th></tr></thead><tbody><tr v-for="item in filteredContractors" :key="item.id" class="border-b border-gray-100 last:border-0 dark:border-gray-800/70"><td class="px-4 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ item.name }}</td><td class="px-4 py-4"><span class="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">{{ item.type }}</span></td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ item.company }}</td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ item.sgk }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700"><EllipsisVertical :size="15" class="mx-auto" /></button></td></tr></tbody></table>
-        </div>
-
-        <div v-else class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
-          <table class="min-w-[760px] w-full text-left"><thead class="bg-gray-50 dark:bg-white/[0.03]"><tr class="border-b border-gray-200 dark:border-gray-800"><th class="px-4 py-3 text-xs font-semibold text-gray-500">Operasyonel Alan</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">Açıklama</th><th class="px-4 py-3 text-xs font-semibold text-gray-500">Durum</th><th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">İşlemler</th></tr></thead><tbody><tr v-for="item in filteredAreas" :key="item.id" class="border-b border-gray-100 last:border-0 dark:border-gray-800/70"><td class="px-4 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ item.name }}</td><td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{{ item.description }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-semibold text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700"><EllipsisVertical :size="15" class="mx-auto" /></button></td></tr></tbody></table>
-        </div>
-
-        <div class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"><span>Toplam {{ activeTab === 'companies' ? filteredCompanies.length : activeTab === 'contractors' ? filteredContractors.length : filteredAreas.length }} kayıt</span><div class="flex items-center gap-1"><button class="h-8 w-8 rounded-lg border border-gray-200 dark:border-gray-700">‹</button><button class="h-8 w-8 rounded-lg bg-brand-500 font-semibold text-white">1</button><button class="h-8 w-8 rounded-lg border border-gray-200 dark:border-gray-700">›</button></div></div>
+    <section class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1.2fr)_1fr_auto] md:items-center">
+        <div class="relative"><Search :size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" type="search" :placeholder="activeTab === 'companies' ? 'Firma ara...' : activeTab === 'contractors' ? 'Taşeron ara...' : 'Operasyonel alan ara...'" class="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" /></div>
+        <div class="relative"><select v-model="statusFilter" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"><option value="all">Tümü</option><option value="active">Aktif</option><option value="passive">Pasif</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div>
+        <button type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06]" @click="resetFilters"><Filter :size="15" />Filtreleri Temizle</button>
       </div>
     </section>
 
+    <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="flex items-center justify-between gap-4 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ activeTab === 'companies' ? 'Lokasyondaki firmaları görüntüleyin ve yönetin.' : activeTab === 'contractors' ? 'Lokasyondaki alt yüklenicileri görüntüleyin ve yönetin.' : 'Lokasyondaki operasyonel alanları görüntüleyin ve yönetin.' }}</p>
+        <button v-if="activeTab === 'companies'" type="button" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" @click="openCompanyModal"><Plus :size="16" /> Firma Ekle</button>
+        <button v-else-if="activeTab === 'contractors'" type="button" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Plus :size="16" /> Alt Yüklenici Ekle</button>
+        <button v-else type="button" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600"><Plus :size="16" /> Operasyonel Alan Ekle</button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table v-if="activeTab === 'companies'" class="w-full min-w-[980px] text-left">
+          <thead class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Firma</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">NACE Kodu</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Tehlike Sınıfı</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">SGK Sicil No</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800"><tr v-for="company in paginatedItems as Company[]" :key="company.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td class="px-4 py-4"><div class="flex items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1.5 dark:border-gray-700"><img :src="company.logo" :alt="company.name" class="h-full w-full object-contain" /></div><span class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ company.name }}</span></div></td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ company.operationalArea }}</td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ company.nace }}</td><td class="px-4 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="company.dangerClass === 'Çok Tehlikeli' ? 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400' : company.dangerClass === 'Tehlikeli' ? 'bg-warning-50 text-warning-600 dark:bg-warning-500/10 dark:text-warning-400' : 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400'">{{ company.dangerClass }}</span></td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ company.sgk }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"><UserRound :size="14" /> Uzman Ata</button></td></tr></tbody>
+        </table>
+
+        <table v-else-if="activeTab === 'contractors'" class="w-full min-w-[900px] text-left">
+          <thead class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Alt Yüklenici</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Tür</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Bağlı Firma</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">SGK Sicil No</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800"><tr v-for="item in paginatedItems as Contractor[]" :key="item.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td class="px-4 py-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ item.name }}</td><td class="px-4 py-4"><span class="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">{{ item.type }}</span></td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ item.company }}</td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ item.sgk }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="flex h-9 w-9 ml-auto items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700"><EllipsisVertical :size="15" /></button></td></tr></tbody>
+        </table>
+
+        <table v-else class="w-full min-w-[760px] text-left">
+          <thead class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Açıklama</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800"><tr v-for="item in paginatedItems as OperationalArea[]" :key="item.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td class="px-4 py-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ item.name }}</td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ item.description }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600 dark:bg-success-500/10 dark:text-success-400"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td><td class="px-4 py-4 text-right"><button type="button" class="flex h-9 w-9 ml-auto items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700"><EllipsisVertical :size="15" /></button></td></tr></tbody>
+        </table>
+
+        <div v-if="filteredItems.length === 0" class="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Kayıt bulunamadı.</div>
+      </div>
+
+      <div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+        <span class="text-sm text-gray-500 dark:text-gray-400">Toplam {{ filteredItems.length }} kayıt</span>
+        <div class="flex items-center gap-1"><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><button v-for="page in visiblePages" :key="page" type="button" class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium" :class="page === currentPage ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/[0.06]'" @click="currentPage = page">{{ page }}</button><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div>
+        <select v-model.number="perPage" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select>
+      </div>
+    </section>
+
+    <!-- Firma Ekle modalı bu revizyonda değiştirilmedi. -->
     <div v-if="showCompanyModal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-[2px]">
       <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800"><div><h2 class="text-base font-semibold text-gray-900 dark:text-white/90">Firma Ekle</h2><p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Firmayı bu lokasyon ve operasyonel alan ile ilişkilendirin.</p></div><button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5" @click="showCompanyModal = false"><X :size="18" /></button></div>
