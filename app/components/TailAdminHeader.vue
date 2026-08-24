@@ -7,11 +7,11 @@
         </button>
         <div class="hidden min-w-0 sm:block">
           <div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <template v-for="(item, index) in breadcrumbs" :key="`${item.kind}-${item.id}`">
-              <button type="button" class="truncate transition hover:text-brand-500" :class="index === breadcrumbs.length - 1 ? 'font-medium text-gray-600 dark:text-gray-300' : ''" @click="goToBreadcrumb(item.kind)">
+            <template v-for="(item, index) in visibleBreadcrumbs" :key="`${item.kind}-${item.id}`">
+              <button type="button" class="truncate transition hover:text-brand-500" :class="index === visibleBreadcrumbs.length - 1 ? 'font-medium text-gray-600 dark:text-gray-300' : ''" @click="goToBreadcrumb(item.kind)">
                 {{ item.name }}
               </button>
-              <span v-if="index < breadcrumbs.length - 1" class="text-gray-300 dark:text-gray-700">/</span>
+              <span v-if="index < visibleBreadcrumbs.length - 1" class="text-gray-300 dark:text-gray-700">/</span>
             </template>
           </div>
           <p class="truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">Taseron Management</p>
@@ -43,6 +43,14 @@
               <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{{ moduleTitle }} kapsamı</p>
               <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Bu sayfada veriyi hangi kapsamda görmek istediğini seç.</p>
             </div>
+
+            <label class="mx-1.5 mt-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg border border-gray-100 px-3 py-2.5 transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/5">
+              <input v-model="showPreviousScope" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800" />
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-semibold text-gray-700 dark:text-gray-200">Önceki kapsamı göster</span>
+                <span class="block text-[10px] text-gray-400">Kapatırsan breadcrumb yalnızca mevcut kapsamı gösterir.</span>
+              </span>
+            </label>
 
             <div v-if="allowedKinds.length > 1" class="flex gap-1 p-2">
               <button
@@ -121,6 +129,7 @@ const { moduleKey, allowedKinds, currentScope, currentTenant, scopeKindLabel, sc
 const profileOpen = ref(false)
 const scopeSelectorOpen = ref(false)
 const selectedKind = ref<ScopeKind>('group')
+const showPreviousScope = useState<boolean>('organization-show-previous-scope', () => true)
 
 const tenantId = computed(() => {
   const value = route.params.tenantId
@@ -133,6 +142,11 @@ const currentScopeIcon = computed(() => scopeIcon(currentScopeKind.value))
 const currentScopeKind = computed<ScopeKind>(() => currentScope.value ? (currentScope.value.id === currentTenant.value?.id ? 'tenant' : selectedKind.value) : selectedKind.value)
 const moduleTitle = computed(() => ({ dashboard: 'Genel Bakış', groups: 'Gruplar', companies: 'Şirketler', brands: 'Markalar', locations: 'Lokasyonlar', hierarchy: 'Hiyerarşi' }[moduleKey.value]))
 const selectorOptions = computed<ScopeOption[]>(() => optionsForKind(selectedKind.value) as ScopeOption[])
+const visibleBreadcrumbs = computed(() => {
+  if (!breadcrumbs.value.length) return []
+  if (showPreviousScope.value) return breadcrumbs.value.slice(-2)
+  return breadcrumbs.value.slice(-1)
+})
 
 const isOptionSelected = (option: ScopeOption) => currentScope.value?.id === option.id && currentScopeKind.value === selectedKind.value
 
