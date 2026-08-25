@@ -45,6 +45,21 @@ export default defineNuxtPlugin((nuxtApp) => {
         margin-top: 28px !important;
       }
 
+      /* Make the location image fill the same vertical span as the map + action button. */
+      .location-detail-refinement > section:first-child > div.grid > div:first-child {
+        position: relative !important;
+        padding: 16px !important;
+      }
+
+      .location-detail-refinement > section:first-child > div.grid > div:first-child > div {
+        position: absolute !important;
+        top: 16px !important;
+        right: 16px !important;
+        bottom: 14px !important;
+        left: 16px !important;
+        height: auto !important;
+      }
+
       .location-detail-refinement .mb-4.flex.items-center.justify-end {
         justify-content: flex-start !important;
       }
