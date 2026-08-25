@@ -21,7 +21,14 @@ const tabs=computed(()=>[
 ])
 const organizations=computed(()=>isTemporary.value?[{name:'Medikal Grubu',status:'Aktif',start:'01.03.2026',end:'15.03.2026',list:'Beyaz Liste'},{name:'Arçelik Grubu',status:'Aktif',start:'10.07.2026',end:'10.08.2026',list:'Beyaz Liste'}]:[{name:'Medikal Grubu',status:'Aktif',start:'01.01.2026',end:'31.12.2026',list:'Beyaz Liste'},{name:'Otomotiv Grubu',status:'Pasif',start:'01.01.2025',end:'31.12.2025',list:'Tanımlı değil'},{name:'Dayanıklı Tüketim Grubu',status:'Kara Liste',start:'01.06.2026',end:'01.06.2036',list:'Kara Liste'}])
 const locations=[{name:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',status:'Aktif'},{name:'Sütlüce Kampüsü',business:'Arçelik Pazarlama A.Ş.',status:'Aktif'},{name:'Çayırova Fabrikası',business:'Beko Europe',status:'Pasif'}]
-const visits=[{date:'18.08.2026',location:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',purpose:'Forklift bakım ve teknik servis',people:3,status:'Tamamlandı'},{date:'04.07.2026',location:'Çayırova Fabrikası',business:'Arçelik A.Ş.',purpose:'Periyodik bakım',people:2,status:'Tamamlandı'},{date:'22.05.2026',location:'Sütlüce Kampüsü',business:'Arçelik Pazarlama A.Ş.',purpose:'Acil teknik müdahale',people:4,status:'Tamamlandı'},{date:'11.03.2026',location:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',purpose:'Makine arıza müdahalesi',people:2,status:'Tamamlandı'}]
+const visits=[
+  {date:'26.08.2026',location:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',purpose:'Planlı ekipman kontrolü',people:4,status:'Planlanan'},
+  {date:'24.08.2026',location:'Çayırova Fabrikası',business:'Arçelik A.Ş.',purpose:'Teknik bakım ve saha çalışması',people:3,status:'Devam Ediyor'},
+  {date:'18.08.2026',location:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',purpose:'Forklift bakım ve teknik servis',people:3,status:'Tamamlandı'},
+  {date:'04.07.2026',location:'Çayırova Fabrikası',business:'Arçelik A.Ş.',purpose:'Periyodik bakım',people:2,status:'Tamamlandı'},
+  {date:'22.05.2026',location:'Sütlüce Kampüsü',business:'Arçelik Pazarlama A.Ş.',purpose:'Acil teknik müdahale',people:4,status:'Tamamlandı'},
+  {date:'11.03.2026',location:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',purpose:'Makine arıza müdahalesi',people:2,status:'Tamamlandı'}
+]
 const tabContractor=computed(()=>({...contractor.value,statusText:statusText.value}))
 const temporaryHistoryUrl=computed(()=>`/tenants/${tenantId.value}/contractors/${contractorId.value}/temporary-history`)
 </script>
