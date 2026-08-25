@@ -83,7 +83,7 @@
     width: 100%;
   }
   div.font-outfit.mx-auto.w-full[class*="max-w-[1400px]"] > div:nth-child(3)::before {
-    content: 'Lokasyonda yer alan kayıtları görüntüleyin ve yönetin.';
+   
     display: block;
     margin-right: auto;
     color: var(--color-gray-500);
