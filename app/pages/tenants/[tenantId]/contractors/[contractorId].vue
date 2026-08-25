@@ -1,0 +1,59 @@
+<script setup lang="ts">
+import { ArrowLeft, Building2, CalendarDays, CheckCircle2, MapPin, ShieldAlert } from 'lucide-vue-next'
+
+definePageMeta({ layout: 'default' })
+
+const organizations = [
+  { name: 'Medikal Grubu', status: 'Aktif', start: '01.01.2026', end: '31.12.2026', list: 'Beyaz Liste' },
+  { name: 'Otomotiv Grubu', status: 'Pasif', start: '01.01.2025', end: '31.12.2025', list: 'Tanımlı değil' },
+  { name: 'Dayanıklı Tüketim Grubu', status: 'Kara Liste', start: '01.06.2026', end: '01.06.2036', list: 'Kara Liste' }
+]
+const locations = [
+  { name: 'Beylikdüzü Kampüsü', business: 'Arçelik A.Ş.', status: 'Aktif' },
+  { name: 'Sütlüce Kampüsü', business: 'Arçelik Pazarlama A.Ş.', status: 'Aktif' },
+  { name: 'Çayırova Fabrikası', business: 'Beko Europe', status: 'Pasif' }
+]
+const history = [
+  { year: '2026', organization: 'Medikal Grubu', status: 'Aktif', contract: '01.01.2026 – 31.12.2026' },
+  { year: '2025', organization: 'Medikal Grubu', status: 'Pasif', contract: '01.01.2025 – 31.12.2025' },
+  { year: '2024', organization: 'Otomotiv Grubu', status: 'Aktif', contract: '01.03.2024 – 31.12.2024' }
+]
+</script>
+
+<template>
+  <div class="font-outfit mx-auto w-full max-w-[1400px]">
+    <div class="mb-6 flex items-start gap-4">
+      <NuxtLink :to="`/tenants/${$route.params.tenantId}/contractors/`" class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"><ArrowLeft :size="17" /></NuxtLink>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white/90">Çebi Hizmet Yönetimi A.Ş.</h1>
+          <span class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-600 dark:bg-brand-500/10">Çebi</span>
+          <span class="rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600 dark:bg-success-500/10">Daimi</span>
+        </div>
+        <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">Alt yüklenici detayları, organizasyon ilişkileri ve çalışma geçmişi.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2">
+        <div class="mb-5 flex items-center justify-between"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Genel Bilgiler</h2><p class="mt-1 text-xs text-gray-500">Merkezi havuzdaki firma kaydı.</p></div><button class="h-9 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">Düzenle</button></div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div><span class="text-xs text-gray-500">Firma Unvanı</span><p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Çebi Hizmet Yönetimi A.Ş.</p></div>
+          <div><span class="text-xs text-gray-500">Kısa Ad</span><p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Çebi</p></div>
+          <div><span class="text-xs text-gray-500">Tür</span><p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Daimi</p></div>
+          <div><span class="text-xs text-gray-500">Tenant</span><p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Arçelik</p></div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]"><div class="mb-4"><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Özet</h2><p class="mt-1 text-xs text-gray-500">Merkezi havuz istatistikleri.</p></div><div class="space-y-4"><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10"><Building2 :size="16" /></span><div><p class="text-xs text-gray-500">Organizasyon</p><p class="text-sm font-semibold text-gray-800 dark:text-white/90">3 eşleşme</p></div></div><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800"><MapPin :size="16" /></span><div><p class="text-xs text-gray-500">Lokasyon</p><p class="text-sm font-semibold text-gray-800 dark:text-white/90">3 kayıt</p></div></div><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-success-50 text-success-600 dark:bg-success-500/10"><CheckCircle2 :size="16" /></span><div><p class="text-xs text-gray-500">Durum</p><p class="text-sm font-semibold text-gray-800 dark:text-white/90">Aktif</p></div></div></div></section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2"><div class="mb-4 flex items-center justify-between"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Organizasyon İlişkileri</h2><p class="mt-1 text-xs text-gray-500">Firma ile organizasyonlar arasındaki mevcut ilişkiler.</p></div><button class="h-9 rounded-lg bg-brand-500 px-3 text-xs font-semibold text-white hover:bg-brand-600">Organizasyon Ekle</button></div><div class="overflow-x-auto"><table class="w-full min-w-[650px] text-left"><thead><tr class="border-b border-gray-100 text-xs text-gray-500 dark:border-gray-800"><th class="pb-3 font-medium">Organizasyon</th><th class="pb-3 font-medium">Durum</th><th class="pb-3 font-medium">Çalışma Dönemi</th><th class="pb-3 font-medium">Liste</th><th class="pb-3"></th></tr></thead><tbody><tr v-for="item in organizations" :key="item.name" class="border-b border-gray-100 last:border-0 dark:border-gray-800"><td class="py-3 text-sm font-medium text-gray-800 dark:text-white/90">{{ item.name }}</td><td class="py-3"><span class="rounded-full px-2 py-1 text-[11px] font-medium" :class="item.status === 'Aktif' ? 'bg-success-50 text-success-600 dark:bg-success-500/10' : item.status === 'Kara Liste' ? 'bg-error-50 text-error-600 dark:bg-error-500/10' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'">{{ item.status }}</span></td><td class="py-3 text-xs text-gray-500">{{ item.start }} – {{ item.end }}</td><td class="py-3 text-xs font-medium" :class="item.list === 'Kara Liste' ? 'text-error-600' : 'text-gray-600 dark:text-gray-400'">{{ item.list }}</td><td class="py-3 text-right"><button class="text-xs font-medium text-brand-500">Detay</button></td></tr></tbody></table></div></section>
+
+      <section class="rounded-xl border border-error-200 bg-error-50/40 p-5 shadow-theme-xs dark:border-error-900/40 dark:bg-error-500/5"><div class="flex gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-error-100 text-error-600 dark:bg-error-500/10"><ShieldAlert :size="17" /></span><div><h2 class="text-sm font-semibold text-error-700 dark:text-error-400">Kara Liste Uyarısı</h2><p class="mt-1 text-xs leading-5 text-error-700/80 dark:text-error-400/80">Dayanıklı Tüketim Grubu için bu alt yüklenici 01.06.2036 tarihine kadar kara listede.</p><button class="mt-3 text-xs font-semibold text-error-600">Liste kaydını görüntüle</button></div></div></section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-3"><div class="mb-4"><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Lokasyonlar</h2><p class="mt-1 text-xs text-gray-500">Bu alt yüklenicinin lokasyon bazındaki ilişkileri.</p></div><div class="grid grid-cols-1 gap-3 md:grid-cols-3"><div v-for="item in locations" :key="item.name" class="rounded-lg border border-gray-100 p-4 dark:border-gray-800"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ item.name }}</p><p class="mt-1 text-xs text-gray-500">{{ item.business }}</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-500 dark:bg-gray-800">{{ item.status }}</span></div></div></div></section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-3"><div class="mb-4 flex items-center justify-between"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Çalışma Geçmişi</h2><p class="mt-1 text-xs text-gray-500">Organizasyon bazındaki geçmiş çalışma dönemleri.</p></div><button class="text-xs font-medium text-brand-500">Tümünü Gör</button></div><div class="overflow-x-auto"><table class="w-full min-w-[600px] text-left"><thead><tr class="border-b border-gray-100 text-xs text-gray-500 dark:border-gray-800"><th class="pb-3 font-medium">Yıl</th><th class="pb-3 font-medium">Organizasyon</th><th class="pb-3 font-medium">Dönem</th><th class="pb-3 font-medium">Durum</th></tr></thead><tbody><tr v-for="item in history" :key="`${item.year}-${item.organization}`" class="border-b border-gray-100 last:border-0 dark:border-gray-800"><td class="py-3 text-sm font-medium text-gray-800 dark:text-white/90">{{ item.year }}</td><td class="py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.organization }}</td><td class="py-3 text-xs text-gray-500">{{ item.contract }}</td><td class="py-3"><span class="rounded-full bg-success-50 px-2 py-1 text-[11px] font-medium text-success-600 dark:bg-success-500/10">{{ item.status }}</span></td></tr></tbody></table></div></section>
+    </div>
+  </div>
+</template>
