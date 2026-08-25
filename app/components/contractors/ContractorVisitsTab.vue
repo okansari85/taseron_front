@@ -15,8 +15,6 @@ type Visit = {
   status: string
 }
 
-defineProps<{ visits: Visit[]; historyUrl: string }>()
-
 const props = defineProps<{ visits: Visit[]; historyUrl: string }>()
 
 const selectedYear = ref(2026)
