@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { ArrowLeft, Building2, CheckCircle2, FileText, History, MapPin, Star } from 'lucide-vue-next'
+import ContractorGeneralTab from '~/components/contractors/ContractorGeneralTab.vue'
+import ContractorOrganizationsTab from '~/components/contractors/ContractorOrganizationsTab.vue'
+import ContractorLocationsTab from '~/components/contractors/ContractorLocationsTab.vue'
+import ContractorVisitsTab from '~/components/contractors/ContractorVisitsTab.vue'
+import ContractorHistoryTab from '~/components/contractors/ContractorHistoryTab.vue'
 definePageMeta({ layout: 'default' })
 const route = useRoute()
 const tenantId = computed(() => String(route.params.tenantId ?? '1'))
