@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Eye, Filter, MapPin, Plus, Search } from 'lucide-vue-next'
 import { mockKocLocations } from '~/data/mock-koc-locations'
+import LocationCreateDrawer from '~/components/LocationCreateDrawer.vue'
 
 definePageMeta({ layout: 'default' })
 
 type LocationStatus = 'active' | 'passive'
 type LocationBusinessEntity = { id: number; companyName: string; brandName?: string; logoUrl: string }
 type Location = { id: number; name: string; city: string; district: string; address: string; businessEntities: LocationBusinessEntity[]; contractorCount: number; status: LocationStatus; image: string }
+type LocationCreatePayload = { name: string; city: string; district: string; address: string; status: LocationStatus; image: string }
 
 const route = useRoute()
 const tenantId = computed(() => String(route.params.tenantId ?? ''))
@@ -16,6 +18,7 @@ const cityFilter = ref('all')
 const statusFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
+const createDrawerOpen = ref(false)
 
 const logos = {
   arcelik: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg',
@@ -87,8 +90,11 @@ const paginatedLocations = computed(() => filteredLocations.value.slice((current
 const visiblePages = computed(() => Array.from({ length: Math.min(5, totalPages.value) }, (_, index) => Math.min(Math.max(1, currentPage.value - 2) + index, totalPages.value)).filter((page, index, pages) => pages.indexOf(page) === index))
 watch([search, companyFilter, cityFilter, statusFilter, perPage], () => { currentPage.value = 1 })
 const resetFilters = () => { search.value = ''; companyFilter.value = 'all'; cityFilter.value = 'all'; statusFilter.value = 'all' }
-const goToCreate = () => navigateTo(`/tenants/${tenantId.value}/locations/create`)
+const goToCreate = () => { createDrawerOpen.value = true }
 const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/locations/${id}`)
+const createLocation = (payload: LocationCreatePayload) => {
+  locations.value.unshift({ id: Date.now(), name: payload.name, city: payload.city, district: payload.district, address: payload.address, businessEntities: [], contractorCount: 0, status: payload.status, image: payload.image || industrialImages[0] })
+}
 </script>
 
 <template>
@@ -113,5 +119,7 @@ const goToLocation = (id: number) => navigateTo(`/tenants/${tenantId.value}/loca
       </tr></tbody></table></div>
       <div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800"><span class="text-sm text-gray-500 dark:text-gray-400">Toplam {{ filteredLocations.length }} kayıt</span><div class="flex items-center gap-1"><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><button v-for="page in visiblePages" :key="page" type="button" class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium" :class="page === currentPage ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/[0.06]'" @click="currentPage = page">{{ page }}</button><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div><select v-model.number="perPage" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select></div>
     </section>
+
+    <LocationCreateDrawer v-model="createDrawerOpen" @save="createLocation" />
   </div></div>
 </template>
