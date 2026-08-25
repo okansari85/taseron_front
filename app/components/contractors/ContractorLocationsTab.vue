@@ -3,10 +3,10 @@ import { MapPin, Users, Building2 } from 'lucide-vue-next'
 defineProps<{ locations: Array<{ name: string; business: string; status: string }> }>()
 const serviceSummary = { locationCount: 3, personnelCount: 48 }
 const mapPoints = [
-  { city: 'İstanbul', x: 30, y: 34, count: 2 },
-  { city: 'Kocaeli', x: 39, y: 39, count: 1 },
-  { city: 'Ankara', x: 58, y: 48, count: 1 },
-  { city: 'İzmir', x: 22, y: 59, count: 1 },
+  { city: 'İstanbul', x: 24, y: 30, count: 2 },
+  { city: 'Kocaeli', x: 31, y: 34, count: 1 },
+  { city: 'Ankara', x: 54, y: 46, count: 1 },
+  { city: 'İzmir', x: 23, y: 63, count: 1 },
 ]
 </script>
 <template>
@@ -15,12 +15,14 @@ const mapPoints = [
   <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_0.65fr]">
     <div class="relative overflow-hidden rounded-xl border border-gray-100 bg-slate-50/70 p-4">
       <div class="mb-2 flex items-center justify-between"><div><p class="text-xs font-semibold text-gray-800">Türkiye Operasyon Haritası</p><p class="mt-1 text-[11px] text-gray-500">Hizmet verilen lokasyonlar</p></div><span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 shadow-sm">{{ serviceSummary.locationCount }} lokasyon</span></div>
-      <div class="relative mx-auto mt-2 aspect-[1.7/1] max-w-[680px]">
-        <svg viewBox="0 0 700 410" class="h-full w-full" aria-label="Türkiye lokasyon haritası" role="img">
-          <path d="M64 135 C88 116 113 121 132 106 C154 88 180 101 199 91 C224 77 247 93 268 87 C292 80 312 96 334 91 C356 86 375 101 398 94 C421 87 445 101 468 96 C494 90 516 104 538 99 C565 93 592 112 617 121 C640 129 650 148 636 162 C624 176 635 192 619 204 C604 216 608 236 588 245 C568 254 560 271 539 278 C518 285 504 303 480 299 C455 295 442 315 418 308 C395 301 380 320 355 312 C330 304 312 321 287 312 C263 303 244 316 221 307 C198 298 181 310 160 297 C139 284 118 287 105 271 C92 255 74 248 79 228 C84 208 67 194 73 176 C78 160 55 151 64 135 Z" fill="currentColor" class="text-white" stroke="currentColor" stroke-width="3" />
-          <path d="M107 180 C155 157 201 166 248 151 C302 133 346 145 396 137 C447 129 492 145 548 140 C584 137 606 153 619 169" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="5 7" class="text-gray-200" />
-          <g v-for="point in mapPoints" :key="point.city" :transform="`translate(${point.x*10},${point.y*6.1})`">
-            <circle r="14" class="fill-brand-100 stroke-brand-500" stroke-width="2"/><circle r="5" class="fill-brand-500"/><text y="28" text-anchor="middle" class="fill-gray-600 text-[12px] font-medium">{{ point.city }}</text><text y="4" text-anchor="middle" class="fill-white text-[9px] font-bold">{{ point.count }}</text>
+      <div class="relative mx-auto mt-2 aspect-[1.85/1] max-w-[680px]">
+        <svg viewBox="0 0 760 410" class="h-full w-full" aria-label="Türkiye haritası" role="img">
+          <defs><filter id="mapShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-opacity=".12"/></filter></defs>
+          <!-- Stylized Turkey silhouette: recognizable long east-west Anatolian peninsula -->
+          <path d="M55 145 L76 129 L101 126 L119 111 L147 116 L168 103 L198 106 L221 95 L252 102 L278 91 L309 99 L337 91 L368 101 L397 96 L427 107 L458 101 L486 111 L516 106 L546 120 L576 116 L605 128 L633 132 L660 149 L696 155 L710 169 L696 182 L705 196 L687 207 L674 222 L649 226 L631 241 L607 239 L586 252 L561 248 L542 262 L517 259 L495 273 L469 268 L449 282 L423 277 L398 289 L371 283 L347 296 L322 287 L296 298 L271 289 L246 298 L221 287 L195 292 L172 279 L146 282 L128 266 L105 265 L92 248 L75 243 L80 224 L66 211 L72 194 L57 181 L66 166 Z" class="fill-white text-white" stroke="currentColor" stroke-width="3" filter="url(#mapShadow)"/>
+          <path d="M95 171 C165 149 231 157 292 137 C361 115 425 139 486 128 C548 117 606 141 675 158" fill="none" class="text-gray-200" stroke="currentColor" stroke-width="2" stroke-dasharray="5 7"/>
+          <g v-for="point in mapPoints" :key="point.city" :transform="`translate(${point.x*7.4},${point.y*4.1})`">
+            <circle r="15" class="fill-brand-100 stroke-brand-500" stroke-width="2"/><circle r="5" class="fill-brand-500"/><text y="28" text-anchor="middle" class="fill-gray-600 text-[12px] font-medium">{{ point.city }}</text><text y="4" text-anchor="middle" class="fill-white text-[9px] font-bold">{{ point.count }}</text>
           </g>
         </svg>
       </div>
