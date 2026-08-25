@@ -1,0 +1,6 @@
+<script setup lang="ts">
+defineProps<{ history: Array<{ year: string; organization: string; status: string; contract: string }> }>()
+</script>
+<template>
+<section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs"><div class="mb-5"><h2 class="text-sm font-semibold text-gray-900">Çalışma Geçmişi</h2><p class="mt-1 text-xs text-gray-500">Organizasyon bazındaki geçmiş çalışma dönemleri.</p></div><div class="overflow-x-auto"><table class="w-full min-w-[650px] text-left"><thead><tr class="border-b border-gray-100 text-xs text-gray-500"><th class="pb-3">Yıl</th><th class="pb-3">Organizasyon</th><th class="pb-3">Dönem</th><th class="pb-3">Durum</th></tr></thead><tbody><tr v-for="item in history" :key="item.year+item.organization" class="border-b border-gray-100 last:border-0"><td class="py-4 text-sm font-medium">{{ item.year }}</td><td class="py-4 text-sm">{{ item.organization }}</td><td class="py-4 text-xs text-gray-500">{{ item.contract }}</td><td class="py-4 text-xs">{{ item.status }}</td></tr></tbody></table></div></section>
+</template>
