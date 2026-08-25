@@ -1,64 +1,325 @@
 <script setup lang="ts">
-import { CalendarDays, CheckCircle2, Clock3, MapPin, Users, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-type Visit={date:string;location:string;business:string;purpose:string;people:number;status:string}
+import { computed, ref } from 'vue'
+import { CalendarDays, CheckCircle2, Clock3, MapPin, Users, ArrowUpRight } from 'lucide-vue-next'
+import FullCalendar from '@fullcalendar/vue3'
+import multiMonthPlugin from '@fullcalendar/multimonth'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import trLocale from '@fullcalendar/core/locales/tr'
+
+type Visit = {
+  date: string
+  location: string
+  business: string
+  purpose: string
+  people: number
+  status: string
+}
+
 defineProps<{ visits: Visit[]; historyUrl: string }>()
-const statusMeta={
-  Planlanan:{icon:CalendarDays,classes:'bg-brand-50 text-brand-600',dot:'bg-brand-500'},
-  'Devam Ediyor':{icon:Clock3,classes:'bg-warning-50 text-warning-600',dot:'bg-warning-500'},
-  Tamamlandı:{icon:CheckCircle2,classes:'bg-success-50 text-success-600',dot:'bg-success-500'},
+
+const props = defineProps<{ visits: Visit[]; historyUrl: string }>()
+
+const selectedYear = ref(2026)
+
+const statusMeta = {
+  Planlanan: {
+    icon: CalendarDays,
+    classes: 'bg-brand-50 text-brand-600',
+    dot: 'bg-brand-500',
+    color: '#6366f1',
+  },
+  'Devam Ediyor': {
+    icon: Clock3,
+    classes: 'bg-warning-50 text-warning-600',
+    dot: 'bg-warning-500',
+    color: '#f59e0b',
+  },
+  Tamamlandı: {
+    icon: CheckCircle2,
+    classes: 'bg-success-50 text-success-600',
+    dot: 'bg-success-500',
+    color: '#10b981',
+  },
+} as const
+
+const normalizeDate = (value: string) => {
+  const parts = value.split('.')
+  return parts.length === 3
+    ? `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+    : value
 }
-const selectedYear=ref(2026)
-const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']
-const weekDays=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz']
-const normalizeDate=(value:string)=>{const parts=value.split('.');return parts.length===3?`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`:value}
-const visitsForDate=(year:number,month:number,day:number)=>visits.filter(v=>{const d=new Date(normalizeDate(v.date));return d.getFullYear()===year&&d.getMonth()===month&&d.getDate()===day})
-const daysInMonth=(year:number,month:number)=>new Date(year,month+1,0).getDate()
-const mondayOffset=(year:number,month:number)=>{const day=new Date(year,month,1).getDay();return day===0?6:day-1}
-const monthWeeks=(month:number)=>{
-  const days=daysInMonth(selectedYear.value,month);const cells:Array<number|null>=Array(mondayOffset(selectedYear.value,month)).fill(null);for(let d=1;d<=days;d++)cells.push(d);while(cells.length%7)cells.push(null);return cells
+
+const toDate = (value: string) => new Date(`${normalizeDate(value)}T00:00:00`)
+
+const annualVisits = computed(() =>
+  props.visits.filter(visit => toDate(visit.date).getFullYear() === selectedYear.value),
+)
+
+const statusCount = (status: string) => annualVisits.value.filter(visit => visit.status === status).length
+const annualPeople = computed(() => annualVisits.value.reduce((sum, visit) => sum + visit.people, 0))
+
+const calendarEvents = computed(() => props.visits.map((visit, index) => {
+  const meta = statusMeta[visit.status as keyof typeof statusMeta]
+
+  return {
+    id: `${visit.date}-${visit.location}-${index}`,
+    title: visit.location,
+    start: normalizeDate(visit.date),
+    allDay: true,
+    backgroundColor: meta?.color ?? '#64748b',
+    borderColor: meta?.color ?? '#64748b',
+    textColor: '#ffffff',
+    extendedProps: {
+      status: visit.status,
+      business: visit.business,
+      purpose: visit.purpose,
+      people: visit.people,
+    },
+  }
+}))
+
+const calendarOptions = computed(() => ({
+  plugins: [multiMonthPlugin, dayGridPlugin],
+  initialView: 'multiMonthYear',
+  initialDate: `${selectedYear.value}-01-01`,
+  locale: trLocale,
+  firstDay: 1,
+  height: 'auto',
+  fixedWeekCount: false,
+  dayMaxEvents: 2,
+  eventDisplay: 'block',
+  displayEventTime: false,
+  multiMonthMaxColumns: 3,
+  multiMonthMinWidth: 260,
+  headerToolbar: {
+    left: 'prev,next today',
+    center: 'title',
+    right: '',
+  },
+  buttonText: {
+    today: 'Bugün',
+  },
+  events: calendarEvents.value,
+}))
+
+const handleDatesSet = (info: { start: Date }) => {
+  const year = info.start.getFullYear()
+  if (year !== selectedYear.value) selectedYear.value = year
 }
-const annualVisits=computed(()=>visits.filter(v=>new Date(normalizeDate(v.date)).getFullYear()===selectedYear.value))
-const statusCount=(status:string)=>annualVisits.value.filter(v=>v.status===status).length
-const annualPeople=computed(()=>annualVisits.value.reduce((sum,v)=>sum+v.people,0))
-const monthCount=(month:number)=>annualVisits.value.filter(v=>new Date(normalizeDate(v.date)).getMonth()===month).length
-const shiftYear=(amount:number)=>{selectedYear.value+=amount}
 </script>
+
 <template>
-<section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs">
-  <div class="mb-6 flex items-center justify-between gap-4">
-    <div><h2 class="text-sm font-semibold text-gray-900">Saha Ziyaretleri</h2><p class="mt-1 text-xs text-gray-500">Geçici alt yüklenicinin planlanan ve gerçekleşen saha ziyaretleri.</p></div>
-    <NuxtLink :to="historyUrl" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Tümünü Gör <ArrowUpRight :size="13"/></NuxtLink>
-  </div>
+  <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-xs">
+    <div class="mb-6 flex items-center justify-between gap-4">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-900">Saha Ziyaretleri</h2>
+        <p class="mt-1 text-xs text-gray-500">Geçici alt yüklenicinin planlanan ve gerçekleşen saha ziyaretleri.</p>
+      </div>
+      <NuxtLink :to="props.historyUrl" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">
+        Tümünü Gör <ArrowUpRight :size="13" />
+      </NuxtLink>
+    </div>
 
-  <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-    <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Toplam Ziyaret</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualVisits.length }}</p><p class="mt-1 text-[11px] text-gray-400">{{ selectedYear }} yılı</p></div>
-    <div v-for="(meta,status) in statusMeta" :key="status" class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><div class="flex items-center justify-between"><p class="text-xs text-gray-500">{{ status }}</p><component :is="meta.icon" :size="16" :class="meta.classes.split(' ')[1]"/></div><p class="mt-1 text-2xl font-semibold text-gray-900">{{ statusCount(status) }}</p><p class="mt-1 text-[11px] text-gray-400">ziyaret</p></div>
-    <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><div class="flex items-center justify-between"><p class="text-xs text-gray-500">Toplam Personel</p><Users :size="16" class="text-gray-400"/></div><p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualPeople }}</p><p class="mt-1 text-[11px] text-gray-400">ziyaret bazında</p></div>
-  </div>
+    <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+        <p class="text-xs text-gray-500">Toplam Ziyaret</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualVisits.length }}</p>
+        <p class="mt-1 text-[11px] text-gray-400">{{ selectedYear }} yılı</p>
+      </div>
 
-  <div class="mb-6 rounded-xl border border-gray-100 bg-gray-50/40 p-5">
-    <div class="mb-5 flex items-center justify-between"><div><h3 class="text-sm font-semibold text-gray-900">{{ selectedYear }} Ziyaret Takvimi</h3><p class="mt-1 text-xs text-gray-500">Planlanan, devam eden ve tamamlanan ziyaretleri yıl genelinde takip edin.</p></div><div class="flex items-center gap-2"><button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50" @click="shiftYear(-1)"><ChevronLeft :size="15"/></button><span class="min-w-16 text-center text-xs font-semibold text-gray-700">{{ selectedYear }}</span><button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50" @click="shiftYear(1)"><ChevronRight :size="15"/></button></div></div>
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <div v-for="(month,monthIndex) in monthNames" :key="month" class="rounded-lg border border-gray-100 bg-white p-3">
-        <div class="mb-2 flex items-center justify-between"><span class="text-xs font-semibold text-gray-800">{{ month }}</span><span class="text-[10px] text-gray-400">{{ monthCount(monthIndex) }} ziyaret</span></div>
-        <div class="mb-1 grid grid-cols-7 text-center"><span v-for="day in weekDays" :key="day" class="text-[9px] font-medium text-gray-400">{{ day.slice(0,1) }}</span></div>
-        <div class="grid grid-cols-7 gap-y-1 text-center">
-          <div v-for="(day,index) in monthWeeks(monthIndex)" :key="`${monthIndex}-${index}`" class="flex h-6 items-center justify-center">
-            <template v-if="day">
-              <span class="relative flex h-6 w-6 items-center justify-center rounded-full text-[10px]" :class="visitsForDate(selectedYear,monthIndex,day).length?'bg-brand-50 font-semibold text-brand-700':'text-gray-600'">{{ day }}<span v-if="visitsForDate(selectedYear,monthIndex,day).length" class="absolute bottom-0.5 h-1 w-1 rounded-full bg-brand-500"></span></span>
-            </template>
-          </div>
+      <div v-for="(meta, status) in statusMeta" :key="status" class="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-gray-500">{{ status }}</p>
+          <component :is="meta.icon" :size="16" :class="meta.classes.split(' ')[1]" />
         </div>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ statusCount(status) }}</p>
+        <p class="mt-1 text-[11px] text-gray-400">ziyaret</p>
+      </div>
+
+      <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-gray-500">Toplam Personel</p>
+          <Users :size="16" class="text-gray-400" />
+        </div>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualPeople }}</p>
+        <p class="mt-1 text-[11px] text-gray-400">ziyaret bazında</p>
       </div>
     </div>
-    <div class="mt-4 flex flex-wrap items-center gap-4 border-t border-gray-100 pt-3 text-[11px] text-gray-500"><span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-brand-500"></i>Ziyaret olan gün</span><span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-success-500"></i>Tamamlandı</span><span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-warning-500"></i>Devam Ediyor</span><span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-brand-500"></i>Planlanan</span></div>
-  </div>
 
-  <div class="overflow-x-auto">
-    <table class="w-full min-w-[900px] text-left">
-      <thead><tr class="border-b border-gray-100 text-xs text-gray-500"><th class="pb-3 font-medium">Tarih</th><th class="pb-3 font-medium">Lokasyon</th><th class="pb-3 font-medium">Organizasyon</th><th class="pb-3 font-medium">Ziyaret Nedeni</th><th class="pb-3 font-medium">Personel</th><th class="pb-3 font-medium">Durum</th></tr></thead>
-      <tbody><tr v-for="visit in visits" :key="visit.date+visit.location+visit.business" class="border-b border-gray-100 last:border-0"><td class="py-4"><div class="flex items-center gap-2"><CalendarDays :size="14" class="text-gray-400"/><span class="text-sm font-medium text-gray-800">{{ visit.date }}</span></div></td><td class="py-4"><div class="flex items-center gap-1.5"><MapPin :size="14" class="text-gray-400"/><span class="text-sm text-gray-700">{{ visit.location }}</span></div></td><td class="py-4 text-xs text-gray-500">{{ visit.business }}</td><td class="py-4 text-sm text-gray-600">{{ visit.purpose }}</td><td class="py-4"><div class="flex items-center gap-1.5 text-sm text-gray-700"><Users :size="14" class="text-gray-400"/>{{ visit.people }}</div></td><td class="py-4"><span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium" :class="statusMeta[visit.status as keyof typeof statusMeta]?.classes || 'bg-gray-100 text-gray-500'"><span class="h-1.5 w-1.5 rounded-full" :class="statusMeta[visit.status as keyof typeof statusMeta]?.dot || 'bg-gray-400'"></span>{{ visit.status }}</span></td></tr><tr v-if="!visits.length"><td colspan="6" class="py-12 text-center text-xs text-gray-500">Henüz saha ziyareti bulunmuyor.</td></tr></tbody>
-    </table>
-  </div>
-</section>
+    <div class="mb-6 rounded-xl border border-gray-100 bg-gray-50/40 p-5">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900">{{ selectedYear }} Ziyaret Takvimi</h3>
+          <p class="mt-1 text-xs text-gray-500">Planlanan, devam eden ve tamamlanan ziyaretleri yıl genelinde takip edin.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-[11px] text-gray-500">
+          <span v-for="(meta, status) in statusMeta" :key="status" class="flex items-center gap-1.5">
+            <i class="h-2 w-2 rounded-full" :class="meta.dot" />
+            {{ status }}
+          </span>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-lg border border-gray-100 bg-white p-2">
+        <ClientOnly>
+          <FullCalendar :options="calendarOptions" @dates-set="handleDatesSet" />
+          <template #fallback>
+            <div class="flex min-h-[420px] items-center justify-center text-xs text-gray-400">Takvim yükleniyor...</div>
+          </template>
+        </ClientOnly>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[900px] text-left">
+        <thead>
+          <tr class="border-b border-gray-100 text-xs text-gray-500">
+            <th class="pb-3 font-medium">Tarih</th>
+            <th class="pb-3 font-medium">Lokasyon</th>
+            <th class="pb-3 font-medium">Organizasyon</th>
+            <th class="pb-3 font-medium">Ziyaret Nedeni</th>
+            <th class="pb-3 font-medium">Personel</th>
+            <th class="pb-3 font-medium">Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="visit in props.visits" :key="visit.date + visit.location + visit.business" class="border-b border-gray-100 last:border-0">
+            <td class="py-4">
+              <div class="flex items-center gap-2">
+                <CalendarDays :size="14" class="text-gray-400" />
+                <span class="text-sm font-medium text-gray-800">{{ visit.date }}</span>
+              </div>
+            </td>
+            <td class="py-4">
+              <div class="flex items-center gap-1.5">
+                <MapPin :size="14" class="text-gray-400" />
+                <span class="text-sm text-gray-700">{{ visit.location }}</span>
+              </div>
+            </td>
+            <td class="py-4 text-xs text-gray-500">{{ visit.business }}</td>
+            <td class="py-4 text-sm text-gray-600">{{ visit.purpose }}</td>
+            <td class="py-4">
+              <div class="flex items-center gap-1.5 text-sm text-gray-700">
+                <Users :size="14" class="text-gray-400" />
+                {{ visit.people }}
+              </div>
+            </td>
+            <td class="py-4">
+              <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium" :class="statusMeta[visit.status as keyof typeof statusMeta]?.classes || 'bg-gray-100 text-gray-500'">
+                <span class="h-1.5 w-1.5 rounded-full" :class="statusMeta[visit.status as keyof typeof statusMeta]?.dot || 'bg-gray-400'" />
+                {{ visit.status }}
+              </span>
+            </td>
+          </tr>
+          <tr v-if="!props.visits.length">
+            <td colspan="6" class="py-12 text-center text-xs text-gray-500">Henüz saha ziyareti bulunmuyor.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </template>
+
+<style>
+.fc {
+  --fc-border-color: #eef2f6;
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: #f8fafc;
+  --fc-today-bg-color: #f5f3ff;
+  font-family: inherit;
+}
+
+.fc .fc-toolbar {
+  margin-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.fc .fc-button {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  box-shadow: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.4rem 0.65rem;
+}
+
+.fc .fc-button:hover,
+.fc .fc-button:focus,
+.fc .fc-button:active {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  box-shadow: none;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  border-color: #e5e7eb;
+  background: #f5f3ff;
+  color: #4f46e5;
+}
+
+.fc .fc-multimonth {
+  border: 0;
+}
+
+.fc .fc-multimonth-month {
+  border-color: #eef2f6;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.fc .fc-multimonth-title {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  font-size: 0.65rem;
+  color: #6b7280;
+}
+
+.fc .fc-daygrid-day-number {
+  padding: 0.3rem;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  background: #f5f3ff;
+}
+
+.fc .fc-event {
+  border-radius: 0.25rem;
+  border-width: 0;
+  padding: 1px 3px;
+  font-size: 0.6rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.fc .fc-daygrid-more-link {
+  font-size: 0.6rem;
+  color: #6366f1;
+}
+
+@media (max-width: 768px) {
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .fc .fc-toolbar-title {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+}
+</style>
