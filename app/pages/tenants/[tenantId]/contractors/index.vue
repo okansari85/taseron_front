@@ -6,7 +6,7 @@ definePageMeta({ layout: 'default' })
 type ContractorType = 'Daimi' | 'Geçici'; type Status = 'active' | 'passive'
 type Contractor = { id:number; name:string; shortName:string; type:ContractorType; status:Status; initials:string; avatarClass:string }
 const route = useRoute(); const tenantId = computed(() => String(route.params.tenantId ?? '')); const search=ref(''); const typeFilter=ref('all'); const statusFilter=ref('all'); const drawerOpen=ref(false); const currentPage=ref(1); const perPage=ref(10)
-const contractorTabs = [{ label: 'Alt Yüklenici Havuzu', path: 'index' }, { label: 'Alt Yüklenici Organizasyon Eşleştirmesi', path: 'organization-matching' }]
+const contractorTabs = [{ label: 'Alt Yüklenici Havuzu', path: '' }, { label: 'Alt Yüklenici Organizasyon Eşleştirmesi', path: 'organization-matching' }]
 const contractors=ref<Contractor[]>([
 {id:1,name:'ISS Tesis Yönetim Hizmetleri A.Ş.',shortName:'ISS',type:'Daimi',status:'active',initials:'IS',avatarClass:'bg-blue-50 text-blue-600'},
 {id:2,name:'Tepe Savunma ve Güvenlik Sistemleri A.Ş.',shortName:'Tepe',type:'Daimi',status:'active',initials:'TS',avatarClass:'bg-slate-100 text-slate-600'},
