@@ -11,6 +11,7 @@ const tenantId = computed(() => String(route.params.tenantId ?? ''))
 const props = withDefaults(defineProps<{
   tabs?: TabItem[]
   modelValue?: string
+  basePath?: string
 }>(), {
   tabs: () => [
     { label: 'Gruplar', path: 'groups' },
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<{
     { label: 'Hiyerarşi Görünümü', path: 'hierarchy' },
   ],
   modelValue: '',
+  basePath: 'organization',
 })
 
 const emit = defineEmits<{
@@ -26,7 +28,7 @@ const emit = defineEmits<{
 }>()
 
 const isActive = (tab: TabItem) => {
-  if (tab.path) return route.path.includes(`/organization/${tab.path}`)
+  if (tab.path) return route.path.includes(`/tenants/${tenantId.value}/${props.basePath}/${tab.path}`)
   return props.modelValue === tab.key
 }
 
@@ -36,11 +38,11 @@ const selectTab = (tab: TabItem) => {
 </script>
 
 <template>
-  <nav class="mb-5 flex overflow-x-auto rounded-xl border border-gray-200 bg-white px-2 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]" aria-label="Organizasyon menüsü">
+  <nav class="mb-5 flex overflow-x-auto rounded-xl border border-gray-200 bg-white px-2 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]" aria-label="Sayfa menüsü">
     <template v-for="tab in tabs" :key="tab.key || tab.path">
       <NuxtLink
         v-if="tab.path"
-        :to="`/tenants/${tenantId}/organization/${tab.path}`"
+        :to="`/tenants/${tenantId}/${props.basePath}/${tab.path}`"
         class="relative flex h-11 shrink-0 items-center px-4 font-medium transition"
         :class="isActive(tab)
           ? 'text-brand-500'
