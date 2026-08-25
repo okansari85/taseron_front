@@ -54,8 +54,8 @@
     </div>
 
     <div class="w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="w-full overflow-x-auto custom-scrollbar">
-        <table class="w-full min-w-full table-fixed font-outfit">
+      <div class="!w-full min-w-0 overflow-x-auto custom-scrollbar">
+        <table class="!w-full min-w-full table-fixed font-outfit">
           <thead>
             <tr class="border-b border-gray-200 bg-gray-25 dark:border-gray-700 dark:bg-white/[0.02]">
               <th v-for="heading in ['Tenant Adı', 'Slug', 'Kurumsal Yapı', 'Durum', 'Oluşturulma Tarihi', 'İşlemler']" :key="heading" class="px-5 py-3 text-left sm:px-6">
