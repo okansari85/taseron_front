@@ -53,7 +53,7 @@
       {{ tenantStore.error }}
     </div>
 
-    <div class="w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+ <div class="tenant-table-shell flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div class="!w-full min-w-0 overflow-x-auto custom-scrollbar">
         <table class="!w-full min-w-full table-fixed font-outfit">
           <thead>
