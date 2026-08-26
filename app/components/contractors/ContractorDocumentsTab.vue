@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { UserRound, Truck, Wrench, FlaskConical, Check, X, FileText, MapPin } from 'lucide-vue-next'
-import TurkeyDistributionMap from './visits/TurkeyDistributionMap.vue'
+import { UserRound, Truck, Wrench, FlaskConical, Check, X, FileText, MapPin, Search } from 'lucide-vue-next'
 
 type Asset = { name: string; detail: string; documents: Record<string, boolean>; city?: string }
 type LocationSummary = { name: string; personnel: number; vehicles: number; equipment: number; chemicals: number }
 
 const activeType = ref<'personnel' | 'vehicles' | 'equipment' | 'chemicals' | 'locations'>('personnel')
+const search = ref('')
+const cityFilter = ref('')
+const documentFilter = ref<'all' | 'complete' | 'missing'>('all')
 const types = [
   { key: 'personnel' as const, label: 'Personeller', icon: UserRound },
   { key: 'vehicles' as const, label: 'Araçlar', icon: Truck },
@@ -43,13 +45,28 @@ const locationSummaries: LocationSummary[] = [
 ]
 
 const activeItems = computed(() => data[activeType.value] ?? [])
-const documentNames = computed(() => [...new Set(activeItems.value.flatMap(item => Object.keys(item.documents)))])
+const filteredItems = computed(() => {
+  const q = search.value.trim().toLocaleLowerCase('tr-TR')
+  return activeItems.value.filter(item => {
+    const matchesSearch = !q || `${item.name} ${item.detail} ${item.city ?? ''}`.toLocaleLowerCase('tr-TR').includes(q)
+    const matchesCity = !cityFilter.value || item.city === cityFilter.value
+    const complete = Object.values(item.documents).every(Boolean)
+    const matchesDocument = documentFilter.value === 'all' || (documentFilter.value === 'complete' ? complete : !complete)
+    return matchesSearch && matchesCity && matchesDocument
+  })
+})
+const cities = computed(() => [...new Set(activeItems.value.map(item => item.city).filter(Boolean))])
+const totalCount = computed(() => activeItems.value.length)
+const completeCount = computed(() => activeItems.value.filter(item => Object.values(item.documents).every(Boolean)).length)
+const missingCount = computed(() => totalCount.value - completeCount.value)
+const totalRate = computed(() => totalCount.value ? Math.round((completeCount.value / totalCount.value) * 100) : 0)
 const distributionTitle = computed(() => types.find(type => type.key === activeType.value)?.label ?? '')
 const distributions = computed(() => {
   const counts = new Map<string, number>()
   activeItems.value.forEach(item => counts.set(item.city ?? 'İstanbul', (counts.get(item.city ?? 'İstanbul') ?? 0) + 1))
   return [...counts.entries()].map(([city, count]) => ({ city, count }))
 })
+const clearFilters = () => { search.value = ''; cityFilter.value = ''; documentFilter.value = 'all' }
 </script>
 
 <template>
@@ -64,9 +81,24 @@ const distributions = computed(() => {
 
       <div class="min-w-0 flex-1 p-6">
         <template v-if="activeType !== 'locations'">
-          <div class="mb-5 flex items-center justify-between gap-4"><div><h2 class="text-sm font-semibold text-gray-900">{{ types.find(type => type.key === activeType)?.label }}</h2><p class="mt-1 text-xs text-gray-500">Kayıtlı varlıkların evrak durumlarını kontrol edin.</p></div><div class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500"><FileText :size="14" /> {{ activeItems.length }} kayıt</div></div>
-          <TurkeyDistributionMap :title="distributionTitle" :distributions="distributions" :total="activeItems.length" />
-          <div class="mt-5 overflow-x-auto rounded-xl border border-gray-100"><table class="w-full min-w-[760px] text-left"><thead><tr class="border-b border-gray-100 bg-gray-50/60 text-xs text-gray-500"><th class="px-4 py-3 font-medium">Kayıt</th><th class="px-4 py-3 font-medium">Lokasyon</th><th class="px-4 py-3 text-center font-medium">Evrak Durumu</th></tr></thead><tbody><tr v-for="item in activeItems" :key="item.name" class="border-b border-gray-100 last:border-0"><td class="px-4 py-4"><p class="text-sm font-medium text-gray-800">{{ item.name }}</p><p class="mt-1 text-[11px] text-gray-400">{{ item.detail }}</p></td><td class="px-4 py-4 text-xs text-gray-600">{{ item.city }}</td><td class="px-4 py-4 text-center"><span v-if="Object.values(item.documents).every(Boolean)" class="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-success-50 text-success-600" title="Tam"><Check :size="15" /></span><span v-else class="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-error-50 text-error-500" title="Eksik"><X :size="15" /></span></td></tr></tbody></table></div>
+          <div class="mb-5 flex items-center justify-between gap-4"><div><h2 class="text-sm font-semibold text-gray-900">{{ types.find(type => type.key === activeType)?.label }}</h2><p class="mt-1 text-xs text-gray-500">Kayıtlı varlıkların evrak durumlarını kontrol edin.</p></div></div>
+
+          <div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Toplam Kayıt</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ totalCount }}</p></div>
+            <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Evrakı Tam</p><p class="mt-1 text-2xl font-semibold text-success-600">{{ completeCount }}</p></div>
+            <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Eksik Evrak</p><p class="mt-1 text-2xl font-semibold text-error-500">{{ missingCount }}</p></div>
+            <div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Toplam Oran</p><p class="mt-1 text-2xl font-semibold text-brand-600">%{{ totalRate }}</p></div>
+          </div>
+
+          <div class="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-gray-100 bg-white p-4">
+            <div class="relative min-w-[220px] flex-1"><Search :size="14" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input v-model="search" type="text" placeholder="Kayıtlarda ara..." class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-xs text-gray-700 outline-none focus:border-brand-300 focus:bg-white"/></div>
+            <select v-model="cityFilter" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-600 outline-none focus:border-brand-300"><option value="">Tüm şehirler</option><option v-for="city in cities" :key="city" :value="city">{{ city }}</option></select>
+            <select v-model="documentFilter" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-600 outline-none focus:border-brand-300"><option value="all">Tüm evrak durumları</option><option value="complete">Evrakı tam</option><option value="missing">Eksik evrak</option></select>
+            <button v-if="search || cityFilter || documentFilter !== 'all'" type="button" @click="clearFilters" class="h-9 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-500 hover:bg-gray-50">Temizle</button>
+          </div>
+
+          <div class="mb-5 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-500"><FileText :size="14" /> {{ filteredItems.length }} kayıt gösteriliyor<span v-if="distributions.length" class="ml-auto">{{ distributions.map(item => `${item.city} ${item.count}`).join(' · ') }}</span></div>
+          <div class="overflow-x-auto rounded-xl border border-gray-100"><table class="w-full min-w-[760px] text-left"><thead><tr class="border-b border-gray-100 bg-gray-50/60 text-xs text-gray-500"><th class="px-4 py-3 font-medium">Kayıt</th><th class="px-4 py-3 font-medium">Lokasyon</th><th class="px-4 py-3 text-center font-medium">Evrak Durumu</th></tr></thead><tbody><tr v-for="item in filteredItems" :key="item.name" class="border-b border-gray-100 last:border-0"><td class="px-4 py-4"><p class="text-sm font-medium text-gray-800">{{ item.name }}</p><p class="mt-1 text-[11px] text-gray-400">{{ item.detail }}</p></td><td class="px-4 py-4 text-xs text-gray-600">{{ item.city }}</td><td class="px-4 py-4 text-center"><span v-if="Object.values(item.documents).every(Boolean)" class="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-success-50 text-success-600" title="Tam"><Check :size="15" /></span><span v-else class="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-error-50 text-error-500" title="Eksik"><X :size="15" /></span></td></tr><tr v-if="!filteredItems.length"><td colspan="3" class="px-4 py-12 text-center text-xs text-gray-400">Filtrelere uygun kayıt bulunamadı.</td></tr></tbody></table></div>
           <div class="mt-4 flex items-center gap-4 text-[11px] text-gray-400"><span class="flex items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-success-50 text-success-600"><Check :size="12" /></span> Tam</span><span class="flex items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-error-50 text-error-500"><X :size="12" /></span> Eksik</span></div>
         </template>
 
