@@ -8,6 +8,7 @@ import trLocale from '@fullcalendar/core/locales/tr'
 
 type Visit = { date: string; location: string; business: string; purpose: string; people: number; status: string; personnel?: string[]; vehicles?: string[]; equipment?: string[]; chemicals?: string[] }
 const props = defineProps<{ visits: Visit[] }>()
+const emit = defineEmits<{ yearChanged: [year: number] }>()
 const today = new Date()
 const selectedYear = ref(today.getFullYear())
 const calendarView = ref<'month' | 'year'>('month')
@@ -20,7 +21,7 @@ const statusCount=(status:string)=>annualVisits.value.filter(v=>v.status===statu
 const calendarEvents=computed(()=>props.visits.map((visit,index)=>{const meta=statusMeta[visit.status as keyof typeof statusMeta];return{id:`${visit.date}-${visit.location}-${index}`,title:visit.location,start:normalizeDate(visit.date),allDay:true,backgroundColor:meta?.color??'#64748b',borderColor:meta?.color??'#64748b',textColor:'#ffffff',extendedProps:{status:visit.status,business:visit.business,purpose:visit.purpose,people:visit.people}}}))
 const calendarOptions=computed(()=>({plugins:[multiMonthPlugin,dayGridPlugin],initialView:calendarView.value==='year'?'multiMonthYear':'dayGridMonth',initialDate:calendarView.value==='year'?`${selectedYear.value}-01-01`:currentMonthDate.value,locale:trLocale,firstDay:1,height:'auto',fixedWeekCount:false,dayMaxEvents:2,eventDisplay:'block',displayEventTime:false,multiMonthMaxColumns:3,multiMonthMinWidth:260,headerToolbar:{left:'prev,next today',center:'title',right:''},buttonText:{today:'Bugün'},events:calendarEvents.value}))
 const setCalendarView=(view:'month'|'year')=>{calendarView.value=view}
-const handleDatesSet=(info:{start:Date;view?:{currentStart?:Date}})=>{const year=info.start.getFullYear();if(year!==selectedYear.value)selectedYear.value=year;if(calendarView.value==='month'){const date=info.view?.currentStart??info.start;currentMonthDate.value=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-01`}}
+const handleDatesSet=(info:{start:Date;view?:{currentStart?:Date}})=>{const year=info.start.getFullYear();if(year!==selectedYear.value){selectedYear.value=year;emit('yearChanged',year)}if(calendarView.value==='month'){const date=info.view?.currentStart??info.start;currentMonthDate.value=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-01`}}
 </script>
 <template>
 <div class="mb-6 rounded-xl border border-gray-100 bg-gray-50/40 p-5">
