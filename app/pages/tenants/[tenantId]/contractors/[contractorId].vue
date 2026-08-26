@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ArrowLeft, Building2, CheckCircle2, History, MapPin, Star } from 'lucide-vue-next'
+import { ArrowLeft, Building2, CheckCircle2, FileCheck2, History, MapPin, Star } from 'lucide-vue-next'
 import ContractorGeneralTab from '~/components/contractors/ContractorGeneralTab.vue'
 import ContractorOrganizationsTab from '~/components/contractors/ContractorOrganizationsTab.vue'
 import ContractorLocationsTab from '~/components/contractors/ContractorLocationsTab.vue'
 import ContractorVisitsTab from '~/components/contractors/ContractorVisitsTab.vue'
+import ContractorDocumentsTab from '~/components/contractors/ContractorDocumentsTab.vue'
 definePageMeta({ layout: 'default' })
 const route=useRoute()
 const tenantId=computed(()=>String(route.params.tenantId??'1'))
@@ -17,7 +18,7 @@ const activeTab=ref('general')
 const tabs=computed(()=>[
   {key:'general',label:'Genel Bilgiler',icon:Building2},
   {key:'organizations',label:'Organizasyon İlişkileri',icon:Building2},
-  ...(isTemporary.value ? [{key:'visits',label:'Saha Ziyaretleri',icon:History}] : [{key:'locations',label:'Lokasyonlar',icon:MapPin}])
+  ...(isTemporary.value ? [{key:'visits',label:'Saha Ziyaretleri',icon:History}] : [{key:'locations',label:'Lokasyonlar',icon:MapPin},{key:'documents',label:'Evrak Durumu',icon:FileCheck2}])
 ])
 const organizations=computed(()=>isTemporary.value?[{name:'Medikal Grubu',status:'Aktif',start:'01.03.2026',end:'15.03.2026',list:'Beyaz Liste'},{name:'Arçelik Grubu',status:'Aktif',start:'10.07.2026',end:'10.08.2026',list:'Beyaz Liste'}]:[{name:'Medikal Grubu',status:'Aktif',start:'01.01.2026',end:'31.12.2026',list:'Beyaz Liste'},{name:'Otomotiv Grubu',status:'Pasif',start:'01.01.2025',end:'31.12.2025',list:'Tanımlı değil'},{name:'Dayanıklı Tüketim Grubu',status:'Kara Liste',start:'01.06.2026',end:'01.06.2036',list:'Kara Liste'}])
 const locations=[{name:'Beylikdüzü Kampüsü',business:'Arçelik A.Ş.',status:'Aktif'},{name:'Sütlüce Kampüsü',business:'Arçelik Pazarlama A.Ş.',status:'Aktif'},{name:'Çayırova Fabrikası',business:'Beko Europe',status:'Pasif'}]
@@ -40,5 +41,6 @@ const temporaryHistoryUrl=computed(()=>`/tenants/${tenantId.value}/contractors/$
 <ContractorGeneralTab v-if="activeTab==='general'" :contractor="tabContractor" />
 <ContractorOrganizationsTab v-else-if="activeTab==='organizations'" :organizations="organizations" />
 <ContractorLocationsTab v-else-if="activeTab==='locations'" :locations="locations" />
+<ContractorDocumentsTab v-else-if="activeTab==='documents'" />
 <ContractorVisitsTab v-else-if="activeTab==='visits'" :visits="visits" :history-url="temporaryHistoryUrl" />
 </div></template>
