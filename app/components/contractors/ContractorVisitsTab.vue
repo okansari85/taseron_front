@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CalendarDays, UserRound, ClipboardList, ArrowUpRight } from 'lucide-vue-next'
+import { CalendarDays, CheckCircle2, Clock3, UserRound, ClipboardList, ArrowUpRight } from 'lucide-vue-next'
 import ContractorVisitsCalendar from '~/components/contractors/visits/ContractorVisitsCalendar.vue'
 import ContractorVisitsTable from '~/components/contractors/visits/ContractorVisitsTable.vue'
 import ContractorVisitsPeople from '~/components/contractors/visits/ContractorVisitsPeople.vue'
@@ -14,7 +14,7 @@ const selectedYear = ref(today.getFullYear())
 const normalizeDate=(value:string)=>{const parts=value.split('.');return parts.length===3?`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`:value}
 const toDate=(value:string)=>new Date(`${normalizeDate(value)}T00:00:00`)
 const annualVisits=computed(()=>props.visits.filter(v=>toDate(v.date).getFullYear()===selectedYear.value))
-const statusMeta = { Planlanan:{},'Devam Ediyor':{},Tamamlandı:{} } as const
+const statusMeta = { Planlanan:{icon:CalendarDays,classes:'bg-brand-50 text-brand-600'},'Devam Ediyor':{icon:Clock3,classes:'bg-warning-50 text-warning-600'},Tamamlandı:{icon:CheckCircle2,classes:'bg-success-50 text-success-600'} } as const
 const statusCount=(status:string)=>annualVisits.value.filter(v=>v.status===status).length
 </script>
 
@@ -32,8 +32,8 @@ const statusCount=(status:string)=>annualVisits.value.filter(v=>v.status===statu
     <div class="min-w-0 flex-1 p-6">
       <template v-if="activeSection==='visits'">
         <div class="mb-6 flex items-center justify-between gap-4"><div><h2 class="text-sm font-semibold text-gray-900">Saha Ziyaretleri</h2><p class="mt-1 text-xs text-gray-500">Geçici alt yüklenicinin planlanan ve gerçekleşen saha ziyaretleri.</p></div><NuxtLink :to="props.historyUrl" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Tümünü Gör <ArrowUpRight :size="13"/></NuxtLink></div>
-        <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"><div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Toplam Ziyaret</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualVisits.length }}</p><p class="mt-1 text-[11px] text-gray-400">{{ selectedYear }} yılı</p></div><div v-for="status in Object.keys(statusMeta)" :key="status" class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">{{ status }}</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ statusCount(status) }}</p><p class="mt-1 text-[11px] text-gray-400">ziyaret</p></div></div>
-        <ContractorVisitsCalendar :visits="props.visits" />
+        <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"><div class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><p class="text-xs text-gray-500">Toplam Ziyaret</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ annualVisits.length }}</p><p class="mt-1 text-[11px] text-gray-400">{{ selectedYear }} yılı</p></div><div v-for="(meta,status) in statusMeta" :key="status" class="rounded-xl border border-gray-100 bg-gray-50/60 p-4"><div class="flex items-center justify-between"><p class="text-xs text-gray-500">{{ status }}</p><component :is="meta.icon" :size="16" :class="meta.classes.split(' ')[1]"/></div><p class="mt-1 text-2xl font-semibold text-gray-900">{{ statusCount(status) }}</p><p class="mt-1 text-[11px] text-gray-400">ziyaret</p></div></div>
+        <ContractorVisitsCalendar :visits="props.visits" @year-changed="selectedYear=$event" />
         <ContractorVisitsTable :visits="props.visits" />
       </template>
       <ContractorVisitsPeople v-else-if="activeSection==='people'" :visits="props.visits" />
