@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Filter, FolderTree, Plus, Search } from 'lucide-vue-next'
+import { useOrganizationStore } from '~/stores/organization'
 
 definePageMeta({ layout: 'default' })
 
@@ -7,6 +8,7 @@ type GroupStatus = 'active' | 'passive'
 type Group = { id: number; name: string; code: string; parent: string | null; description: string; status: GroupStatus; createdAt: string }
 
 const route = useRoute()
+const organizationStore = useOrganizationStore()
 const tenantId = computed(() => String(route.params.tenantId ?? ''))
 const search = ref('')
 const statusFilter = ref('all')
@@ -14,13 +16,25 @@ const parentFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
 
-const groups = ref<Group[]>([
-  { id: 1, name: 'Dayanıklı Tüketim Grubu', code: '#GRP-001', parent: null, description: 'Dayanıklı tüketim sektöründeki şirketlerin bağlı olduğu grup.', status: 'active', createdAt: '18.05.2025 14:32' },
-  { id: 2, name: 'Otomotiv Grubu', code: '#GRP-002', parent: null, description: 'Otomotiv sektöründeki şirketlerin bağlı olduğu grup.', status: 'active', createdAt: '17.05.2025 11:20' },
-  { id: 3, name: 'Finans Grubu', code: '#GRP-003', parent: null, description: 'Finans ve yatırım şirketlerinin bağlı olduğu grup.', status: 'active', createdAt: '16.05.2025 09:15' },
-  { id: 4, name: 'Enerji Grubu', code: '#GRP-004', parent: null, description: 'Enerji sektöründeki şirketlerin bağlı olduğu grup.', status: 'active', createdAt: '15.05.2025 16:45' },
-  { id: 5, name: 'Savunma Grubu', code: '#GRP-005', parent: null, description: 'Savunma sanayi şirketlerinin bağlı olduğu grup.', status: 'active', createdAt: '14.05.2025 10:05' },
-])
+onMounted(async () => {
+  await organizationStore.fetchOrganizations()
+})
+
+const groups = computed<Group[]>(() => organizationStore.groups.map((organization) => {
+  const parent = organization.parent_id
+    ? organizationStore.organizations.find(item => item.id === organization.parent_id)
+    : null
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    code: organization.code ?? '—',
+    parent: parent?.name ?? null,
+    description: organization.description ?? '—',
+    status: organization.is_active === false || organization.is_active === 0 ? 'passive' : 'active',
+    createdAt: organization.created_at ?? '—',
+  }
+}))
 
 const filteredGroups = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
