@@ -3,7 +3,7 @@ import { Save, X } from 'lucide-vue-next'
 type GroupForm={name:string;slug:string;code:string;description:string;display_order:number;is_active:boolean;parent_id:number|null;color:string}
 const props=withDefaults(defineProps<{open:boolean;form:GroupForm;parentGroups?:Array<{id:number;name:string}>;saving?:boolean;rootOrganizationName?:string|null;rootOrganizationId?:number|null}>(),{parentGroups:()=>[],saving:false,rootOrganizationName:null,rootOrganizationId:null})
 const emit=defineEmits<{ 'update:open':[value:boolean]; save:[payload:GroupForm & {type:'group'}] }>()
-const colorOptions=['#465FFF','#12B76A','#F79009','#F04438','#EE46BC','#475467']
+const colorOptions=['#465FFF','#1599E5','#10B981','#F59E0B','#EF4444','#EC4899','#475467']
 const normalizeColor=(color?:string|null)=>(color||'').trim().toUpperCase()
 const close=()=>emit('update:open',false)
 const submit=()=>emit('save',{...props.form,type:'group'})
