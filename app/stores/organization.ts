@@ -124,14 +124,15 @@ export const useOrganizationStore = defineStore('organization', () => {
     error.value = null
     try {
       const response = await organizationApi.update(id, payload)
-      if (loadedTenantId.value !== null) {
-        const refreshed = await fetchOrganizationsForTenant(loadedTenantId.value, true)
-        const updated = refreshed.find(item => item.id === id)
-        if (updated) currentOrganization.value = updated
-        return updated ?? response
-      }
       const index = organizations.value.findIndex(item => item.id === id)
       if (index !== -1) organizations.value[index] = response
+      if (loadedTenantId.value !== null) {
+        const cached = tenantOrganizationCache.get(loadedTenantId.value) ?? []
+        const cachedIndex = cached.findIndex(item => item.id === id)
+        if (cachedIndex !== -1) cached[cachedIndex] = response
+        else cached.unshift(response)
+        tenantOrganizationCache.set(loadedTenantId.value, cached)
+      }
       if (currentOrganization.value?.id === id) currentOrganization.value = response
       return response
     } catch (err) {
