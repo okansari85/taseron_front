@@ -15,7 +15,6 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Global context: yalnızca tenant -->
         <div v-if="isTenantWorkspace && currentTenantOption" class="relative hidden lg:block">
           <button type="button" class="flex min-w-[230px] max-w-[320px] items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40" @click="tenantSelectorOpen = !tenantSelectorOpen">
             <span class="flex min-w-0 items-center gap-2.5">
@@ -26,7 +25,14 @@
           </button>
           <div v-if="tenantSelectorOpen" class="absolute right-0 top-full z-[1000] mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <div class="border-b border-gray-100 px-3 py-2.5 dark:border-gray-800"><p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Tenant</p><p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Çalışma alanını seç.</p></div>
-            <div class="p-1.5"><button type="button" class="flex w-full items-center gap-2.5 rounded-lg bg-brand-50/70 px-3 py-2.5 text-left dark:bg-brand-500/10" @click="tenantSelectorOpen = false"><span class="flex h-7 w-7 items-center justify-center rounded-md bg-brand-100 text-brand-500 dark:bg-brand-500/10"><component :is="currentTenantOption.icon" :size="13" /></span><span class="min-w-0 flex-1"><span class="block truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ currentTenantOption.name }}</span><span class="block text-[10px] text-gray-400">Aktif tenant</span></span><Check :size="14" class="text-brand-500" /></button></div>
+            <div class="max-h-72 overflow-y-auto p-1.5">
+              <button v-for="item in tenantOptions" :key="item.id" type="button" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-white/5" :class="Number(item.id) === Number(tenantId) ? 'bg-brand-50/70 dark:bg-brand-500/10' : ''" @click="selectTenant(item.id)">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><Building2 :size="13" /></span>
+                <span class="min-w-0 flex-1"><span class="block truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ item.name }}</span><span class="block text-[10px] text-gray-400">{{ Number(item.id) === Number(tenantId) ? 'Aktif tenant' : 'Tenant' }}</span></span>
+                <Check v-if="Number(item.id) === Number(tenantId)" :size="14" class="text-brand-500" />
+              </button>
+              <p v-if="tenantOptions.length === 0" class="px-3 py-4 text-center text-xs text-gray-400">Tenant bulunamadı.</p>
+            </div>
           </div>
         </div>
 
@@ -42,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { Bell, Check, ChevronDown, Menu, Moon, Sun } from '@lucide/vue'
+import { Bell, Building2, Check, ChevronDown, Menu, Moon, Sun } from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
 const { toggle, toggleMobile } = useTailAdminSidebar()
@@ -54,6 +60,7 @@ const profileOpen = ref(false)
 const tenantSelectorOpen = ref(false)
 const tenantId = computed(() => Array.isArray(route.params.tenantId) ? route.params.tenantId[0] : route.params.tenantId)
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
+const tenantOptions = computed(() => tenantStore.tenants)
 const displayBreadcrumbs = computed(() => {
   if (route.path.includes('/locations/') && tenantLocationContext.value) {
     return [
@@ -65,6 +72,10 @@ const displayBreadcrumbs = computed(() => {
   return breadcrumbs.value
 })
 watch(isTenantWorkspace, async (enabled) => { if (enabled && tenantStore.tenants.length === 0) await tenantStore.fetchTenants() }, { immediate: true })
+const selectTenant = async (id: number | string) => {
+  tenantSelectorOpen.value = false
+  await router.push(`/tenants/${id}${route.path.split(`/tenants/${tenantId.value}`).slice(1).join(`/tenants/${tenantId.value}`) || ''}`)
+}
 const initials = computed(() => { const name = auth.user.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
 const roleLabel = computed(() => { const role = auth.user.value?.roles?.[0]; const labels: Record<string, string> = { 'super-admin': 'Sistem Yöneticisi', 'tenant-admin': 'Tenant Yöneticisi' }; return role ? labels[role] || role : 'Kullanıcı' })
 const handleSidebar = () => { if (import.meta.client && window.innerWidth < 1024) toggleMobile(); else toggle() }
