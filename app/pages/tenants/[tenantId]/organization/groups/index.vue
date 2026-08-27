@@ -9,7 +9,7 @@ type Group = { id: number; name: string; code: string; parent: string | null; de
 
 const route = useRoute()
 const organizationStore = useOrganizationStore()
-const tenantId = computed(() => String(route.params.tenantId ?? ''))
+const tenantId = computed(() => Number(route.params.tenantId ?? 0))
 const search = ref('')
 const statusFilter = ref('all')
 const parentFilter = ref('all')
@@ -17,7 +17,7 @@ const currentPage = ref(1)
 const perPage = ref(10)
 
 onMounted(async () => {
-  await organizationStore.fetchOrganizations()
+  await organizationStore.fetchOrganizationsForTenant(tenantId.value)
 })
 
 const groups = computed<Group[]>(() => organizationStore.groups.map((organization) => {
