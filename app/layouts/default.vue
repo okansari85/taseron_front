@@ -16,6 +16,19 @@
 </template>
 
 <script setup lang="ts">
+const route = useRoute()
+const tenantStore = useTenantStore()
 const { isExpanded } = useTailAdminSidebar()
 useTailAdminTheme()
+
+const tenantId = computed(() => {
+  const value = route.params.tenantId
+  return Number(Array.isArray(value) ? value[0] : value)
+})
+
+watch(tenantId, async id => {
+  if (!Number.isInteger(id) || id <= 0) return
+  if (tenantStore.currentTenant?.id === id && tenantStore.currentTenant?.root_organization) return
+  await tenantStore.fetchTenant(id)
+}, { immediate: true })
 </script>
