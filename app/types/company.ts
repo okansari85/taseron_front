@@ -21,6 +21,9 @@ export type CompanyOrganization = {
 export type CompanyApiRecord = {
   id: number
   name: string
+  short_name?: string | null
+  description?: string | null
+  is_active?: boolean | null
   company_type?: string | null
   business_entity_id?: number | null
   created_at?: string
@@ -30,7 +33,6 @@ export type CompanyApiRecord = {
     id: number
     tenant_id: number
     type: string
-    name: string
   } | null
   organizations?: CompanyOrganization[]
 }
