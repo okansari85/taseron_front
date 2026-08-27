@@ -10,12 +10,12 @@ const normalizeCompany = (item: CompanyApiRecord): Company => ({
     .replace(/[^a-z0-9çğıöşü\s-]/gi, '')
     .trim()
     .replace(/\s+/g, '-'),
-  group: '—',
-  brandCount: 0,
+  group: item.organizations?.[0]?.name ?? '—',
+  brandCount: item.brands_count ?? 0,
   status: 'active',
   createdAt: item.created_at ?? '',
   company_type: item.company_type ?? null,
-  business_entity_id: item.business_entity_id ?? null,
+  business_entity_id: item.business_entity_id ?? item.business_entity?.id ?? null,
 })
 
 export const useCompanyStore = defineStore('company', () => {
