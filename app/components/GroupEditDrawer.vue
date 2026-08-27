@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Palette, Save, X } from 'lucide-vue-next'
+import { Save, X } from 'lucide-vue-next'
 
 type GroupForm = {
   name: string
@@ -17,9 +17,11 @@ const props = withDefaults(defineProps<{
   form: GroupForm
   parentGroups?: Array<{ id: number; name: string }>
   saving?: boolean
+  hasHolding?: boolean
 }>(), {
   parentGroups: () => [],
   saving: false,
+  hasHolding: false,
 })
 
 const emit = defineEmits<{
@@ -80,7 +82,7 @@ const close = () => emit('update:open', false)
             <div>
               <label class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">Ebeveyn Grup</label>
               <select v-model="props.form.parent_id" class="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                <option :value="null">En üst seviye</option>
+                <option :value="null">{{ props.hasHolding ? 'Üst Organizasyon' : 'En üst seviye' }}</option>
                 <option v-for="parent in props.parentGroups" :key="parent.id" :value="parent.id">{{ parent.name }}</option>
               </select>
             </div>
@@ -124,12 +126,9 @@ const close = () => emit('update:open', false)
           </div>
 
           <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
-            <button type="button" class="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5" @click="close">
-              İptal
-            </button>
+            <button type="button" class="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5" @click="close">İptal</button>
             <button type="submit" :disabled="props.saving" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60">
-              <Save :size="16" />
-              {{ props.saving ? 'Kaydediliyor...' : 'Kaydet' }}
+              <Save :size="16" />{{ props.saving ? 'Kaydediliyor...' : 'Kaydet' }}
             </button>
           </div>
         </form>
@@ -139,13 +138,6 @@ const close = () => emit('update:open', false)
 </template>
 
 <style scoped>
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: opacity .2s ease;
-}
-
-.drawer-enter-from,
-.drawer-leave-to {
-  opacity: 0;
-}
+.drawer-enter-active,.drawer-leave-active{transition:opacity .2s ease}
+.drawer-enter-from,.drawer-leave-to{opacity:0}
 </style>
