@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, Save, X } from 'lucide-vue-next'
+import { useOrganizationStore } from '~/stores/organization'
 
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
-const tenantId = computed(() => String(route.params.tenantId ?? ''))
+const tenantId = computed(() => Number(route.params.tenantId ?? 0))
+const organizationStore = useOrganizationStore()
 
 const companyName = ref('')
 const shortName = ref('')
@@ -13,24 +15,36 @@ const description = ref('')
 const isActive = ref(true)
 const createdBy = ref('Ahmet Yılmaz')
 const createdAt = ref('19.05.2025 10:30')
+const saving = ref(false)
+const errorMessage = ref('')
 
-const groups = [
-  { id: '1', name: 'Dayanıklı Tüketim Grubu' },
-  { id: '2', name: 'Otomotiv Grubu' },
-  { id: '3', name: 'Enerji Grubu' },
-]
+const groups = computed(() => organizationStore.groups.filter(item => item.tenant_id == null || Number(item.tenant_id) === tenantId.value))
+
+onMounted(async () => {
+  await organizationStore.fetchOrganizationsForTenant(tenantId.value)
+})
 
 const cancel = () => navigateTo(`/tenants/${tenantId.value}/organization/companies`)
 
-const saveCompany = () => {
-  const payload = {
-    name: companyName.value,
-    short_name: shortName.value,
-    group_id: group.value || null,
-    description: description.value,
-    is_active: isActive.value,
+const saveCompany = async () => {
+  if (saving.value) return
+  saving.value = true
+  errorMessage.value = ''
+  try {
+    await organizationStore.createOrganizationForTenant(tenantId.value, {
+      name: companyName.value,
+      short_name: shortName.value,
+      type: 'company',
+      parent_id: group.value ? Number(group.value) : null,
+      description: description.value,
+      is_active: isActive.value,
+    })
+    await navigateTo(`/tenants/${tenantId.value}/organization/companies`)
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message ?? error?.message ?? 'Şirket kaydedilemedi.'
+  } finally {
+    saving.value = false
   }
-  console.log('Yeni şirket:', payload)
 }
 </script>
 
@@ -126,7 +140,7 @@ const saveCompany = () => {
 
         <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800 md:px-7">
           <button type="button" class="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" @click="cancel"><X :size="16" /> İptal</button>
-          <button type="button" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600" @click="saveCompany"><Save :size="16" /> Kaydet</button>
+          <button type="button" :disabled="saving" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600 disabled:opacity-60" @click="saveCompany"><Save :size="16" /> {{ saving ? 'Kaydediliyor...' : 'Kaydet' }}</button>
         </div>
       </section>
     </div>
