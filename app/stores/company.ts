@@ -7,6 +7,7 @@ const normalizeCompany = (item: CompanyApiRecord): Company => ({
   id: item.id,
   name: item.name,
   shortName: item.short_name ?? '',
+  description: item.description ?? '',
   group: item.organizations?.find(organization => organization.type === 'group')?.name ?? '—',
   brandCount: item.brands_count ?? 0,
   status: item.is_active === false ? 'passive' : 'active',
@@ -30,7 +31,7 @@ export const useCompanyStore = defineStore('company', () => {
     finally { loading.value = false }
   }
 
-  const createCompany = async (organizationId: number, payload: { name: string; company_type: 'individual' | 'corporate'; short_name?: string; description?: string; is_active?: boolean }) => {
+  const createCompany = async (organizationId: number, payload: { name: string; company_type: 'corporate'; short_name: string; description: string; is_active: boolean }) => {
     saving.value = true; error.value = null
     try {
       const created = await companyApi.create(payload)
@@ -42,7 +43,7 @@ export const useCompanyStore = defineStore('company', () => {
     finally { saving.value = false }
   }
 
-  const updateCompany = async (id: number, payload: { name?: string; company_type?: 'individual' | 'corporate'; short_name?: string; description?: string; is_active?: boolean }) => {
+  const updateCompany = async (id: number, payload: { name: string; company_type: 'corporate'; short_name: string; description: string; is_active: boolean }) => {
     saving.value = true; error.value = null
     try {
       const response = await companyApi.update(id, payload)
