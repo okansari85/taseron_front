@@ -3,12 +3,20 @@ import type { FetchOptions } from 'ofetch'
 export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) => {
   const config = useRuntimeConfig()
   const token = useCookie<string | null>('auth_token')
+  const tenantStore = useTenantStore()
   const body = options.body
 
   const headers = new Headers(options.headers as HeadersInit | undefined)
 
   if (token.value) {
     headers.set('Authorization', `Bearer ${token.value}`)
+  }
+
+  const tenantId = tenantStore.currentTenant?.id
+  if (tenantId) {
+    headers.set('X-Tenant-ID', String(tenantId))
+  } else {
+    headers.delete('X-Tenant-ID')
   }
 
   headers.set('Accept', 'application/json')
