@@ -5,6 +5,7 @@ import { organizationApi } from '~/api/organization'
 export const useOrganizationStore = defineStore('organization', () => {
   const organizations = ref<Organization[]>([])
   const currentOrganization = ref<Organization | null>(null)
+  const loadedTenantId = ref<number | null>(null)
   const loading = ref(false)
   const saving = ref(false)
   const deleting = ref(false)
@@ -25,12 +26,15 @@ export const useOrganizationStore = defineStore('organization', () => {
     }
   }
 
-  const fetchOrganizationsForTenant = async (tenantId: number) => {
+  const fetchOrganizationsForTenant = async (tenantId: number, force = false) => {
+    if (!force && loadedTenantId.value === tenantId) return organizations.value
+
     loading.value = true
     error.value = null
     try {
       const response = await organizationApi.listForTenant(tenantId)
       organizations.value = response
+      loadedTenantId.value = tenantId
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Organizasyon listesi alınamadı.'
@@ -78,6 +82,7 @@ export const useOrganizationStore = defineStore('organization', () => {
       const response = await organizationApi.createForTenant(tenantId, payload)
       organizations.value.unshift(response)
       currentOrganization.value = response
+      loadedTenantId.value = tenantId
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Organizasyon oluşturulamadı.'
@@ -123,22 +128,5 @@ export const useOrganizationStore = defineStore('organization', () => {
   const holdings = computed(() => organizations.value.filter(item => item.type === 'holding'))
   const companies = computed(() => organizations.value.filter(item => item.type === 'company'))
 
-  return {
-    organizations,
-    currentOrganization,
-    groups,
-    holdings,
-    companies,
-    loading,
-    saving,
-    deleting,
-    error,
-    fetchOrganizations,
-    fetchOrganizationsForTenant,
-    fetchOrganization,
-    createOrganization,
-    createOrganizationForTenant,
-    updateOrganization,
-    deleteOrganization,
-  }
+  return { organizations, currentOrganization, loadedTenantId, groups, holdings, companies, loading, saving, deleting, error, fetchOrganizations, fetchOrganizationsForTenant, fetchOrganization, createOrganization, createOrganizationForTenant, updateOrganization, deleteOrganization }
 })
