@@ -25,6 +25,21 @@ export const useOrganizationStore = defineStore('organization', () => {
     }
   }
 
+  const fetchOrganizationsForTenant = async (tenantId: number) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await organizationApi.listForTenant(tenantId)
+      organizations.value = response
+      return response
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Organizasyon listesi alınamadı.'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const fetchOrganization = async (id: number) => {
     loading.value = true
     error.value = null
@@ -45,6 +60,22 @@ export const useOrganizationStore = defineStore('organization', () => {
     error.value = null
     try {
       const response = await organizationApi.create(payload)
+      organizations.value.unshift(response)
+      currentOrganization.value = response
+      return response
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Organizasyon oluşturulamadı.'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  const createOrganizationForTenant = async (tenantId: number, payload: OrganizationPayload) => {
+    saving.value = true
+    error.value = null
+    try {
+      const response = await organizationApi.createForTenant(tenantId, payload)
       organizations.value.unshift(response)
       currentOrganization.value = response
       return response
@@ -103,8 +134,10 @@ export const useOrganizationStore = defineStore('organization', () => {
     deleting,
     error,
     fetchOrganizations,
+    fetchOrganizationsForTenant,
     fetchOrganization,
     createOrganization,
+    createOrganizationForTenant,
     updateOrganization,
     deleteOrganization,
   }
