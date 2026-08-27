@@ -12,6 +12,12 @@ export type Company = {
   business_entity_id?: number | null
 }
 
+export type CompanyOrganization = {
+  id: number
+  name: string
+  type?: string | null
+}
+
 export type CompanyApiRecord = {
   id: number
   name: string
@@ -19,4 +25,12 @@ export type CompanyApiRecord = {
   business_entity_id?: number | null
   created_at?: string
   updated_at?: string
+  brands_count?: number
+  business_entity?: {
+    id: number
+    tenant_id: number
+    type: string
+    name: string
+  } | null
+  organizations?: CompanyOrganization[]
 }
