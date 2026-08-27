@@ -3,6 +3,7 @@ import type { Organization, OrganizationPayload } from '~/types/organization'
 import { organizationApi } from '~/api/organization'
 
 export const useOrganizationStore = defineStore('organization', () => {
+  const route = useRoute()
   const organizations = ref<Organization[]>([])
   const currentOrganization = ref<Organization | null>(null)
   const loadedTenantId = ref<number | null>(null)
@@ -13,12 +14,25 @@ export const useOrganizationStore = defineStore('organization', () => {
   const error = ref<string | null>(null)
   const pendingTenantRequests = new Map<number, Promise<Organization[]>>()
 
+  const routeTenantId = computed(() => {
+    const value = route.params.tenantId
+    const id = Number(Array.isArray(value) ? value[0] : value)
+    return Number.isInteger(id) && id > 0 ? id : null
+  })
+
   const fetchOrganizations = async () => {
+    // Tenant workspace içindeysek eski çağrı da aynı tenant-aware akışa girer.
+    // Böylece farklı componentler farklı methodları çağırsa bile ikinci request oluşmaz.
+    if (routeTenantId.value !== null) {
+      return fetchOrganizationsForTenant(routeTenantId.value)
+    }
+
     loading.value = true
     error.value = null
     try {
       const response = await organizationApi.list()
       organizations.value = response
+      loadedTenantId.value = null
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Organizasyon listesi alınamadı.'
@@ -29,6 +43,10 @@ export const useOrganizationStore = defineStore('organization', () => {
   }
 
   const fetchOrganizationsForTenant = async (tenantId: number, force = false) => {
+    if (!tenantId || !Number.isInteger(tenantId)) {
+      throw new Error('Geçerli bir tenant ID gerekli.')
+    }
+
     if (!force && tenantOrganizationCache.has(tenantId)) {
       const cached = tenantOrganizationCache.get(tenantId) ?? []
       organizations.value = cached
