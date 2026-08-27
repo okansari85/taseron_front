@@ -21,12 +21,7 @@ export const useOrganizationStore = defineStore('organization', () => {
   })
 
   const fetchOrganizations = async () => {
-    // Tenant workspace içindeysek eski çağrı da aynı tenant-aware akışa girer.
-    // Böylece farklı componentler farklı methodları çağırsa bile ikinci request oluşmaz.
-    if (routeTenantId.value !== null) {
-      return fetchOrganizationsForTenant(routeTenantId.value)
-    }
-
+    if (routeTenantId.value !== null) return fetchOrganizationsForTenant(routeTenantId.value)
     loading.value = true
     error.value = null
     try {
@@ -43,23 +38,17 @@ export const useOrganizationStore = defineStore('organization', () => {
   }
 
   const fetchOrganizationsForTenant = async (tenantId: number, force = false) => {
-    if (!tenantId || !Number.isInteger(tenantId)) {
-      throw new Error('Geçerli bir tenant ID gerekli.')
-    }
-
+    if (!tenantId || !Number.isInteger(tenantId)) throw new Error('Geçerli bir tenant ID gerekli.')
     if (!force && tenantOrganizationCache.has(tenantId)) {
       const cached = tenantOrganizationCache.get(tenantId) ?? []
       organizations.value = cached
       loadedTenantId.value = tenantId
       return cached
     }
-
     const pending = pendingTenantRequests.get(tenantId)
     if (!force && pending) return pending
-
     loading.value = true
     error.value = null
-
     const request = organizationApi.listForTenant(tenantId)
       .then(response => {
         tenantOrganizationCache.set(tenantId, response)
@@ -75,7 +64,6 @@ export const useOrganizationStore = defineStore('organization', () => {
         pendingTenantRequests.delete(tenantId)
         loading.value = false
       })
-
     pendingTenantRequests.set(tenantId, request)
     return request
   }
@@ -136,13 +124,14 @@ export const useOrganizationStore = defineStore('organization', () => {
     error.value = null
     try {
       const response = await organizationApi.update(id, payload)
+      if (loadedTenantId.value !== null) {
+        const refreshed = await fetchOrganizationsForTenant(loadedTenantId.value, true)
+        const updated = refreshed.find(item => item.id === id)
+        if (updated) currentOrganization.value = updated
+        return updated ?? response
+      }
       const index = organizations.value.findIndex(item => item.id === id)
       if (index !== -1) organizations.value[index] = response
-      if (loadedTenantId.value !== null) {
-        const cached = tenantOrganizationCache.get(loadedTenantId.value) ?? []
-        const cachedIndex = cached.findIndex(item => item.id === id)
-        if (cachedIndex !== -1) cached[cachedIndex] = response
-      }
       if (currentOrganization.value?.id === id) currentOrganization.value = response
       return response
     } catch (err) {
