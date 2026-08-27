@@ -28,12 +28,14 @@ export const useTenantStore = defineStore('tenant', () => {
 
   const fetchTenant = async (id: number) => {
     const cached = tenants.value.find(item => item.id === id)
-    if (cached) {
+    if (cached?.root_organization) {
       currentTenant.value = cached
       return cached
     }
 
-    if (currentTenant.value?.id === id) return currentTenant.value
+    if (currentTenant.value?.id === id && currentTenant.value.root_organization) {
+      return currentTenant.value
+    }
 
     loading.value = true
     error.value = null
