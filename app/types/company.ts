@@ -6,6 +6,7 @@ export type Company = {
   shortName: string
   description: string
   group: string
+  groupId?: number | null
   brandCount: number
   status: CompanyStatus
   createdAt: string
@@ -30,10 +31,6 @@ export type CompanyApiRecord = {
   created_at?: string
   updated_at?: string
   brands_count?: number
-  business_entity?: {
-    id: number
-    tenant_id: number
-    type: string
-  } | null
+  business_entity?: { id: number; tenant_id: number; type: string } | null
   organizations?: CompanyOrganization[]
 }
