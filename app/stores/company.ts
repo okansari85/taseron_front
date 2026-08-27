@@ -10,7 +10,7 @@ const normalizeCompany = (item: CompanyApiRecord): Company => ({
     .replace(/[^a-z0-9çğıöşü\s-]/gi, '')
     .trim()
     .replace(/\s+/g, '-'),
-  group: item.organizations?.[0]?.name ?? '—',
+  group: item.organizations?.find(organization => organization.type === 'group')?.name ?? '—',
   brandCount: item.brands_count ?? 0,
   status: 'active',
   createdAt: item.created_at ?? '',
