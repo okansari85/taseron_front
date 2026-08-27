@@ -5,6 +5,7 @@ import CompanyFilters from '~/components/companies/CompanyFilters.vue'
 import CompanyPagination from '~/components/companies/CompanyPagination.vue'
 import CompanyTable from '~/components/companies/CompanyTable.vue'
 import { useCompanyStore } from '~/stores/company'
+import { useOrganizationStore } from '~/stores/organization'
 
 definePageMeta({ layout: 'default' })
 
@@ -20,9 +21,11 @@ const statusFilter = ref('all')
 const currentPage = ref(1)
 const perPage = ref(10)
 const companyStore = useCompanyStore()
+const organizationStore = useOrganizationStore()
 const { companies: storeCompanies, loading, error } = storeToRefs(companyStore)
+const { groups } = storeToRefs(organizationStore)
 const companies = computed<Company[]>(() => storeCompanies.value)
-const groupOptions = computed(() => [...new Set(companies.value.map(company => company.group))].filter(Boolean))
+const groupOptions = computed(() => groups.value.map(group => group.name).filter(Boolean))
 const filteredCompanies = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
   return companies.value.filter(company => {
@@ -38,8 +41,12 @@ const resetFilters = () => { search.value = ''; groupFilter.value = 'all'; statu
 const goToCreate = () => navigateTo(`/tenants/${tenantId.value}/organization/companies/create`)
 const goToCompany = (id: number) => navigateTo(`/tenants/${tenantId.value}/organization/companies/${id}`)
 
-onMounted(() => {
-  if (Number.isInteger(tenantIdNumber.value) && tenantIdNumber.value > 0) companyStore.fetchCompanies(tenantIdNumber.value)
+onMounted(async () => {
+  if (!Number.isInteger(tenantIdNumber.value) || tenantIdNumber.value <= 0) return
+  await Promise.all([
+    companyStore.fetchCompanies(tenantIdNumber.value),
+    organizationStore.fetchOrganizationsForTenant(tenantIdNumber.value),
+  ])
 })
 </script>
 
