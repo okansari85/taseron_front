@@ -1,15 +1,12 @@
 import { defineStore } from 'pinia'
 import type { Company, CompanyApiRecord } from '~/types/company'
 import { companyApi } from '~/api/company'
+import { organizationCompanyApi } from '~/api/organization-company'
 
 const normalizeCompany = (item: CompanyApiRecord): Company => ({
   id: item.id,
   name: item.name,
-  shortName: item.name
-    .toLocaleLowerCase('tr-TR')
-    .replace(/[^a-z0-9çğıöşü\s-]/gi, '')
-    .trim()
-    .replace(/\s+/g, '-'),
+  shortName: item.name.toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü\s-]/gi, '').trim().replace(/\s+/g, '-'),
   group: item.organizations?.find(organization => organization.type === 'group')?.name ?? '—',
   brandCount: item.brands_count ?? 0,
   status: 'active',
@@ -22,30 +19,46 @@ export const useCompanyStore = defineStore('company', () => {
   const companies = ref<Company[]>([])
   const loadedTenantId = ref<number | null>(null)
   const loading = ref(false)
+  const saving = ref(false)
+  const deleting = ref(false)
   const error = ref<string | null>(null)
 
   const fetchCompanies = async (tenantId?: number) => {
-    loading.value = true
-    error.value = null
+    loading.value = true; error.value = null
+    try { const response = await companyApi.list(); companies.value = response.map(normalizeCompany); loadedTenantId.value = tenantId ?? null; return companies.value }
+    catch (err) { error.value = err instanceof Error ? err.message : 'Şirket listesi alınamadı.'; throw err }
+    finally { loading.value = false }
+  }
 
+  const createCompany = async (organizationId: number, payload: { name: string; company_type: 'individual' | 'corporate' }) => {
+    saving.value = true; error.value = null
     try {
-      const response = await companyApi.list()
-      companies.value = response.map(normalizeCompany)
-      loadedTenantId.value = tenantId ?? null
-      return companies.value
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Şirket listesi alınamadı.'
-      throw err
-    } finally {
-      loading.value = false
-    }
+      const created = await companyApi.create(payload)
+      const businessEntityId = created.business_entity_id ?? created.business_entity?.id
+      if (!businessEntityId) throw new Error('Şirket oluşturuldu ancak BusinessEntity bilgisi alınamadı.')
+      await organizationCompanyApi.attach(organizationId, businessEntityId)
+      return created
+    } catch (err) { error.value = err instanceof Error ? err.message : 'Şirket oluşturulamadı.'; throw err }
+    finally { saving.value = false }
   }
 
-  return {
-    companies,
-    loadedTenantId,
-    loading,
-    error,
-    fetchCompanies,
+  const updateCompany = async (id: number, payload: { name?: string; company_type?: 'individual' | 'corporate' }) => {
+    saving.value = true; error.value = null
+    try {
+      const response = await companyApi.update(id, payload)
+      const index = companies.value.findIndex(item => item.id === id)
+      if (index !== -1) companies.value[index] = normalizeCompany(response)
+      return response
+    } catch (err) { error.value = err instanceof Error ? err.message : 'Şirket güncellenemedi.'; throw err }
+    finally { saving.value = false }
   }
+
+  const deleteCompany = async (id: number) => {
+    deleting.value = true; error.value = null
+    try { await companyApi.remove(id); companies.value = companies.value.filter(item => item.id !== id) }
+    catch (err) { error.value = err instanceof Error ? err.message : 'Şirket silinemedi.'; throw err }
+    finally { deleting.value = false }
+  }
+
+  return { companies, loadedTenantId, loading, saving, deleting, error, fetchCompanies, createCompany, updateCompany, deleteCompany }
 })
