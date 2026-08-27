@@ -10,6 +10,7 @@ export const useOrganizationStore = defineStore('organization', () => {
   const saving = ref(false)
   const deleting = ref(false)
   const error = ref<string | null>(null)
+  const pendingTenantRequests = new Map<number, Promise<Organization[]>>()
 
   const fetchOrganizations = async () => {
     loading.value = true
@@ -29,19 +30,29 @@ export const useOrganizationStore = defineStore('organization', () => {
   const fetchOrganizationsForTenant = async (tenantId: number, force = false) => {
     if (!force && loadedTenantId.value === tenantId) return organizations.value
 
+    const pending = pendingTenantRequests.get(tenantId)
+    if (!force && pending) return pending
+
     loading.value = true
     error.value = null
-    try {
-      const response = await organizationApi.listForTenant(tenantId)
-      organizations.value = response
-      loadedTenantId.value = tenantId
-      return response
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Organizasyon listesi alınamadı.'
-      throw err
-    } finally {
-      loading.value = false
-    }
+
+    const request = organizationApi.listForTenant(tenantId)
+      .then(response => {
+        organizations.value = response
+        loadedTenantId.value = tenantId
+        return response
+      })
+      .catch(err => {
+        error.value = err instanceof Error ? err.message : 'Organizasyon listesi alınamadı.'
+        throw err
+      })
+      .finally(() => {
+        pendingTenantRequests.delete(tenantId)
+        loading.value = false
+      })
+
+    pendingTenantRequests.set(tenantId, request)
+    return request
   }
 
   const fetchOrganization = async (id: number) => {
