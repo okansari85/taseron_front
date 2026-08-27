@@ -8,6 +8,11 @@ export type OrganizationDeleteResponse = { message: string }
 export const organizationApi = {
   list: async () => apiClient<OrganizationListResponse>('/api/organizations'),
 
+  listForTenant: async (tenantId: number) =>
+    apiClient<OrganizationListResponse>('/api/organizations', {
+      headers: { 'X-Tenant-ID': String(tenantId) },
+    }),
+
   get: async (id: number) =>
     apiClient<OrganizationResponse>(`/api/organizations/${id}`),
 
@@ -15,6 +20,13 @@ export const organizationApi = {
     apiClient<OrganizationResponse>('/api/organizations', {
       method: 'POST',
       body: payload,
+    }),
+
+  createForTenant: async (tenantId: number, payload: OrganizationPayload) =>
+    apiClient<OrganizationResponse>('/api/organizations', {
+      method: 'POST',
+      body: payload,
+      headers: { 'X-Tenant-ID': String(tenantId) },
     }),
 
   update: async (id: number, payload: Partial<OrganizationPayload>) =>
