@@ -8,12 +8,14 @@ import {
   X,
 } from 'lucide-vue-next'
 import { slugify } from '~/utils/slugify'
+import { apiClient } from '~/api/client'
 
 definePageMeta({
   layout: 'default',
 })
 
 const route = useRoute()
+const router = useRouter()
 
 const groupName = ref('')
 const slug = ref('')
@@ -62,15 +64,21 @@ const saveGroup = async () => {
   const payload = {
     name: groupName.value,
     slug: slug.value,
-    description: description.value,
-    code: groupCode.value,
+    description: description.value || null,
+    code: groupCode.value || null,
     display_order: displayOrder.value,
     is_active: isActive.value,
-    parent_id: parentGroup.value || null,
+    parent_id: parentGroup.value ? Number(parentGroup.value) : null,
     color: selectedColor.value,
+    type: 'group',
   }
 
-  console.log('Yeni grup:', payload)
+  await apiClient('/api/organizations/groups', {
+    method: 'POST',
+    body: payload,
+  })
+
+  await router.push(`/tenants/${tenantId.value}/organization/groups`)
 }
 </script>
 
