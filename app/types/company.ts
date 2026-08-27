@@ -4,6 +4,7 @@ export type Company = {
   id: number
   name: string
   shortName: string
+  description: string
   group: string
   brandCount: number
   status: CompanyStatus
