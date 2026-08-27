@@ -74,7 +74,7 @@ const submit = () => emit('save', { ...props.form })
               </h2>
             </div>
 
-            <div class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+            <div class="grid grid-cols-1 gap-y-5">
               <div>
                 <label class="mb-2 block text-sm font-semibold text-gray-800 dark:text-white/90">
                   Şirket Adı <span class="text-error-500">*</span>
