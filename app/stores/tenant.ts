@@ -27,12 +27,24 @@ export const useTenantStore = defineStore('tenant', () => {
   }
 
   const fetchTenant = async (id: number) => {
+    const cached = tenants.value.find(item => item.id === id)
+    if (cached) {
+      currentTenant.value = cached
+      return cached
+    }
+
+    if (currentTenant.value?.id === id) return currentTenant.value
+
     loading.value = true
     error.value = null
     try {
       const response = await tenantApi.get(id)
-      currentTenant.value = response.data
-      return response.data
+      const tenant = response.data
+      const index = tenants.value.findIndex(item => item.id === id)
+      if (index === -1) tenants.value.push(tenant)
+      else tenants.value[index] = tenant
+      currentTenant.value = tenant
+      return tenant
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Tenant alınamadı.'
       throw err
