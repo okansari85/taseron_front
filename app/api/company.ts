@@ -6,7 +6,7 @@ export type CompanyResponse = CompanyApiRecord
 export type CompanyDeleteResponse = { message: string }
 
 export const companyApi = {
-  list: async () => apiClient<CompanyListResponse>('/api/companies'),
+  list: async () => apiClient<CompanyListResponse>('/api/organization-companies'),
 
   get: async (id: number) =>
     apiClient<CompanyResponse>(`/api/companies/${id}`),
