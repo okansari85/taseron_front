@@ -1,12 +1,16 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { Building2, Layers3, Network, ZoomIn, ZoomOut, Maximize2 } from '@lucide/vue'
 import OrganizationChart from 'organization-chart-vue3'
 import 'organization-chart-vue3/style.css'
+import { organizationApi } from '~/api/organization'
+import type { Organization } from '~/types/organization'
 
 definePageMeta({
   layout: 'default',
 })
 
+type NodeTone = 'purple' | 'green' | 'blue'
 type OrgNode = {
   id: string
   title: string
@@ -14,85 +18,115 @@ type OrgNode = {
   children?: OrgNode[]
   meta: {
     type: 'Holding' | 'Grup' | 'Şirket' | 'Marka'
-    tone: 'purple' | 'green' | 'blue' | 'orange'
+    tone: NodeTone
   }
 }
 
-const groups = [
-  {
-    name: 'Dayanıklı Tüketim Grubu',
-    companies: [
-      {
-        name: 'Arçelik A.Ş.',
-        shortName: 'arcelik',
-        brands: ['Arçelik', 'Beko', 'Altus', 'Grundig'],
-      },
-      {
-        name: 'Arçelik Pazarlama A.Ş.',
-        shortName: 'arcelik-pazarlama',
-        brands: [],
-      },
-    ],
-  },
-  {
-    name: 'Otomotiv Grubu',
-    companies: [
-      {
-        name: 'Tofaş Türk Otomobil Fabrikası A.Ş.',
-        shortName: 'tofas',
-        brands: ['Tofaş'],
-      },
-      {
-        name: 'Otokar A.Ş.',
-        shortName: 'otokar',
-        brands: ['Otokar'],
-      },
-    ],
-  },
-  {
-    name: 'Enerji Grubu',
-    companies: [
-      {
-        name: 'Tüpraş - Türkiye Petrol Rafinerileri A.Ş.',
-        shortName: 'tupras',
-        brands: [],
-      },
-    ],
-  },
-]
-
-const orgData = computed<OrgNode>(() => ({
-  id: 'koc-holding',
-  title: 'Koç Holding',
-  member: [],
-  meta: { type: 'Holding', tone: 'purple' },
-  children: groups.map((group, groupIndex) => ({
-    id: `group-${groupIndex}`,
-    title: group.name,
-    member: [],
-    meta: { type: 'Grup', tone: 'purple' },
-    children: group.companies.map((company, companyIndex) => ({
-      id: `company-${groupIndex}-${companyIndex}`,
-      title: company.name,
-      member: [],
-      meta: { type: 'Şirket', tone: 'green' },
-      children: company.brands.map((brand, brandIndex) => ({
-        id: `brand-${groupIndex}-${companyIndex}-${brandIndex}`,
-        title: brand,
-        member: [],
-        meta: { type: 'Marka', tone: 'blue' },
-      })),
-    })),
-  })),
-}))
-
-const totalCompanies = computed(() => groups.reduce((total, group) => total + group.companies.length, 0))
-const totalBrands = computed(() => groups.reduce((total, group) => total + group.companies.reduce((sum, company) => sum + company.brands.length, 0), 0))
+const route = useRoute()
+const tenantId = computed(() => Number(route.params.tenantId ?? 0))
+const organizations = ref<Organization[]>([])
+const loading = ref(true)
+const error = ref('')
 
 const zoom = ref(1)
 const pan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, panX: 0, panY: 0 })
+
+const organizationById = computed(() => {
+  const map = new Map<number, Organization>()
+  for (const organization of organizations.value) map.set(Number(organization.id), organization)
+  return map
+})
+
+const hierarchyOrganizations = computed(() =>
+  organizations.value.filter((organization) => ['holding', 'group', 'company', 'brand'].includes(organization.type)),
+)
+
+const childrenByParent = computed(() => {
+  const map = new Map<number, Organization[]>()
+  for (const organization of hierarchyOrganizations.value) {
+    if (organization.parent_id == null) continue
+    const parentId = Number(organization.parent_id)
+    const children = map.get(parentId) ?? []
+    children.push(organization)
+    map.set(parentId, children)
+  }
+  for (const children of map.values()) {
+    children.sort((a, b) => {
+      const orderA = Number(a.display_order ?? 0)
+      const orderB = Number(b.display_order ?? 0)
+      return orderA - orderB || a.name.localeCompare(b.name, 'tr')
+    })
+  }
+  return map
+})
+
+const roots = computed(() =>
+  hierarchyOrganizations.value
+    .filter((organization) => organization.parent_id == null || !organizationById.value.has(Number(organization.parent_id)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'tr')),
+)
+
+const typeMeta = (type: Organization['type']): OrgNode['meta'] => {
+  if (type === 'holding') return { type: 'Holding', tone: 'purple' }
+  if (type === 'group') return { type: 'Grup', tone: 'purple' }
+  if (type === 'company') return { type: 'Şirket', tone: 'green' }
+  return { type: 'Marka', tone: 'blue' }
+}
+
+const buildNode = (organization: Organization, path: Set<number> = new Set()): OrgNode => {
+  const id = Number(organization.id)
+  const nextPath = new Set(path)
+  nextPath.add(id)
+  const children = (childrenByParent.value.get(id) ?? [])
+    .filter((child) => !nextPath.has(Number(child.id)))
+    .map((child) => buildNode(child, nextPath))
+
+  return {
+    id: String(organization.id),
+    title: organization.name,
+    member: [],
+    ...(children.length ? { children } : {}),
+    meta: typeMeta(organization.type),
+  }
+}
+
+const orgData = computed<OrgNode | null>(() => {
+  if (roots.value.length === 0) return null
+  if (roots.value.length === 1) return buildNode(roots.value[0])
+
+  return {
+    id: `tenant-${tenantId.value}`,
+    title: 'Organizasyon',
+    member: [],
+    children: roots.value.map((root) => buildNode(root)),
+    meta: { type: 'Holding', tone: 'purple' },
+  }
+})
+
+const totalGroups = computed(() => hierarchyOrganizations.value.filter((item) => item.type === 'group').length)
+const totalCompanies = computed(() => hierarchyOrganizations.value.filter((item) => item.type === 'company').length)
+const totalBrands = computed(() => hierarchyOrganizations.value.filter((item) => item.type === 'brand').length)
+
+const fetchHierarchy = async () => {
+  if (!tenantId.value) {
+    error.value = 'Geçerli bir tenant bulunamadı.'
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  try {
+    organizations.value = await organizationApi.listForTenant(tenantId.value)
+  } catch (err: any) {
+    error.value = err?.message || 'Organizasyon hiyerarşisi yüklenemedi.'
+    organizations.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 const zoomIn = () => {
   zoom.value = Math.min(1.8, Number((zoom.value + 0.1).toFixed(2)))
@@ -143,8 +177,11 @@ const toneClasses = {
   purple: 'border-brand-200 bg-brand-50 text-brand-600 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400',
   green: 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400',
   blue: 'border-blue-light-200 bg-blue-light-50 text-blue-light-700 dark:border-blue-light-500/30 dark:bg-blue-light-500/10 dark:text-blue-light-400',
-  orange: 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400',
 }
+
+onMounted(() => {
+  void fetchHierarchy()
+})
 </script>
 
 <template>
@@ -160,7 +197,7 @@ const toneClasses = {
       <div class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center gap-3">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><Layers3 :size="18" /></span>
-          <div><p class="text-xs font-medium text-gray-500 dark:text-gray-400">Grup</p><p class="mt-0.5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ groups.length }}</p></div>
+          <div><p class="text-xs font-medium text-gray-500 dark:text-gray-400">Grup</p><p class="mt-0.5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ totalGroups }}</p></div>
         </div>
       </div>
 
@@ -183,7 +220,7 @@ const toneClasses = {
       <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
         <div>
           <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">Organizasyon Hiyerarşisi</h2>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Mevcut organizasyon yapısını yakınlaştırıp uzaklaştırarak inceleyin.</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gerçek organizasyon düğümlerini yakınlaştırıp uzaklaştırarak inceleyin.</p>
         </div>
 
         <div class="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-theme-xs dark:border-gray-700 dark:bg-gray-900">
@@ -205,7 +242,17 @@ const toneClasses = {
       >
         <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_55%)]" />
 
-        <div class="absolute left-1/2 top-8 origin-top-left" :style="chartTransform">
+        <div v-if="loading" class="absolute inset-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+          Hiyerarşi yükleniyor...
+        </div>
+        <div v-else-if="error" class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-error-600 dark:text-error-400">
+          {{ error }}
+        </div>
+        <div v-else-if="!orgData" class="absolute inset-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+          Bu tenant için görüntülenecek organizasyon düğümü bulunamadı.
+        </div>
+
+        <div v-else class="absolute left-1/2 top-8 origin-top-left" :style="chartTransform">
           <ClientOnly>
             <OrganizationChart :data="orgData" :default-expand-all="true" class="hierarchy-org-chart">
               <template #node-title="{ node }">
