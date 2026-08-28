@@ -1,4 +1,4 @@
-export type OrganizationType = 'holding' | 'group' | 'company'
+export type OrganizationType = 'holding' | 'group' | 'company' | 'brand' | 'location'
 
 export type Organization = {
   id: number
