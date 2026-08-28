@@ -4,7 +4,6 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
   const config = useRuntimeConfig()
   const token = useCookie<string | null>('auth_token')
   const tenantStore = useTenantStore()
-  const route = useRoute()
   const body = options.body
 
   const headers = new Headers(options.headers as HeadersInit | undefined)
@@ -13,12 +12,11 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
     headers.set('Authorization', `Bearer ${token.value}`)
   }
 
-  // Prefer an explicitly supplied tenant header. Otherwise derive the tenant
-  // from the current workspace route so refreshes do not race tenant loading.
+  // Prefer an explicitly supplied tenant header. Otherwise use the tenant
+  // currently loaded in the tenant store. Do not use useRoute() here because
+  // this client is also called from global middleware.
   if (!headers.has('X-Tenant-ID')) {
-    const routeTenant = route.params.tenantId
-    const routeTenantId = Array.isArray(routeTenant) ? routeTenant[0] : routeTenant
-    const tenantId = tenantStore.currentTenant?.id ?? Number(routeTenantId)
+    const tenantId = tenantStore.currentTenant?.id
 
     if (tenantId && Number.isInteger(Number(tenantId))) {
       headers.set('X-Tenant-ID', String(tenantId))
