@@ -51,9 +51,18 @@ const {
 } = storeToRefs(companyStore);
 const { groups } = storeToRefs(organizationStore);
 const companies = computed<Company[]>(() => storeCompanies.value);
-const groupOptions = computed(() =>
-  groups.value.map((group) => group.name).filter(Boolean),
-);
+const groupOptions = computed(() => {
+  const seen = new Set<number>();
+  return companies.value
+    .filter((company) => company.groupId && company.group)
+    .filter((company) => {
+      const id = Number(company.groupId);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .map((company) => company.group);
+});
 const editGroups = computed(() =>
   groups.value.map((group) => ({ id: Number(group.id), name: group.name })),
 );
