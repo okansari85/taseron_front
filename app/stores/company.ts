@@ -60,13 +60,7 @@ export const useCompanyStore = defineStore("company", () => {
     error.value = null;
     try {
       const created = await companyApi.create(payload);
-      const businessEntityId =
-        created.business_entity_id ?? created.business_entity?.id;
-      if (!businessEntityId)
-        throw new Error(
-          "Şirket oluşturuldu ancak BusinessEntity bilgisi alınamadı.",
-        );
-      await organizationCompanyApi.attach(organizationId, businessEntityId);
+      await organizationCompanyApi.attach(organizationId, created.id);
       return created;
     } catch (err) {
       error.value =
@@ -87,26 +81,18 @@ export const useCompanyStore = defineStore("company", () => {
     },
     previousOrganizationId?: number,
     newOrganizationId?: number,
-    businessEntityId?: number | null,
+    _businessEntityId?: number | null,
   ) => {
     saving.value = true;
     error.value = null;
     try {
       const response = await companyApi.update(id, payload);
       if (
-        businessEntityId &&
         previousOrganizationId &&
         newOrganizationId &&
         previousOrganizationId !== newOrganizationId
       ) {
-        await organizationCompanyApi.detach(
-          previousOrganizationId,
-          businessEntityId,
-        );
-        await organizationCompanyApi.attach(
-          newOrganizationId,
-          businessEntityId,
-        );
+        await organizationCompanyApi.attach(newOrganizationId, id);
       }
       await fetchCompanies(loadedTenantId.value ?? undefined);
       return response;
