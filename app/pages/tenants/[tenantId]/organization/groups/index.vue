@@ -1,39 +1,513 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Eye, Filter, FolderTree, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
-import { useOrganizationStore } from '~/stores/organization'
-import { formatCreatedAt } from '~/utils/formatCreatedAt'
-import ConfirmationModal from '~/components/ConfirmationModal.vue'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  EllipsisVertical,
+  Eye,
+  Filter,
+  FolderTree,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-vue-next";
+import { useOrganizationStore } from "~/stores/organization";
+import { formatCreatedAt } from "~/utils/formatCreatedAt";
+import ConfirmationModal from "~/components/ConfirmationModal.vue";
 
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: "default" });
 
-type GroupStatus = 'active' | 'passive'
-type Group = { id: number; name: string; code: string; parent: string | null; description: string; status: GroupStatus; createdAt: string; raw: any }
-const route = useRoute(); const organizationStore = useOrganizationStore(); const tenantId = computed(() => Number(route.params.tenantId ?? 0)); const search = ref(''); const statusFilter = ref('all'); const parentFilter = ref('all'); const currentPage = ref(1); const perPage = ref(10); const editOpen = ref(false); const editingGroup = ref<any | null>(null); const openActionId = ref<number | null>(null); const actionMenuStyle = ref<Record<string, string>>({})
-const editForm = reactive({ name: '', slug: '', code: '', description: '', display_order: 0, is_active: true, parent_id: null as number | null, color: '#465FFF' })
-const deleteTarget = ref<Group | null>(null); const confirmationOpen = ref(false)
-onMounted(async () => { await organizationStore.fetchOrganizationsForTenant(tenantId.value) })
-const tenantOrganizations = computed(() => organizationStore.organizations.filter(item => Number(item.tenant_id) === tenantId.value))
-const rootOrganization = computed(() => tenantOrganizations.value.find(item => (item.parent_id === null || item.parent_id === undefined) && item.type !== 'location') ?? null)
-const rootOrganizationName = computed(() => rootOrganization.value?.name ?? null); const rootOrganizationId = computed(() => rootOrganization.value?.id ?? null)
-const groups = computed<Group[]>(() => organizationStore.groups.map((organization) => { const parent = organization.parent_id ? tenantOrganizations.value.find(item => item.id === Number(organization.parent_id)) : null; return { id: organization.id, name: organization.name, code: organization.code ?? '—', parent: parent?.name ?? null, description: organization.description ?? '—', status: organization.is_active === false || organization.is_active === 0 ? 'passive' : 'active', createdAt: organization.created_at ?? '—', raw: organization } }))
-const filteredGroups = computed(() => { const term = search.value.trim().toLocaleLowerCase('tr-TR'); return groups.value.filter(group => { const matchesSearch = !term || group.name.toLocaleLowerCase('tr-TR').includes(term) || group.code.toLocaleLowerCase('tr-TR').includes(term); const matchesStatus = statusFilter.value === 'all' || group.status === statusFilter.value; const matchesParent = parentFilter.value === 'all' || (parentFilter.value === 'root' && rootOrganization.value ? Number(group.raw.parent_id) === Number(rootOrganization.value.id) : group.parent === parentFilter.value); return matchesSearch && matchesStatus && matchesParent }) })
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredGroups.value.length / perPage.value))); const paginatedGroups = computed(() => filteredGroups.value.slice((currentPage.value - 1) * perPage.value, currentPage.value * perPage.value)); const visiblePages = computed(() => Array.from({ length: Math.min(5, totalPages.value) }, (_, index) => Math.min(Math.max(1, currentPage.value - 2) + index, totalPages.value)).filter((page, index, pages) => pages.indexOf(page) === index))
-watch([search, statusFilter, parentFilter, perPage], () => { currentPage.value = 1 })
-const resetFilters = () => { search.value = ''; statusFilter.value = 'all'; parentFilter.value = 'all' }; const goToCreate = () => navigateTo(`/tenants/${tenantId.value}/organization/groups/create`); const goToGroup = (id: number) => navigateTo(`/tenants/${tenantId.value}/organization/groups/${id}`); const groupInitial = (name: string) => name.trim().charAt(0).toLocaleUpperCase('tr-TR')
-const openEdit = (group: Group) => { openActionId.value = null; editingGroup.value = group.raw; editForm.name = group.raw.name ?? ''; editForm.slug = group.raw.slug ?? ''; editForm.code = group.raw.code ?? ''; editForm.description = group.raw.description ?? ''; editForm.display_order = group.raw.display_order ?? 0; editForm.is_active = group.raw.is_active !== false && group.raw.is_active !== 0; editForm.parent_id = group.raw.parent_id == null ? null : Number(group.raw.parent_id); editForm.color = group.raw.color || '#465FFF'; editOpen.value = true }
-const closeEdit = () => { editOpen.value = false; editingGroup.value = null }
-const saveEdit = async (payload: Record<string, unknown>) => { if (!editingGroup.value) return; await organizationStore.updateOrganization(editingGroup.value.id, payload); closeEdit() }
-const toggleActions = (id: number, event?: MouseEvent) => { if (openActionId.value === id) { openActionId.value = null; return }; openActionId.value = id; if (event?.currentTarget instanceof HTMLElement) { const rect = event.currentTarget.getBoundingClientRect(); const menuHeight = 42; const gap = 4; const showAbove = rect.bottom + gap + menuHeight > window.innerHeight; actionMenuStyle.value = { top: `${showAbove ? rect.top - menuHeight - gap : rect.bottom + gap}px`, right: `${Math.max(8, window.innerWidth - rect.right)}px` } } }
-const deleteGroup = (group: Group) => { openActionId.value = null; deleteTarget.value = group; confirmationOpen.value = true }
-const confirmDelete = async () => { if (!deleteTarget.value) return; const id = deleteTarget.value.id; confirmationOpen.value = false; deleteTarget.value = null; await organizationStore.deleteOrganization(id) }
+type GroupStatus = "active" | "passive";
+type Group = {
+  id: number;
+  name: string;
+  code: string;
+  parent: string | null;
+  description: string;
+  status: GroupStatus;
+  createdAt: string;
+  raw: any;
+};
+const route = useRoute();
+const organizationStore = useOrganizationStore();
+const tenantId = computed(() => Number(route.params.tenantId ?? 0));
+const search = ref("");
+const statusFilter = ref("all");
+const parentFilter = ref("all");
+const currentPage = ref(1);
+const perPage = ref(10);
+const editOpen = ref(false);
+const editingGroup = ref<any | null>(null);
+const openActionId = ref<number | null>(null);
+const actionMenuStyle = ref<Record<string, string>>({});
+const editForm = reactive({
+  name: "",
+  slug: "",
+  code: "",
+  description: "",
+  display_order: 0,
+  is_active: true,
+  parent_id: null as number | null,
+  color: "#465FFF",
+});
+const deleteTarget = ref<Group | null>(null);
+const confirmationOpen = ref(false);
+onMounted(async () => {
+  await organizationStore.fetchOrganizationsForTenant(tenantId.value);
+});
+const tenantOrganizations = computed(() =>
+  organizationStore.organizations.filter(
+    (item) => Number(item.tenant_id) === tenantId.value,
+  ),
+);
+const rootOrganization = computed(
+  () =>
+    tenantOrganizations.value.find(
+      (item) =>
+        (item.parent_id === null || item.parent_id === undefined) &&
+        item.type !== "location",
+    ) ?? null,
+);
+const rootOrganizationName = computed(
+  () => rootOrganization.value?.name ?? null,
+);
+const rootOrganizationId = computed(() => rootOrganization.value?.id ?? null);
+const groups = computed<Group[]>(() =>
+  organizationStore.groups.map((organization) => {
+    const parent = organization.parent_id
+      ? tenantOrganizations.value.find(
+          (item) => item.id === Number(organization.parent_id),
+        )
+      : null;
+    return {
+      id: organization.id,
+      name: organization.name,
+      code: organization.code ?? "—",
+      parent: parent?.name ?? null,
+      description: organization.description ?? "—",
+      status:
+        organization.is_active === false || organization.is_active === 0
+          ? "passive"
+          : "active",
+      createdAt: organization.created_at ?? "—",
+      raw: organization,
+    };
+  }),
+);
+const filteredGroups = computed(() => {
+  const term = search.value.trim().toLocaleLowerCase("tr-TR");
+  return groups.value.filter((group) => {
+    const matchesSearch =
+      !term ||
+      group.name.toLocaleLowerCase("tr-TR").includes(term) ||
+      group.code.toLocaleLowerCase("tr-TR").includes(term);
+    const matchesStatus =
+      statusFilter.value === "all" || group.status === statusFilter.value;
+    const matchesParent =
+      parentFilter.value === "all" ||
+      (parentFilter.value === "root" && rootOrganization.value
+        ? Number(group.raw.parent_id) === Number(rootOrganization.value.id)
+        : group.parent === parentFilter.value);
+    return matchesSearch && matchesStatus && matchesParent;
+  });
+});
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredGroups.value.length / perPage.value)),
+);
+const paginatedGroups = computed(() =>
+  filteredGroups.value.slice(
+    (currentPage.value - 1) * perPage.value,
+    currentPage.value * perPage.value,
+  ),
+);
+const visiblePages = computed(() =>
+  Array.from({ length: Math.min(5, totalPages.value) }, (_, index) =>
+    Math.min(Math.max(1, currentPage.value - 2) + index, totalPages.value),
+  ).filter((page, index, pages) => pages.indexOf(page) === index),
+);
+watch([search, statusFilter, parentFilter, perPage], () => {
+  currentPage.value = 1;
+});
+const resetFilters = () => {
+  search.value = "";
+  statusFilter.value = "all";
+  parentFilter.value = "all";
+};
+const goToCreate = () =>
+  navigateTo(`/tenants/${tenantId.value}/organization/groups/create`);
+const goToGroup = (id: number) =>
+  navigateTo(`/tenants/${tenantId.value}/organization/groups/${id}`);
+const groupInitial = (name: string) =>
+  name.trim().charAt(0).toLocaleUpperCase("tr-TR");
+const openEdit = (group: Group) => {
+  openActionId.value = null;
+  editingGroup.value = group.raw;
+  editForm.name = group.raw.name ?? "";
+  editForm.slug = group.raw.slug ?? "";
+  editForm.code = group.raw.code ?? "";
+  editForm.description = group.raw.description ?? "";
+  editForm.display_order = group.raw.display_order ?? 0;
+  editForm.is_active =
+    group.raw.is_active !== false && group.raw.is_active !== 0;
+  editForm.parent_id =
+    group.raw.parent_id == null ? null : Number(group.raw.parent_id);
+  editForm.color = group.raw.color || "#465FFF";
+  editOpen.value = true;
+};
+const closeEdit = () => {
+  editOpen.value = false;
+  editingGroup.value = null;
+};
+const saveEdit = async (payload: Record<string, unknown>) => {
+  if (!editingGroup.value) return;
+  await organizationStore.updateOrganization(editingGroup.value.id, payload);
+  closeEdit();
+};
+const toggleActions = (id: number, event?: MouseEvent) => {
+  if (openActionId.value === id) {
+    openActionId.value = null;
+    return;
+  }
+  openActionId.value = id;
+  if (event?.currentTarget instanceof HTMLElement) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = 42;
+    const gap = 4;
+    const showAbove = rect.bottom + gap + menuHeight > window.innerHeight;
+    actionMenuStyle.value = {
+      top: `${showAbove ? rect.top - menuHeight - gap : rect.bottom + gap}px`,
+      right: `${Math.max(8, window.innerWidth - rect.right)}px`,
+    };
+  }
+};
+const deleteGroup = (group: Group) => {
+  openActionId.value = null;
+  deleteTarget.value = group;
+  confirmationOpen.value = true;
+};
+const confirmDelete = async () => {
+  if (!deleteTarget.value) return;
+  const id = deleteTarget.value.id;
+  confirmationOpen.value = false;
+  deleteTarget.value = null;
+  await organizationStore.deleteOrganization(id);
+};
 </script>
 
 <template>
-  <div class="font-outfit" @click="openActionId = null"><div class="mx-auto w-full max-w-[1400px]"><div class="mb-6"><h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white/90">Organizasyon Yönetimi</h1><p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">Organizasyon yapınızı yönetin ve hiyerarşiyi görüntüleyin.</p></div><OrganizationTabs /><div class="mb-5 flex items-center justify-between gap-4"><p class="text-sm text-gray-500 dark:text-gray-400">Organizasyon yapınızda yer alan grupları görüntüleyin ve yönetin.</p><button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600" @click.stop="goToCreate"><Plus :size="16" />Yeni Grup</button></div>
-  <section class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]"><div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1.2fr)_1fr_1fr_auto] md:items-center"><div class="relative"><Search :size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" type="search" placeholder="Grup ara..." class="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" /></div><div class="relative"><select v-model="statusFilter" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"><option value="all">Tümü</option><option value="active">Aktif</option><option value="passive">Pasif</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div><div class="relative"><select v-model="parentFilter" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"><option value="all">Tümü</option><option value="root" :disabled="!rootOrganization">{{ rootOrganizationName || 'En üst seviye' }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div><button type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06]" @click="resetFilters"><Filter :size="15" />Filtreleri Temizle</button></div></section>
-  <section class="overflow-visible rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]"><div class="overflow-x-auto"><table class="w-full min-w-[900px] text-left"><thead class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Grup Adı</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Ebeveyn Grup</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Açıklama</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th><th class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400">Oluşturulma Tarihi</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400">İşlemler</th></tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800"><tr v-for="group in paginatedGroups" :key="group.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td class="px-4 py-4"><button type="button" class="flex min-w-[210px] items-center gap-3 text-left" @click="goToGroup(group.id)"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-300">{{ groupInitial(group.name) }}</span><span><span class="block text-sm font-semibold text-gray-800 dark:text-white/90">{{ group.name }}</span><span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ group.code }}</span></span></button></td><td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ group.parent ?? '—' }}</td><td class="max-w-[260px] px-4 py-4 text-sm leading-5 text-gray-500 dark:text-gray-400">{{ group.description }}</td><td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" :class="group.status === 'active' ? 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700/60 dark:text-gray-300'"><span class="h-1.5 w-1.5 rounded-full" :class="group.status === 'active' ? 'bg-success-500' : 'bg-gray-400'" />{{ group.status === 'active' ? 'Aktif' : 'Pasif' }}</span></td><td class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ formatCreatedAt(group.createdAt) }}</td><td class="px-4 py-4"><div class="flex items-center justify-end gap-2"><button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" title="Görüntüle" aria-label="Görüntüle" @click.stop="goToGroup(group.id)"><Eye :size="17" /></button><button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" title="Düzenle" aria-label="Düzenle" @click.stop="openEdit(group)"><Pencil :size="17" /></button><button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" aria-label="Diğer işlemler" :aria-expanded="openActionId === group.id" @click.stop="toggleActions(group.id, $event)"><EllipsisVertical :size="17" /></button></div></td></tr><tr v-if="paginatedGroups.length === 0"><td colspan="6" class="px-4 py-12 text-center"><div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.06]"><FolderTree :size="18" /></div><p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">Grup bulunamadı.</p></td></tr></tbody></table></div><div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800 dark:bg-white/[0.03]"><span class="text-sm text-gray-500 dark:text-gray-400">Toplam {{ filteredGroups.length }} kayıt</span><div class="flex items-center gap-1"><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><button v-for="page in visiblePages" :key="page" type="button" class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium" :class="page === currentPage ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/[0.06]'" @click="currentPage = page">{{ page }}</button><button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div><select v-model.number="perPage" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select></div></section></div>
-    <div v-if="openActionId !== null" class="fixed z-[10050] w-40 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900" :style="actionMenuStyle" @click.stop><button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10" @click.stop="deleteGroup(groups.find(group => group.id === openActionId)!)"><Trash2 :size="15" />Sil</button></div>
-    <GroupEditDrawer v-if="editOpen" v-model:open="editOpen" :form="editForm" :parent-groups="organizationStore.groups.filter(item => item.id !== editingGroup?.id && item.id !== rootOrganizationId)" :root-organization-name="rootOrganizationName" :root-organization-id="rootOrganizationId" :saving="organizationStore.saving" @save="saveEdit" />
-    <ConfirmationModal v-model:open="confirmationOpen" title="Grubu Sil" :message="deleteTarget ? `“${deleteTarget.name}” grubunu silmek istediğinize emin misiniz?` : ''" confirm-text="Sil" cancel-text="Vazgeç" @confirm="confirmDelete" />
+  <div class="font-outfit" @click="openActionId = null">
+    <div class="mx-auto w-full max-w-[1400px]">
+      <div class="mb-6">
+        <h1
+          class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white/90"
+        >
+          Organizasyon Yönetimi
+        </h1>
+        <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+          Organizasyon yapınızı yönetin ve hiyerarşiyi görüntüleyin.
+        </p>
+      </div>
+      <OrganizationTabs />
+      <div class="mb-5 flex items-center justify-between gap-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Organizasyon yapınızda yer alan grupları görüntüleyin ve yönetin.
+        </p>
+        <button
+          type="button"
+          class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600"
+          @click.stop="goToCreate"
+        >
+          <Plus :size="16" />Yeni Grup
+        </button>
+      </div>
+      <section
+        class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <div
+          class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1.2fr)_1fr_1fr_auto] md:items-center"
+        >
+          <div class="relative">
+            <Search
+              :size="16"
+              class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            /><input
+              v-model="search"
+              type="search"
+              placeholder="Grup ara..."
+              class="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+          <div class="relative">
+            <select
+              v-model="statusFilter"
+              class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            >
+              <option value="all">Tümü</option>
+              <option value="active">Aktif</option>
+              <option value="passive">Pasif</option></select
+            ><ChevronDown
+              :size="15"
+              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+          </div>
+          <div class="relative">
+            <select
+              v-model="parentFilter"
+              class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            >
+              <option value="all">Tümü</option>
+              <option value="root" :disabled="!rootOrganization">
+                {{ rootOrganizationName || "En üst seviye" }}
+              </option></select
+            ><ChevronDown
+              :size="15"
+              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06]"
+            @click="resetFilters"
+          >
+            <Filter :size="15" />Filtreleri Temizle
+          </button>
+        </div>
+      </section>
+      <section
+        class="overflow-visible rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[900px] text-left">
+            <thead
+              class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"
+            >
+              <tr>
+                <th
+                  class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Grup Adı
+                </th>
+                <th
+                  class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Ebeveyn Grup
+                </th>
+                <th
+                  class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Açıklama
+                </th>
+                <th
+                  class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Durum
+                </th>
+                <th
+                  class="px-4 py-4 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Oluşturulma Tarihi
+                </th>
+                <th
+                  class="px-4 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              <tr
+                v-for="group in paginatedGroups"
+                :key="group.id"
+                class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"
+              >
+                <td class="px-4 py-4">
+                  <button
+                    type="button"
+                    class="flex min-w-[210px] items-center gap-3 text-left"
+                    @click="goToGroup(group.id)"
+                  >
+                    <span
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-300"
+                      >{{ groupInitial(group.name) }}</span
+                    ><span
+                      ><span
+                        class="block text-sm font-semibold text-gray-800 dark:text-white/90"
+                        >{{ group.name }}</span
+                      ><span
+                        class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400"
+                        >{{ group.code }}</span
+                      ></span
+                    >
+                  </button>
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {{ group.parent ?? "—" }}
+                </td>
+                <td
+                  class="max-w-[260px] px-4 py-4 text-sm leading-5 text-gray-500 dark:text-gray-400"
+                >
+                  {{ group.description }}
+                </td>
+                <td class="px-4 py-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                    :class="
+                      group.status === 'active'
+                        ? 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-300'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700/60 dark:text-gray-300'
+                    "
+                    ><span
+                      class="h-1.5 w-1.5 rounded-full"
+                      :class="
+                        group.status === 'active'
+                          ? 'bg-success-500'
+                          : 'bg-gray-400'
+                      "
+                    />{{ group.status === "active" ? "Aktif" : "Pasif" }}</span
+                  >
+                </td>
+                <td
+                  class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-400"
+                >
+                  {{ formatCreatedAt(group.createdAt) }}
+                </td>
+                <td class="px-4 py-4">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700"
+                      title="Görüntüle"
+                      aria-label="Görüntüle"
+                      @click.stop="goToGroup(group.id)"
+                    >
+                      <Eye :size="17" /></button
+                    ><button
+                      type="button"
+                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700"
+                      title="Düzenle"
+                      aria-label="Düzenle"
+                      @click.stop="openEdit(group)"
+                    >
+                      <Pencil :size="17" /></button
+                    ><button
+                      type="button"
+                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700"
+                      aria-label="Diğer işlemler"
+                      :aria-expanded="openActionId === group.id"
+                      @click.stop="toggleActions(group.id, $event)"
+                    >
+                      <EllipsisVertical :size="17" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="paginatedGroups.length === 0">
+                <td colspan="6" class="px-4 py-12 text-center">
+                  <div
+                    class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.06]"
+                  >
+                    <FolderTree :size="18" />
+                  </div>
+                  <p
+                    class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Grup bulunamadı.
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div
+          class="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800 dark:bg-white/[0.03]"
+        >
+          <span class="text-sm text-gray-500 dark:text-gray-400"
+            >Toplam {{ filteredGroups.length }} kayıt</span
+          >
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400"
+              :disabled="currentPage === 1"
+              @click="currentPage--"
+            >
+              <ChevronLeft :size="16" /></button
+            ><button
+              v-for="page in visiblePages"
+              :key="page"
+              type="button"
+              class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium"
+              :class="
+                page === currentPage
+                  ? 'bg-brand-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/[0.06]'
+              "
+              @click="currentPage = page"
+            >
+              {{ page }}</button
+            ><button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400"
+              :disabled="currentPage === totalPages"
+              @click="currentPage++"
+            >
+              <ChevronRight :size="16" />
+            </button>
+          </div>
+          <select
+            v-model.number="perPage"
+            class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+          >
+            <option :value="10">10 / sayfa</option>
+            <option :value="25">25 / sayfa</option>
+            <option :value="50">50 / sayfa</option>
+          </select>
+        </div>
+      </section>
+    </div>
+    <div
+      v-if="openActionId !== null"
+      class="fixed z-[10050] w-40 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+      :style="actionMenuStyle"
+      @click.stop
+    >
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10"
+        @click.stop="
+          deleteGroup(groups.find((group) => group.id === openActionId)!)
+        "
+      >
+        <Trash2 :size="15" />Sil
+      </button>
+    </div>
+    <GroupEditDrawer
+      v-if="editOpen"
+      v-model:open="editOpen"
+      :form="editForm"
+      :parent-groups="
+        organizationStore.groups.filter(
+          (item) =>
+            item.id !== editingGroup?.id && item.id !== rootOrganizationId,
+        )
+      "
+      :root-organization-name="rootOrganizationName"
+      :root-organization-id="rootOrganizationId"
+      :saving="organizationStore.saving"
+      @save="saveEdit"
+    />
+    <ConfirmationModal
+      v-model:open="confirmationOpen"
+      title="Grubu Sil"
+      :message="
+        deleteTarget
+          ? `“${deleteTarget.name}” grubunu silmek istediğinize emin misiniz?`
+          : ''
+      "
+      confirm-text="Sil"
+      cancel-text="Vazgeç"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
