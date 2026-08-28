@@ -56,7 +56,7 @@ const resetFilters = () => {
 }
 const goToCreate = () => navigateTo(`/tenants/${tenantId.value}/organization/brands/create`)
 const goToBrand = (id: number) => navigateTo(`/tenants/${tenantId.value}/organization/brands/${id}`)
-const openEdit = (brand: Brand) => {
+const openEdit = async (brand: Brand) => {
   editingId.value = brand.id
   form.name = brand.name
   form.shortName = brand.shortName
@@ -65,6 +65,8 @@ const openEdit = (brand: Brand) => {
   form.isActive = brand.status === 'active'
   form.logo = null
   form.logoPreview = brand.logoUrl ?? ''
+
+  await companyStore.fetchCompanies(tenantId.value)
   editOpen.value = true
 }
 const saveEdit = async (payload: BrandForm) => {
@@ -85,7 +87,7 @@ const confirmDelete = async () => {
 
 onMounted(async () => {
   if (!Number.isInteger(tenantId.value) || tenantId.value <= 0) return
-  await Promise.all([brandStore.fetchBrands(), companyStore.fetchCompanies(tenantId.value)])
+  await brandStore.fetchBrands()
 })
 </script>
 
