@@ -1,4 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to) => {
+  const tenantContext = useTenantRequestContext()
+  tenantContext.setTenantId(to.params.tenantId)
+
   const auth = useAuth()
 
   await auth.initialize()
