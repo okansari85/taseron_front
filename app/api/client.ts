@@ -1,9 +1,17 @@
 import type { FetchOptions } from 'ofetch'
 
+const isGlobalApiPath = (path: string) =>
+  path === '/api/login' ||
+  path === '/api/logout' ||
+  path === '/api/user' ||
+  path === '/api/tenant-onboarding' ||
+  path === '/api/tenants' ||
+  path.startsWith('/api/tenants/')
+
 export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) => {
   const config = useRuntimeConfig()
   const token = useCookie<string | null>('auth_token')
-  const tenantStore = useTenantStore()
+  const tenantContext = useTenantRequestContext()
   const body = options.body
 
   const headers = new Headers(options.headers as HeadersInit | undefined)
@@ -12,16 +20,15 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
     headers.set('Authorization', `Bearer ${token.value}`)
   }
 
-  // Prefer an explicitly supplied tenant header. Otherwise use the tenant
-  // currently loaded in the tenant store. Do not use useRoute() here because
-  // this client is also called from global middleware.
-  if (!headers.has('X-Tenant-ID')) {
-    const tenantId = tenantStore.currentTenant?.id
+  // Explicit tenant headers always win. For tenant-scoped API calls, use the
+  // route context initialized by global middleware before pages/layouts run.
+  // This avoids both stale Pinia tenant state on refresh and useRoute() calls
+  // from inside middleware-driven requests.
+  if (!headers.has('X-Tenant-ID') && !isGlobalApiPath(path)) {
+    const tenantId = tenantContext.tenantId.value
 
-    if (tenantId && Number.isInteger(Number(tenantId))) {
+    if (tenantId) {
       headers.set('X-Tenant-ID', String(tenantId))
-    } else {
-      headers.delete('X-Tenant-ID')
     }
   }
 
