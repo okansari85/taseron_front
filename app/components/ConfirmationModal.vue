@@ -7,11 +7,13 @@ withDefaults(defineProps<{
   message?: string
   confirmText?: string
   cancelText?: string
+  loading?: boolean
 }>(), {
   title: 'Emin misiniz?',
   message: 'Bu işlemi gerçekleştirmek istediğinize emin misiniz?',
   confirmText: 'Onayla',
   cancelText: 'Vazgeç',
+  loading: false,
 })
 
 const emit = defineEmits<{
@@ -41,11 +43,11 @@ const confirm = () => emit('confirm')
             </button>
           </div>
           <div class="mt-6 flex justify-end gap-3">
-            <button type="button" class="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05]" @click="close">
+            <button type="button" :disabled="loading" class="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05]" @click="close">
               {{ cancelText }}
             </button>
-            <button type="button" class="h-10 rounded-lg bg-error-600 px-4 text-sm font-semibold text-white transition hover:bg-error-700" @click="confirm">
-              {{ confirmText }}
+            <button type="button" :disabled="loading" class="h-10 rounded-lg bg-error-600 px-4 text-sm font-semibold text-white transition hover:bg-error-700 disabled:opacity-50" @click="confirm">
+              {{ loading ? 'İşleniyor...' : confirmText }}
             </button>
           </div>
         </div>
