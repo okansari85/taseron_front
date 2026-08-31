@@ -3,7 +3,8 @@ import { brandApi } from '~/api/brand'
 import type { Brand, BrandApiRecord, BrandPayload } from '~/types/brand'
 
 const normalizeBrand = (item: BrandApiRecord): Brand => {
-  const company = item.companies?.[0]
+  const companies = item.companies ?? []
+  const company = companies[0]
   const group = company?.organizations?.find(organization => organization.type === 'group')
 
   return {
@@ -13,8 +14,9 @@ const normalizeBrand = (item: BrandApiRecord): Brand => {
     description: item.description ?? '',
     status: item.is_active === false ? 'passive' : 'active',
     logoUrl: item.logo_url ?? null,
-    companyId: company?.id ?? null,
-    company: company?.name ?? '—',
+    companyIds: companies.map(company => company.id),
+    companies,
+    company: companies.length > 1 ? `${company?.name ?? '—'} +${companies.length - 1}` : (company?.name ?? '—'),
     group: group?.name ?? '—',
     createdAt: item.created_at ?? '',
   }
