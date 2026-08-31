@@ -1,6 +1,8 @@
 import { apiClient } from './client'
 
 export type LocationOrganization = { id: number; name: string }
+export type City = { id: number; name: string }
+export type District = { id: number; city_id: number; name: string }
 export type LocationApiItem = {
   id: number
   tenant_id: number
@@ -8,8 +10,8 @@ export type LocationApiItem = {
   address?: string | null
   city_id?: number | null
   district_id?: number | null
-  city?: { id: number; name: string } | null
-  district?: { id: number; name: string } | null
+  city?: City | null
+  district?: District | null
   image?: string | null
   latitude?: number | null
   longitude?: number | null
@@ -21,8 +23,10 @@ export const locationApi = {
   list: (_tenantId: number | string) => apiClient<LocationApiItem[]>('/api/locations'),
   get: (_tenantId: number | string, id: number) => apiClient<LocationApiItem>(`/api/locations/${id}`),
   create: (_tenantId: number | string, form: FormData) => apiClient<LocationApiItem>('/api/locations', { method: 'POST', body: form }),
-  update: (_tenantId: number | string, id: number, form: FormData) => apiClient<LocationApiItem>(`/api/locations/${id}`, { method: 'PUT', body: form }),
+  update: (_tenantId: number | string, id: number, form: FormData) => apiClient<LocationApiItem>(`/api/locations/${id}`, { method: 'POST', body: form }),
   remove: (_tenantId: number | string, id: number) => apiClient<void>(`/api/locations/${id}`, { method: 'DELETE' }),
+  cities: () => apiClient<City[]>('/api/cities'),
+  districts: (cityId: number) => apiClient<District[]>(`/api/cities/${cityId}/districts`),
   listOrganizationLocations: (organizationId: number) => apiClient<LocationApiItem[]>(`/api/organizations/${organizationId}/locations`),
   attachOrganization: (organizationId: number, locationId: number) => apiClient<LocationApiItem>(`/api/organizations/${organizationId}/locations/${locationId}`, { method: 'POST' }),
   detachOrganization: (organizationId: number, locationId: number) => apiClient<void>(`/api/organizations/${organizationId}/locations/${locationId}`, { method: 'DELETE' }),
