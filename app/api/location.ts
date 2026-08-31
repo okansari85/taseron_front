@@ -1,9 +1,12 @@
 import { apiClient } from './client'
 
 export type LocationOrganization = { id: number; name: string }
+export type LocationBrand = { id: number; name: string }
+export type LocationCompany = { id: number; name: string; brands?: LocationBrand[] }
+export type LocationBusinessEntity = { id: number; name: string; type?: string; company?: LocationCompany|null }
 export type City = { id: number; name: string }
 export type District = { id: number; city_id: number; name: string }
-export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; organizations?:LocationOrganization[] }
+export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[] }
 
 export const locationApi = {
  list: (_tenantId:number|string) => apiClient<LocationApiItem[]>('/api/locations'),
