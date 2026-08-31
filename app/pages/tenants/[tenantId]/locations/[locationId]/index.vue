@@ -11,6 +11,7 @@ import {
   Search,
   UserRound,
 } from "lucide-vue-next";
+import { locationApi, type LocationApiItem } from "~/api/location";
 import CompanyCreateModal from "./components/CompanyCreateModal.vue";
 import ContractorCreateModal from "./components/ContractorCreateModal.vue";
 import OperationalAreaCreateModal from "./components/OperationalAreaCreateModal.vue";
@@ -43,16 +44,29 @@ type CompanyOption = { name: string; logo: string; group: string };
 const route = useRoute();
 const locationId = computed(() => Number(route.params.locationId ?? 1));
 const { setScope } = useOrganizationScope();
-const location = computed(() => ({
+const location = ref<LocationApiItem | null>(null);
+const locationLoading = ref(true);
+const locationError = ref("");
+const locationView = computed(() => ({
   id: locationId.value,
-  name: "Beylikdüzü Kampüsü",
-  city: "İstanbul",
-  district: "Beylikdüzü",
-  address: "Şifa Mahallesi 34950, Tudaş Caddesi No:2-6, Beylikdüzü / İstanbul",
-  image:
-    "https://static.daktilo.com/sites/302/uploads/2022/01/20/arcelik-fabrika.jpg",
-  status: "active" as const,
+  name: location.value?.name ?? "",
+  city: location.value?.city?.name ?? "",
+  district: location.value?.district?.name ?? "",
+  address: location.value?.address ?? "",
+  image: location.value?.image ?? "",
+  status: location.value?.is_active === false ? ("passive" as const) : ("active" as const),
 }));
+const loadLocation = async () => {
+  locationLoading.value = true;
+  locationError.value = "";
+  try {
+    location.value = await locationApi.get("", locationId.value);
+  } catch (error) {
+    locationError.value = error instanceof Error ? error.message : "Lokasyon bilgileri alınamadı.";
+  } finally {
+    locationLoading.value = false;
+  }
+};
 const activeTab = ref<"companies" | "contractors" | "areas">("companies");
 const locationTabs = [
   { label: "Firmalar", key: "companies" },
@@ -305,14 +319,17 @@ const addArea = (name: string) => {
   areas.value.push({ id: Date.now(), name, description: "", status: "active" });
   showAreaModal.value = false;
 };
-onMounted(() =>
-  setScope("location", {
-    id: location.value.id,
-    name: location.value.name,
-    description: "Tesis",
-    icon: undefined,
-  }),
-);
+onMounted(async () => {
+  await loadLocation();
+  if (location.value) {
+    setScope("location", {
+      id: location.value.id,
+      name: location.value.name,
+      description: "Tesis",
+      icon: undefined,
+    });
+  }
+});
 </script>
 
 <template>
@@ -328,8 +345,9 @@ onMounted(() =>
             class="h-[178px] overflow-hidden rounded-[8px] bg-gray-100 dark:bg-gray-900"
           >
             <img
-              :src="location.image"
-              :alt="location.name"
+              v-if="locationView.image"
+              :src="locationView.image"
+              :alt="locationView.name"
               class="h-full w-full object-cover"
             />
           </div>
@@ -352,25 +370,25 @@ onMounted(() =>
                 <h1
                   class="text-[19px] font-semibold leading-6 tracking-tight text-gray-900 dark:text-white/90"
                 >
-                  {{ location.name }}
+                  {{ locationView.name || "Lokasyon" }}
                 </h1>
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-[10px] font-semibold text-success-600"
-                  ><span
+                ><span
                     class="h-1.5 w-1.5 rounded-full bg-success-500"
-                  />Aktif</span
+                  />{{ locationView.status === "active" ? "Aktif" : "Pasif" }}</span
                 >
               </div>
               <div class="mt-7 space-y-5 text-[11px] text-gray-600">
                 <div class="flex items-center gap-3">
                   <MapPin :size="15" /><span
-                    >{{ location.district }} / {{ location.city }}</span
+                    >{{ locationView.district }} / {{ locationView.city }}</span
                   >
                 </div>
                 <div class="flex items-start gap-3">
                   <MapPin :size="15" class="mt-0.5 shrink-0" /><span
                     class="leading-4 text-gray-500"
-                    >{{ location.address }}</span
+                    >{{ locationView.address }}</span
                   >
                 </div>
               </div>
@@ -399,6 +417,9 @@ onMounted(() =>
         </div>
       </div>
     </section>
+    <div v-if="locationError" class="mt-3 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">
+      {{ locationError }}
+    </div>
     <OrganizationTabs v-model="activeTab" :tabs="locationTabs" />
     <div class="mb-4 flex items-center justify-end">
       <button
@@ -476,225 +497,44 @@ onMounted(() =>
           <thead class="border-b border-gray-100 bg-gray-50/70">
             <tr>
               <th class="px-4 py-4 text-xs font-medium text-gray-500">Firma</th>
-              <th class="px-4 py-4 text-xs font-medium text-gray-500">
-                Operasyonel Alan
-              </th>
-              <th class="px-4 py-4 text-xs font-medium text-gray-500">
-                NACE Kodu
-              </th>
-              <th class="px-4 py-4 text-xs font-medium text-gray-500">
-                Tehlike Sınıfı
-              </th>
-              <th class="px-4 py-4 text-xs font-medium text-gray-500">
-                SGK Sicil No
-              </th>
+              <th class="px-4 py-4 text-xs font-medium text-gray-500">Operasyonel Alan</th>
+              <th class="px-4 py-4 text-xs font-medium text-gray-500">NACE Kodu</th>
+              <th class="px-4 py-4 text-xs font-medium text-gray-500">Tehlike Sınıfı</th>
+              <th class="px-4 py-4 text-xs font-medium text-gray-500">SGK Sicil No</th>
               <th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th>
-              <th
-                class="px-4 py-4 text-right text-xs font-medium text-gray-500"
-              >
-                İşlemler
-              </th>
+              <th class="px-4 py-4 text-right text-xs font-medium text-gray-500">İşlemler</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="company in paginatedCompanies" :key="company.id">
-              <td class="px-4 py-4">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1.5"
-                  >
-                    <img
-                      :src="company.logo"
-                      :alt="company.name"
-                      class="h-full w-full object-contain"
-                    />
-                  </div>
-                  <span class="text-sm font-semibold text-gray-800">{{
-                    company.name
-                  }}</span>
-                </div>
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">
-                {{ company.operationalArea || "—" }}
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">
-                {{ company.nace }}
-              </td>
-              <td class="px-4 py-4">
-                <DangerClassBadge :danger-class="company.dangerClass" />
-              </td>
+              <td class="px-4 py-4"><div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1.5"><img :src="company.logo" :alt="company.name" class="h-full w-full object-contain" /></div><span class="text-sm font-semibold text-gray-800">{{ company.name }}</span></div></td>
+              <td class="px-4 py-4 text-sm text-gray-500">{{ company.operationalArea || "—" }}</td>
+              <td class="px-4 py-4 text-sm text-gray-500">{{ company.nace }}</td>
+              <td class="px-4 py-4"><DangerClassBadge :danger-class="company.dangerClass" /></td>
               <td class="px-4 py-4 text-sm text-gray-500">{{ company.sgk }}</td>
-              <td class="px-4 py-4">
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600"
-                  ><span
-                    class="h-1.5 w-1.5 rounded-full bg-success-500"
-                  />Aktif</span
-                >
-              </td>
-              <td class="px-4 py-4 text-right">
-                <button
-                  class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700"
-                >
-                  <UserRound :size="14" /> Uzman Ata
-                </button>
-              </td>
+              <td class="px-4 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-600"><span class="h-1.5 w-1.5 rounded-full bg-success-500" />Aktif</span></td>
+              <td class="px-4 py-4 text-right"><button class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700"><UserRound :size="14" /> Uzman Ata</button></td>
             </tr>
           </tbody>
         </table>
-        <table
-          v-else-if="activeTab === 'contractors'"
-          class="w-full min-w-[1080px] text-left"
-        >
-          <thead class="border-b border-gray-100 bg-gray-50/70">
-            <tr>
-              <th
-                v-for="h in [
-                  'Firma',
-                  'Faaliyet / Alt Faaliyet',
-                  'NACE Kodu',
-                  'Tehlike Sınıfı',
-                  'SGK Sicil No',
-                  'Taşeron Tipi',
-                  'Durum',
-                  'İşlemler',
-                ]"
-                :key="h"
-                class="px-4 py-4 text-xs font-medium text-gray-500"
-              >
-                {{ h }}
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="company in paginatedContractors" :key="company.id">
-              <td class="px-4 py-4 text-sm font-semibold text-gray-800">
-                {{ company.name }}
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">
-                <span class="font-medium text-gray-700">{{
-                  company.activity
-                }}</span>
-                / {{ company.subActivity }}
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">
-                {{ company.nace }}
-              </td>
-              <td class="px-4 py-4">
-                <DangerClassBadge :danger-class="company.dangerClass" />
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">{{ company.sgk }}</td>
-              <td class="px-4 py-4 text-sm text-gray-600">
-                {{ company.contractorType }}
-              </td>
-              <td class="px-4 py-4 text-sm text-success-600">Aktif</td>
-              <td class="px-4 py-4 text-right">
-                <button
-                  class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700"
-                >
-                  <UserRound :size="14" /> Uzman Ata
-                </button>
-              </td>
-            </tr>
-          </tbody>
+        <table v-else-if="activeTab === 'contractors'" class="w-full min-w-[1080px] text-left">
+          <thead class="border-b border-gray-100 bg-gray-50/70"><tr><th v-for="h in ['Firma','Faaliyet / Alt Faaliyet','NACE Kodu','Tehlike Sınıfı','SGK Sicil No','Taşeron Tipi','Durum','İşlemler']" :key="h" class="px-4 py-4 text-xs font-medium text-gray-500">{{ h }}</th></tr></thead>
+          <tbody class="divide-y divide-gray-100"><tr v-for="company in paginatedContractors" :key="company.id"><td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ company.name }}</td><td class="px-4 py-4 text-sm text-gray-500"><span class="font-medium text-gray-700">{{ company.activity }}</span> / {{ company.subActivity }}</td><td class="px-4 py-4 text-sm text-gray-500">{{ company.nace }}</td><td class="px-4 py-4"><DangerClassBadge :danger-class="company.dangerClass" /></td><td class="px-4 py-4 text-sm text-gray-500">{{ company.sgk }}</td><td class="px-4 py-4 text-sm text-gray-600">{{ company.contractorType }}</td><td class="px-4 py-4 text-sm text-success-600">Aktif</td><td class="px-4 py-4 text-right"><button class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700"><UserRound :size="14" /> Uzman Ata</button></td></tr></tbody>
         </table>
         <table v-else class="w-full min-w-[760px] text-left">
-          <thead class="border-b border-gray-100 bg-gray-50/70">
-            <tr>
-              <th
-                v-for="h in [
-                  'Operasyonel Alan',
-                  'Açıklama',
-                  'Durum',
-                  'İşlemler',
-                ]"
-                :key="h"
-                class="px-4 py-4 text-xs font-medium text-gray-500"
-              >
-                {{ h }}
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="item in paginatedAreas" :key="item.id">
-              <td class="px-4 py-4 text-sm font-semibold text-gray-800">
-                {{ item.name }}
-              </td>
-              <td class="px-4 py-4 text-sm text-gray-500">
-                {{ item.description }}
-              </td>
-              <td class="px-4 py-4 text-sm text-success-600">Aktif</td>
-              <td class="px-4 py-4 text-right">
-                <button
-                  class="flex h-9 w-9 ml-auto items-center justify-center rounded-lg border border-gray-200"
-                >
-                  <EllipsisVertical :size="15" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
+          <thead class="border-b border-gray-100 bg-gray-50/70"><tr><th v-for="h in ['Operasyonel Alan','Açıklama','Durum','İşlemler']" :key="h" class="px-4 py-4 text-xs font-medium text-gray-500">{{ h }}</th></tr></thead>
+          <tbody class="divide-y divide-gray-100"><tr v-for="item in paginatedAreas" :key="item.id"><td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ item.name }}</td><td class="px-4 py-4 text-sm text-gray-500">{{ item.description }}</td><td class="px-4 py-4 text-sm text-success-600">Aktif</td><td class="px-4 py-4 text-right"><button class="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200"><EllipsisVertical :size="15" /></button></td></tr></tbody>
         </table>
-        <div
-          v-if="!filteredItems.length"
-          class="px-4 py-12 text-center text-sm text-gray-500"
-        >
-          Kayıt bulunamadı.
-        </div>
+        <div v-if="!filteredItems.length" class="px-4 py-12 text-center text-sm text-gray-500">Kayıt bulunamadı.</div>
       </div>
-      <div
-        class="flex w-full flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <span class="text-sm text-gray-500"
-          >Toplam {{ filteredItems.length }} kayıt</span
-        >
-        <div class="flex items-center gap-1">
-          <button
-            class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-40"
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-          >
-            <ChevronLeft :size="16" /></button
-          ><button
-            v-for="page in visiblePages"
-            :key="page"
-            class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium"
-            :class="
-              page === currentPage ? 'bg-brand-500 text-white' : 'text-gray-600'
-            "
-            @click="currentPage = page"
-          >
-            {{ page }}</button
-          ><button
-            class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-40"
-            :disabled="currentPage === totalPages"
-            @click="currentPage++"
-          >
-            <ChevronRight :size="16" />
-          </button>
-        </div>
-        <select
-          v-model.number="perPage"
-          class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600"
-        >
-          <option :value="10">10 / sayfa</option>
-          <option :value="25">25 / sayfa</option>
-          <option :value="50">50 / sayfa</option>
-        </select>
+      <div class="flex w-full flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <span class="text-sm text-gray-500">Toplam {{ filteredItems.length }} kayıt</span>
+        <div class="flex items-center gap-1"><button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-40" :disabled="currentPage === 1" @click="currentPage--"><ChevronLeft :size="16" /></button><button v-for="page in visiblePages" :key="page" class="h-9 min-w-9 rounded-lg px-2 text-sm font-medium" :class="page === currentPage ? 'bg-brand-500 text-white' : 'text-gray-600'" @click="currentPage = page">{{ page }}</button><button class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-40" :disabled="currentPage === totalPages" @click="currentPage++"><ChevronRight :size="16" /></button></div>
+        <select v-model.number="perPage" class="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600"><option :value="10">10 / sayfa</option><option :value="25">25 / sayfa</option><option :value="50">50 / sayfa</option></select>
       </div>
     </section>
-    <CompanyCreateModal
-      v-model="showCompanyModal"
-      :groups="groupOptions"
-      :companies="companyOptions"
-      :areas="areas"
-      @save="addCompany"
-    />
-    <ContractorCreateModal
-      v-model="showContractorModal"
-      :contractors="permanentContractorOptions"
-      :areas="areas"
-      @save="addContractor"
-    />
+    <CompanyCreateModal v-model="showCompanyModal" :groups="groupOptions" :companies="companyOptions" :areas="areas" @save="addCompany" />
+    <ContractorCreateModal v-model="showContractorModal" :contractors="permanentContractorOptions" :areas="areas" @save="addContractor" />
     <OperationalAreaCreateModal v-model="showAreaModal" @save="addArea" />
   </div>
 </template>
