@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { MapPin, X } from 'lucide-vue-next'
-import { locationApi, type City, type District } from '~/api/location'
+import { locationApi, type City, type District, type LocationApiItem } from '~/api/location'
 
 const props = withDefaults(defineProps<{ modelValue: boolean }>(), { modelValue: false })
-const emit = defineEmits<{ 'update:modelValue': [value: boolean]; saved: [] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; saved: [location: LocationApiItem] }>()
 
 const route = useRoute()
 const tenantId = String(route.params.tenantId ?? '')
@@ -70,8 +70,8 @@ const submit = async () => {
     data.append('address', form.address)
     data.append('is_active', form.status ? '1' : '0')
     if (imageFile.value) data.append('image', imageFile.value)
-    await locationApi.create(tenantId, data)
-    emit('saved')
+    const created = await locationApi.create(tenantId, data)
+    emit('saved', created)
     close()
     reset()
   } catch (e) {
