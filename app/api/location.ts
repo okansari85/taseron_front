@@ -6,7 +6,10 @@ export type LocationCompany = { id: number; name: string; brands?: LocationBrand
 export type LocationBusinessEntity = { id: number; name: string; type?: string; company?: LocationCompany|null }
 export type City = { id: number; name: string }
 export type District = { id: number; city_id: number; name: string }
-export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[] }
+export type OperationalRegion = { id:number; tenant_id:number; location_id:number; name:string; type?:string|null; is_active:boolean }
+export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[]; operationalRegions?:OperationalRegion[] }
+
+const unwrap = <T>(response: any): T => response?.data ?? response
 
 export const locationApi = {
  list: (_tenantId:number|string) => apiClient<LocationApiItem[]>('/api/locations'),
@@ -20,4 +23,8 @@ export const locationApi = {
  attachOrganization: (organizationId:number,locationId:number) => apiClient<LocationApiItem>(`/api/organizations/${organizationId}/locations/${locationId}`,{method:'POST'}),
  detachOrganization: (organizationId:number,locationId:number) => apiClient<void>(`/api/organizations/${organizationId}/locations/${locationId}`,{method:'DELETE'}),
  syncOrganization: (organizationId:number,locationIds:number[]) => apiClient<LocationApiItem[]>(`/api/organizations/${organizationId}/locations`,{method:'PUT',body:{location_ids:locationIds}}),
+ operationalRegions: async (locationId:number) => unwrap<OperationalRegion[]>(await apiClient<any>(`/api/locations/${locationId}/operational-regions`)),
+ createOperationalRegion: async (locationId:number,payload:{name:string;type?:string;is_active?:boolean}) => unwrap<OperationalRegion>(await apiClient<any>(`/api/locations/${locationId}/operational-regions`,{method:'POST',body:payload})),
+ updateOperationalRegion: async (locationId:number,regionId:number,payload:{name:string;type?:string;is_active?:boolean}) => unwrap<OperationalRegion>(await apiClient<any>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'PUT',body:payload})),
+ removeOperationalRegion: (locationId:number,regionId:number) => apiClient<void>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'DELETE'}),
 }
