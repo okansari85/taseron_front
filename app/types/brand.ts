@@ -28,7 +28,8 @@ export type Brand = {
   description: string
   status: BrandStatus
   logoUrl: string | null
-  companyId: number | null
+  companyIds: number[]
+  companies: BrandCompanyApiRecord[]
   company: string
   group: string
   createdAt: string
