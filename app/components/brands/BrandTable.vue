@@ -42,7 +42,7 @@ const deleteBrand = (id: number) => {
           <tr>
             <th class="px-4 py-4 text-xs font-medium text-gray-500">Marka Adı</th>
             <th class="px-4 py-4 text-xs font-medium text-gray-500">Kısa Ad</th>
-            <th class="px-4 py-4 text-xs font-medium text-gray-500">Şirket</th>
+            <th class="px-4 py-4 text-xs font-medium text-gray-500">Bağlı Şirket Sayısı</th>
             <th class="px-4 py-4 text-xs font-medium text-gray-500">Grup</th>
             <th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th>
             <th class="px-4 py-4 text-xs font-medium text-gray-500">Oluşturulma Tarihi</th>
@@ -64,7 +64,7 @@ const deleteBrand = (id: number) => {
               </button>
             </td>
             <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ brand.shortName }}</td>
-            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ brand.company }}</td>
+            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ brand.companies.length }}</td>
             <td class="px-4 py-4"><span class="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-500">{{ brand.group }}</span></td>
             <td class="px-4 py-4">
               <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" :class="brand.status === 'active' ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-500'">
