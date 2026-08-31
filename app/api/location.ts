@@ -18,11 +18,11 @@ export type LocationApiItem = {
 }
 
 export const locationApi = {
-  list: (tenantId: number | string) => apiClient<LocationApiItem[]>(`/api/tenants/${tenantId}/locations`),
-  get: (tenantId: number | string, id: number) => apiClient<LocationApiItem>(`/api/tenants/${tenantId}/locations/${id}`),
-  create: (tenantId: number | string, form: FormData) => apiClient<LocationApiItem>(`/api/tenants/${tenantId}/locations`, { method: 'POST', body: form }),
-  update: (tenantId: number | string, id: number, form: FormData) => apiClient<LocationApiItem>(`/api/tenants/${tenantId}/locations/${id}`, { method: 'POST', body: form }),
-  remove: (tenantId: number | string, id: number) => apiClient<void>(`/api/tenants/${tenantId}/locations/${id}`, { method: 'DELETE' }),
+  list: (_tenantId: number | string) => apiClient<LocationApiItem[]>('/api/locations'),
+  get: (_tenantId: number | string, id: number) => apiClient<LocationApiItem>(`/api/locations/${id}`),
+  create: (_tenantId: number | string, form: FormData) => apiClient<LocationApiItem>('/api/locations', { method: 'POST', body: form }),
+  update: (_tenantId: number | string, id: number, form: FormData) => apiClient<LocationApiItem>(`/api/locations/${id}`, { method: 'POST', body: form }),
+  remove: (_tenantId: number | string, id: number) => apiClient<void>(`/api/locations/${id}`, { method: 'DELETE' }),
   listOrganizationLocations: (organizationId: number) => apiClient<LocationApiItem[]>(`/api/organizations/${organizationId}/locations`),
   attachOrganization: (organizationId: number, locationId: number) => apiClient<LocationApiItem>(`/api/organizations/${organizationId}/locations/${locationId}`, { method: 'POST' }),
   detachOrganization: (organizationId: number, locationId: number) => apiClient<void>(`/api/organizations/${organizationId}/locations/${locationId}`, { method: 'DELETE' }),
