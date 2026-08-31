@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ChevronDown, Search } from 'lucide-vue-next'
+import { Check, ChevronDown, Search, Unlink } from 'lucide-vue-next'
 import { locationApi, type LocationApiItem } from '~/api/location'
 import { organizationApi } from '~/api/organization'
 import type { Organization } from '~/types/organization'
@@ -16,11 +16,17 @@ const search = ref('')
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
+const detachOpen = ref(false)
 
 const visibleLocations = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
   return locations.value.filter(location => !term || location.name.toLocaleLowerCase('tr-TR').includes(term))
 })
+
+const getOrganization = (location: LocationApiItem) => {
+  if (location.organization) return location.organization
+  return location.organizations?.[0] ?? null
+}
 
 const organizationLabel = (organization: Organization) => {
   const chain: string[] = []
@@ -48,7 +54,11 @@ const sync = async () => {
     const organization = organizations.value.find(item => item.id === selectedOrganizationId.value)
     locations.value = locations.value.map(location =>
       selectedIds.value.includes(location.id)
-        ? { ...location, organization: organization ? { id: organization.id, name: organization.name } : null }
+        ? {
+            ...location,
+            organization: organization ? { id: organization.id, name: organization.name } : null,
+            organizations: organization ? [{ id: organization.id, name: organization.name }] : [],
+          }
         : location,
     )
     selectedIds.value = []
@@ -59,9 +69,44 @@ const sync = async () => {
   }
 }
 
+const askDetach = () => {
+  if (selectedIds.value.length === 0) return
+  detachOpen.value = true
+}
+
+const detachSelected = async () => {
+  saving.value = true
+  error.value = ''
+  try {
+    const selectedLocations = locations.value.filter(location => selectedIds.value.includes(location.id))
+    const assignments = selectedLocations
+      .map(location => ({ location, organization: getOrganization(location) }))
+      .filter(item => item.organization !== null)
+
+    await Promise.all(
+      assignments.map(item =>
+        locationApi.detachOrganization(item.organization!.id, item.location.id),
+      ),
+    )
+
+    locations.value = locations.value.map(location =>
+      selectedIds.value.includes(location.id)
+        ? { ...location, organization: null, organizations: [] }
+        : location,
+    )
+    selectedIds.value = []
+    detachOpen.value = false
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Lokasyon eşleştirmesi kaldırılamadı.'
+  } finally {
+    saving.value = false
+  }
+}
+
 onMounted(async () => {
   if (!tenantId.value) return
   loading.value = true
+  error.value = ''
   try {
     const [locationResponse, organizationResponse] = await Promise.all([
       locationApi.list(),
@@ -92,9 +137,20 @@ onMounted(async () => {
 
       <div class="mb-5 flex items-center justify-between gap-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">Lokasyonları seçin, ardından bağlanacağı organizasyon düğümünü belirleyin.</p>
-        <button type="button" :disabled="saving || selectedIds.length === 0 || !selectedOrganizationId" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50" @click="sync">
-          <Check :size="16" /> {{ saving ? 'Eşleştiriliyor...' : 'Eşleştir' }}
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            v-if="selectedIds.length > 0"
+            type="button"
+            :disabled="saving"
+            class="inline-flex h-10 items-center gap-2 rounded-lg border border-error-200 bg-white px-4 text-sm font-semibold text-error-600 shadow-theme-xs transition hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-error-500/30 dark:bg-white/[0.03] dark:text-error-400 dark:hover:bg-error-500/10"
+            @click="askDetach"
+          >
+            <Unlink :size="16" /> Eşleştirmeyi Kaldır
+          </button>
+          <button type="button" :disabled="saving || selectedIds.length === 0 || !selectedOrganizationId" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50" @click="sync">
+            <Check :size="16" /> {{ saving ? 'İşleniyor...' : 'Eşleştir' }}
+          </button>
+        </div>
       </div>
 
       <section class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
@@ -125,12 +181,15 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-              <tr v-for="location in visibleLocations" :key="location.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
+              <tr v-if="loading">
+                <td colspan="3" class="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Lokasyonlar yükleniyor...</td>
+              </tr>
+              <tr v-for="location in visibleLocations" v-else :key="location.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                 <td class="px-4 py-3">
                   <input type="checkbox" :checked="selectedIds.includes(location.id)" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @change="toggleLocation(location.id)" />
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">{{ location.name }}</td>
-                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ location.organization?.name || 'Eşleştirilmemiş' }}</td>
+                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ getOrganization(location)?.name || 'Eşleştirilmemiş' }}</td>
               </tr>
               <tr v-if="!loading && visibleLocations.length === 0">
                 <td colspan="3" class="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Lokasyon bulunamadı.</td>
@@ -141,4 +200,13 @@ onMounted(async () => {
       </section>
     </div>
   </div>
+
+  <ConfirmationModal
+    v-model:open="detachOpen"
+    title="Lokasyon Eşleştirmesini Kaldır"
+    :message="`${selectedIds.length} lokasyonun organizasyon eşleştirmesi kaldırılacak. Bu işlemi onaylıyor musunuz?`"
+    confirm-text="Eşleştirmeyi Kaldır"
+    cancel-text="Vazgeç"
+    @confirm="detachSelected"
+  />
 </template>
