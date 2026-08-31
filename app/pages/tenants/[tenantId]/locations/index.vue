@@ -3,6 +3,7 @@ import { ChevronDown, Filter, Plus, Search } from 'lucide-vue-next'
 import { mockKocLocations } from '~/data/mock-koc-locations'
 import LocationCreateDrawer from '~/components/LocationCreateDrawer.vue'
 import OrganizationTabs from '~/components/organization/OrganizationTabs.vue'
+import LocationDataTable from '~/components/locations/LocationDataTable.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -44,7 +45,7 @@ const firstLocations: Location[] = [
   { id: 5, name: 'Çerkezköy Kampüsü', city: 'Tekirdağ', district: 'Kapaklı', address: 'Çerkezköy Organize Sanayi Bölgesi, Karaağaç Mah. 8. Sokak No:1A, Kapaklı / Tekirdağ', businessEntities: [{ id: 8, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko }, { id: 9, companyName: 'Arçelik A.Ş.', brandName: 'Grundig', logoUrl: logos.grundig }], contractorCount: 9, status: 'active', image: 'https://turkishtimedergi.com/wp-content/uploads/2018/10/arcelik.jpg' },
   { id: 6, name: 'Manisa Kampüsü', city: 'Manisa', district: 'Yunusemre', address: 'Manisa Organize Sanayi Bölgesi, Yunusemre / Manisa', businessEntities: [{ id: 10, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik }, { id: 11, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko }], contractorCount: 7, status: 'active', image: 'https://hemelektrik.com.tr/Assets/Images/arcelik-camasir-bulasik-makinesi-fabrikasi-b.jpg' },
   { id: 7, name: 'Bolu Pişirici Cihazlar İşletmesi', city: 'Bolu', district: 'Merkez', address: 'Yukarı Soku Mahallesi, Arçelik Sk. No:1, Merkez / Bolu', businessEntities: [{ id: 12, companyName: 'Arçelik A.Ş.', brandName: 'Arçelik', logoUrl: logos.arcelik }], contractorCount: 5, status: 'active', image: 'https://bthaber.com/SFolder/ckeditor/images/Arcelik_Bolu_Pisirici_Cihazlar_Isletmesi_1.jpg' },
-  { id: 8, name: 'Ankara Bulaşık Makinesi İşletmesi', city: 'Ankara', district: 'Sincan', address: '1. OSB, Altınordu Cad. No:3, Sincan / Ankara', businessEntities: [{ id: 13, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko }], contractorCount: 5, status: 'active', image: 'https://i.gazeteoksijen.com/2/850/478/storage/files/images/2026/05/08/arcelik-in-ankaradaki-fabrikasi-469-saniyede-bir-bulasik-makinesi-uretiliyor-54-ulkeye-ihrac-ediliyor-a5dd.jpg' },
+  { id: 8, name: 'Ankara Bulaşık Makinesi İşletmesi', city: 'Ankara', district: 'Sincan', address: '1. OSB, Altınordu Cad. No:3, Sincan / Ankara', businessEntities: [{ id: 13, companyName: 'Arçelik A.Ş.', brandName: 'Beko', logoUrl: logos.beko }], contractorCount: 5, status: 'active', image: 'https://i.gazeteoksijen.com/2/850/478/storage/files/images/2026/05/08/arcelikin-ankaradaki-fabrikasi-469-saniyede-bir-bulasik-makinesi-uretiliyor-54-ulkeye-ihrac-ediliyor-a5dd.jpg' },
   { id: 9, name: 'Arçelik-LG Klima', city: 'Kocaeli', district: 'Gebze', address: 'Gebze Organize Sanayi Bölgesi / Kocaeli', businessEntities: [{ id: 14, companyName: 'Arçelik-LG Klima San. ve Tic. A.Ş.', brandName: 'Arçelik-LG', logoUrl: logos.arcelikLg }], contractorCount: 3, status: 'active', image: 'https://s3.eu-central-1.amazonaws.com/stajim/media/images/company/photos/origin/r_9157_20240506133829.jpg' },
 ]
 
