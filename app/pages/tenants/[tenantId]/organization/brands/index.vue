@@ -29,16 +29,17 @@ const editOpen = ref(false)
 const editingId = ref<number | null>(null)
 const deleteOpen = ref(false)
 const deletingId = ref<number | null>(null)
-const form = reactive<BrandForm>({ name: '', shortName: '', companyId: null, description: '', isActive: true, logo: null, logoPreview: '' })
+const form = reactive<BrandForm>({ name: '', shortName: '', companyIds: [], description: '', isActive: true, logo: null, logoPreview: '' })
 
-const companyOptions = computed(() => [...new Set(brands.value.map(brand => brand.company).filter(company => company !== '—'))])
+const companyOptions = computed(() => [...new Set(brands.value.flatMap(brand => brand.companies.map(company => company.name)).filter(Boolean))])
 const groupOptions = computed(() => [...new Set(brands.value.map(brand => brand.group).filter(group => group !== '—'))])
-const editCompanies = computed(() => companies.value.map(company => ({ id: company.id, name: company.name, group: company.group })))
+const editCompanies = computed(() => companies.value)
 const filteredBrands = computed(() => {
   const term = search.value.trim().toLocaleLowerCase('tr-TR')
   return brands.value.filter(brand => {
     const matchesSearch = !term || brand.name.toLocaleLowerCase('tr-TR').includes(term) || brand.shortName.toLocaleLowerCase('tr-TR').includes(term)
-    return matchesSearch && (companyFilter.value === 'all' || brand.company === companyFilter.value) && (groupFilter.value === 'all' || brand.group === groupFilter.value) && (statusFilter.value === 'all' || brand.status === statusFilter.value)
+    const matchesCompany = companyFilter.value === 'all' || brand.companies.some(company => company.name === companyFilter.value)
+    return matchesSearch && matchesCompany && (groupFilter.value === 'all' || brand.group === groupFilter.value) && (statusFilter.value === 'all' || brand.status === statusFilter.value)
   })
 })
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredBrands.value.length / perPage.value)))
@@ -60,7 +61,7 @@ const openEdit = async (brand: Brand) => {
   editingId.value = brand.id
   form.name = brand.name
   form.shortName = brand.shortName
-  form.companyId = brand.companyId
+  form.companyIds = [...brand.companyIds]
   form.description = brand.description
   form.isActive = brand.status === 'active'
   form.logo = null
@@ -70,8 +71,8 @@ const openEdit = async (brand: Brand) => {
   editOpen.value = true
 }
 const saveEdit = async (payload: BrandForm) => {
-  if (editingId.value === null || payload.companyId === null) return
-  await brandStore.updateBrand(editingId.value, { name: payload.name.trim(), shortName: payload.shortName.trim(), description: payload.description.trim(), isActive: payload.isActive, companyIds: [payload.companyId], logo: payload.logo })
+  if (editingId.value === null || payload.companyIds.length === 0) return
+  await brandStore.updateBrand(editingId.value, { name: payload.name.trim(), shortName: payload.shortName.trim(), description: payload.description.trim(), isActive: payload.isActive, companyIds: [...payload.companyIds], logo: payload.logo })
   editOpen.value = false
 }
 const askDelete = (id: number) => {
