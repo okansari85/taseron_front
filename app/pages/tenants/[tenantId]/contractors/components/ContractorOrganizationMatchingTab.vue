@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowRight, Building2, Check, Search } from "lucide-vue-next";
 import { organizationApi } from "~/api/organization";
-import { organizationBusinessEntityApi, type ContractorOrganizationMatch } from "~/api/organization-business-entity";
+import { organizationContractorApi, type ContractorOrganizationMatch } from "~/api/organization-contractor";
 
 const props = defineProps<{ tenantId: string }>();
 
@@ -58,7 +58,7 @@ const fetchData = async () => {
   errorMessage.value = "";
   try {
     const [contractorData, organizationData] = await Promise.all([
-      organizationBusinessEntityApi.listContractors(),
+      organizationContractorApi.listContractors(),
       organizationApi.list(),
     ]);
 
@@ -84,7 +84,7 @@ const applyMatching = async () => {
     const selected = contractors.value.filter((contractor) => selectedContractors.value.includes(contractor.id));
     const operations = selected.flatMap((contractor) =>
       selectedOrganizations.value.map((organizationId) =>
-        organizationBusinessEntityApi.attach(organizationId, contractor.id),
+        organizationContractorApi.attach(organizationId, contractor.id),
       ),
     );
 
