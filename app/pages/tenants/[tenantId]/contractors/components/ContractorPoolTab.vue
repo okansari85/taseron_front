@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, Filter, Plus, Search, Users } from "lucide-vue-next";
 import ContractorCreateDrawer from "~/components/ContractorCreateDrawer.vue";
+import { contractorApi, type ContractorApiRecord } from "~/api/contractor";
 import { contractors as mockContractors, type Contractor, type ContractorStatus, type ContractorType } from "~/data/contractors.mock";
 
 defineProps<{ tenantId: string }>();
@@ -9,6 +10,8 @@ const search = ref("");
 const typeFilter = ref("all");
 const statusFilter = ref("all");
 const drawerOpen = ref(false);
+const createLoading = ref(false);
+const createError = ref("");
 const currentPage = ref(1);
 const perPage = ref(10);
 const contractors = ref<Contractor[]>(mockContractors);
@@ -26,17 +29,50 @@ const paginated = computed(() => filtered.value.slice((currentPage.value - 1) * 
 const visiblePages = computed(() => Array.from({ length: Math.min(5, totalPages.value) }, (_, i) => Math.min(Math.max(1, currentPage.value - 2) + i, totalPages.value)).filter((p, i, a) => a.indexOf(p) === i));
 watch([search, typeFilter, statusFilter, perPage], () => (currentPage.value = 1));
 const resetFilters = () => { search.value = ""; typeFilter.value = "all"; statusFilter.value = "all"; };
-const addContractor = (payload: { name: string; shortName: string; type: ContractorType; status: ContractorStatus }) => {
-  contractors.value.unshift({ id: Date.now(), ...payload, initials: payload.shortName.slice(0, 2).toLocaleUpperCase("tr-TR"), avatarClass: "bg-brand-50 text-brand-500" });
-  drawerOpen.value = false;
+
+const mapContractor = (record: ContractorApiRecord, payload: { shortName: string; status: ContractorStatus }): Contractor => {
+  const name = record.business_entity?.name ?? "";
+  const shortName = payload.shortName || name.split(" ").slice(0, 2).join(" ");
+  const initials = shortName.split(" ").map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("tr-TR");
+
+  return {
+    id: record.id,
+    name,
+    shortName,
+    type: record.contractor_type === "permanent" ? "Daimi" : "Geçici",
+    status: payload.status,
+    initials,
+    avatarClass: "bg-brand-50 text-brand-500",
+  };
 };
+
+const addContractor = async (payload: { name: string; shortName: string; type: ContractorType; status: ContractorStatus }) => {
+  createLoading.value = true;
+  createError.value = "";
+
+  try {
+    const created = await contractorApi.create({
+      name: payload.name,
+      contractor_type: payload.type === "Daimi" ? "permanent" : "temporary",
+    });
+
+    contractors.value.unshift(mapContractor(created, payload));
+    drawerOpen.value = false;
+  } catch (error) {
+    createError.value = error instanceof Error ? error.message : "Alt yüklenici oluşturulamadı.";
+  } finally {
+    createLoading.value = false;
+  }
+};
+
 const goToPage = (page: number) => { currentPage.value = Math.min(Math.max(1, page), totalPages.value); };
 </script>
 
 <template>
   <div class="col-span-full block w-full min-w-0" style="display: block !important; width: 100% !important; grid-column: 1 / -1 !important;">
+    <div v-if="createError" class="mb-4 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">{{ createError }}</div>
     <div class="mb-6 flex items-start justify-end">
-      <button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" @click="drawerOpen = true">
+      <button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-60" :disabled="createLoading" @click="drawerOpen = true">
         <Plus :size="16" /> Yeni Alt Yüklenici
       </button>
     </div>
