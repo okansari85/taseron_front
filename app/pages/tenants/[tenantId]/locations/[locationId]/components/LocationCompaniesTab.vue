@@ -5,7 +5,9 @@ import CompanyCreateModal from "./CompanyCreateModal.vue";
 import { companyOptions, groupOptions, type Company, type CompanyOption, type DangerClass, type OperationalArea } from "~/data/location-detail.mock";
 
 type CompanyRow = Company;
-const props=defineProps<{ companies: CompanyRow[]; areas?: OperationalArea[]; locationId?: number }>();
+const props=defineProps<{ companies: CompanyRow[]; areas?: OperationalArea[] }>();
+const route=useRoute();
+const locationId=computed(()=>Number(route.params.locationId));
 const emit=defineEmits<{ created:[company:CompanyRow] }>();
 const showCompanyModal=ref(false); const saving=ref(false); const error=ref("");
 const search=ref(""); const statusFilter=ref<"all"|"active"|"passive">("all"); const currentPage=ref(1); const perPage=ref(10);
@@ -15,7 +17,7 @@ const paginated=computed(()=>filteredCompanies.value.slice((currentPage.value-1)
 const visiblePages=computed(()=>Array.from({length:Math.min(5,totalPages.value)},(_,i)=>Math.min(Math.max(1,currentPage.value-2)+i,totalPages.value)).filter((p,i,a)=>a.indexOf(p)===i));
 const resetFilters=()=>{search.value="";statusFilter.value="all"}; watch([search,statusFilter,perPage],()=>currentPage.value=1);
 const openCreate=()=>{error.value="";showCompanyModal.value=true};
-const addCompany=async(p:{group:string;company:string;companyId?:number;area:string;areaId?:number;nace:string;dangerClass:DangerClass;sgk:string})=>{if(!props.locationId||!p.companyId)return; saving.value=true;error.value="";try{const created=await locationApi.createBusinessEntity(props.locationId,{business_entity_id:p.companyId,operational_region_id:p.areaId||null,nace_code:p.nace,hazard_class:p.dangerClass,sgk_workplace_number:p.sgk});const c=companyOptions.find(x=>x.id===p.companyId||x.name===p.company);if(!c)return;const row={id:created.id,name:c.name,logo:c.logo,operationalArea:p.area,nace:p.nace,dangerClass:p.dangerClass,sgk:p.sgk,status:"active" as const};props.companies.push(row);showCompanyModal.value=false;emit("created",row)}catch(e:any){error.value=e?.data?.message||e?.message||"Firma eklenemedi."}finally{saving.value=false}};
+const addCompany=async(p:{group:string;company:string;companyId?:number;area:string;areaId?:number;nace:string;dangerClass:DangerClass;sgk:string})=>{if(!locationId.value||!p.companyId)return; saving.value=true;error.value="";try{const created=await locationApi.createBusinessEntity(locationId.value,{business_entity_id:p.companyId,operational_region_id:p.areaId||null,nace_code:p.nace,hazard_class:p.dangerClass,sgk_workplace_number:p.sgk});const c=companyOptions.find(x=>x.id===p.companyId||x.name===p.company);if(!c)return;const row={id:created.id,name:c.name,logo:c.logo,operationalArea:p.area,nace:p.nace,dangerClass:p.dangerClass,sgk:p.sgk,status:"active" as const};props.companies.push(row);showCompanyModal.value=false;emit("created",row)}catch(e:any){error.value=e?.data?.message||e?.message||"Firma eklenemedi."}finally{saving.value=false}};
 defineExpose({openCreate});
 </script>
 <template><div>
