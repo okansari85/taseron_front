@@ -27,6 +27,12 @@ export const organizationContractorApi = {
   list: async (organizationId: number) =>
     apiClient(`/api/organizations/${organizationId}/contractors`),
 
+  bulkAttach: async (organizationIds: number[], contractorIds: number[]) =>
+    apiClient<{ message: string; count: number }>('/api/organizations/contractors/bulk', {
+      method: 'POST',
+      body: { organization_ids: organizationIds, contractor_ids: contractorIds },
+    }),
+
   attach: async (organizationId: number, contractorId: number) =>
     apiClient<{ id: number; message?: string }>(`/api/organizations/${organizationId}/contractors/${contractorId}`, {
       method: 'POST',
