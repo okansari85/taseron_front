@@ -34,7 +34,7 @@ const goToPage = (page: number) => { currentPage.value = Math.min(Math.max(1, pa
 </script>
 
 <template>
-  <div>
+  <div class="col-span-full min-w-0 w-full">
     <div class="mb-6 flex items-start justify-end">
       <button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" @click="drawerOpen = true">
         <Plus :size="16" /> Yeni Alt Yüklenici
