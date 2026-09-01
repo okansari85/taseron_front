@@ -114,20 +114,22 @@ defineExpose({ openCreate, load });
 
     <div v-if="error" class="mb-3 rounded-lg bg-error-50 px-3 py-2 text-sm text-error-600">{{ error }}</div>
     <div v-if="loading" class="py-12 text-center text-sm text-gray-500">Yükleniyor...</div>
-    <div v-else>
-      <table class="w-full min-w-[760px] text-left">
-        <thead class="border-b border-gray-100 bg-gray-50/70"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Tip</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500">İşlemler</th></tr></thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr v-for="area in filteredAreas" :key="area.id">
-            <td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ area.name }}</td>
-            <td class="px-4 py-4 text-sm text-gray-500">{{ area.type || "—" }}</td>
-            <td class="px-4 py-4 text-sm" :class="area.is_active ? 'text-success-600' : 'text-gray-500'">{{ area.is_active ? 'Aktif' : 'Pasif' }}</td>
-            <td class="px-4 py-4"><div class="flex justify-end gap-2"><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-50" @click="editArea(area)"><Pencil :size="15" /></button><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-error-600 disabled:opacity-50" @click="deleteArea(area)"><Trash2 :size="15" /></button></div></td>
-          </tr>
-          <tr v-if="!filteredAreas.length"><td colspan="4" class="px-4 py-10 text-center text-sm text-gray-500">Operasyonel alan bulunamadı.</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <section v-else class="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left">
+          <thead class="border-b border-gray-100 bg-gray-50/70"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Tip</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500">İşlemler</th></tr></thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="area in filteredAreas" :key="area.id">
+              <td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ area.name }}</td>
+              <td class="px-4 py-4 text-sm text-gray-500">{{ area.type || "—" }}</td>
+              <td class="px-4 py-4 text-sm" :class="area.is_active ? 'text-success-600' : 'text-gray-500'">{{ area.is_active ? 'Aktif' : 'Pasif' }}</td>
+              <td class="px-4 py-4"><div class="flex justify-end gap-2"><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-50" @click="editArea(area)"><Pencil :size="15" /></button><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-error-600 disabled:opacity-50" @click="deleteArea(area)"><Trash2 :size="15" /></button></div></td>
+            </tr>
+            <tr v-if="!filteredAreas.length"><td colspan="4" class="px-4 py-10 text-center text-sm text-gray-500">Operasyonel alan bulunamadı.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <OperationalAreaCreateModal v-model="showCreate" @save="createArea" />
   </div>
