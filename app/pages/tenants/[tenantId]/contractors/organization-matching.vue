@@ -20,7 +20,7 @@ const contractorTabs = [
         Alt Yüklenici Organizasyon Eşleştirmesi
       </h1>
       <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-        Alt yüklenicileri organizasyon düğümleriyle merkezi olarak eşleştirin.
+        Alt yüklenicileri organizasyonlarla merkezi olarak eşleştirin.
       </p>
     </div>
 
