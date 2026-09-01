@@ -19,7 +19,7 @@
 import { Users, X } from 'lucide-vue-next'
 type ContractorType = 'Daimi' | 'Geçici'; type ContractorStatus = 'active' | 'passive'
 interface ContractorForm { name: string; shortName: string; type: ContractorType; status: ContractorStatus; logo: File | null; logoPreview: string }
-interface ContractorEditData extends ContractorForm { id: number }
+interface ContractorEditData { id: number; name: string; shortName: string; type: ContractorType; status: ContractorStatus; logoPath: string | null }
 const props = withDefaults(defineProps<{ modelValue: boolean; editData?: ContractorEditData | null }>(), { modelValue: false, editData: null })
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save: [payload: ContractorForm & { id?: number }] }>()
 const form = reactive<ContractorForm>({ name: '', shortName: '', type: 'Daimi', status: 'active', logo: null, logoPreview: '' })
@@ -42,10 +42,10 @@ const onLogoChange = (event: Event) => {
 const submit = () => { emit('save', { ...form, ...(props.editData ? { id: props.editData.id } : {}) }); close(); reset() }
 watch(() => props.modelValue, value => {
   if (value && props.editData) {
-    Object.assign(form, props.editData, { logo: null, logoPreview: logoUrl(props.editData.logoPath) })
+    Object.assign(form, { name: props.editData.name, shortName: props.editData.shortName, type: props.editData.type, status: props.editData.status, logo: null, logoPreview: logoUrl(props.editData.logoPath) })
   } else if (!value) reset()
 })
 watch(() => props.editData, value => {
-  if (props.modelValue && value) Object.assign(form, value, { logo: null, logoPreview: logoUrl(value.logoPath) })
+  if (props.modelValue && value) Object.assign(form, { name: value.name, shortName: value.shortName, type: value.type, status: value.status, logo: null, logoPreview: logoUrl(value.logoPath) })
 })
 </script>
