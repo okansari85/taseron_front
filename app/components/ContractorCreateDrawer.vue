@@ -23,6 +23,7 @@ interface ContractorEditData { id: number; name: string; shortName: string; type
 const props = withDefaults(defineProps<{ modelValue: boolean; editData?: ContractorEditData | null }>(), { modelValue: false, editData: null })
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save: [payload: ContractorForm & { id?: number }] }>()
 const form = reactive<ContractorForm>({ name: '', shortName: '', type: 'Daimi', status: 'active', logo: null, logoPreview: '' })
+const logoPreview = computed(() => form.logoPreview)
 const logoPreviewError = ref(false)
 const isEdit = computed(() => props.editData !== null)
 const initials = computed(() => form.shortName.trim().slice(0, 2).toLocaleUpperCase('tr-TR'))
