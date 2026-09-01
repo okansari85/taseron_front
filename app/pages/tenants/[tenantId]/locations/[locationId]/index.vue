@@ -7,6 +7,7 @@ import OperationalAreaCreateModal from "./components/OperationalAreaCreateModal.
 import LocationCompaniesTab from "./components/LocationCompaniesTab.vue";
 import LocationContractorsTab from "./components/LocationContractorsTab.vue";
 import LocationOperationalAreasTab from "./components/LocationOperationalAreasTab.vue";
+import LocationDetailCard from "./components/LocationDetailCard.vue";
 import {
   companies as mockCompanies,
   contractors as mockContractors,
