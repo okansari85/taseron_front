@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import { contractorApi, type ContractorApiRecord } from '~/api/contractor'
+import { contractorApi, type ContractorApiRecord, type ContractorPayload } from '~/api/contractor'
 
 export type Contractor = {
   id: number
   name: string
   shortName: string
+  logoPath: string | null
   type: 'Daimi' | 'Geçici'
   status: 'active' | 'passive'
   initials: string
@@ -13,18 +14,14 @@ export type Contractor = {
 
 const normalizeContractor = (record: ContractorApiRecord): Contractor => {
   const name = record.business_entity?.name ?? ''
-  const shortName = name.split(' ').slice(0, 2).join(' ')
-  const initials = shortName
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .slice(0, 2)
-    .toLocaleUpperCase('tr-TR')
+  const shortName = record.short_name ?? ''
+  const initials = shortName.trim().slice(0, 2).toLocaleUpperCase('tr-TR')
 
   return {
     id: record.id,
     name,
     shortName,
+    logoPath: record.logo_path ?? null,
     type: record.contractor_type === 'permanent' ? 'Daimi' : 'Geçici',
     status: 'active',
     initials,
@@ -55,7 +52,7 @@ export const useContractorStore = defineStore('contractor', () => {
     }
   }
 
-  const createContractor = async (payload: { name: string; contractor_type: 'permanent' | 'temporary' }) => {
+  const createContractor = async (payload: ContractorPayload) => {
     saving.value = true
     error.value = null
 
@@ -72,10 +69,7 @@ export const useContractorStore = defineStore('contractor', () => {
     }
   }
 
-  const updateContractor = async (
-    id: number,
-    payload: { name: string; contractor_type: 'permanent' | 'temporary' },
-  ) => {
+  const updateContractor = async (id: number, payload: ContractorPayload) => {
     saving.value = true
     error.value = null
 
