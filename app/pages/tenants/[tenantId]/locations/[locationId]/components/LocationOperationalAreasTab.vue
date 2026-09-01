@@ -2,135 +2,16 @@
 import { Pencil, Plus, Trash2 } from "lucide-vue-next";
 import { locationApi, type OperationalRegion } from "~/api/location";
 import OperationalAreaCreateModal from "./OperationalAreaCreateModal.vue";
-
 const props = defineProps<{ locationId: number }>();
 const emit = defineEmits<{ loaded: [areas: OperationalRegion[]]; created: [area: OperationalRegion]; updated: [area: OperationalRegion]; deleted: [areaId: number] }>();
-
-const showCreate = ref(false);
-const loading = ref(false);
-const saving = ref(false);
-const error = ref("");
-const search = ref("");
-const statusFilter = ref<"all" | "active" | "passive">("all");
-const areas = ref<OperationalRegion[]>([]);
-
-const filteredAreas = computed(() => {
-  const term = search.value.trim().toLocaleLowerCase("tr-TR");
-  return areas.value.filter((x) =>
-    (!term || `${x.name} ${x.type || ""}`.toLocaleLowerCase("tr-TR").includes(term)) &&
-    (statusFilter.value === "all" || (x.is_active ? "active" : "passive") === statusFilter.value),
-  );
-});
-
-const resetFilters = () => {
-  search.value = "";
-  statusFilter.value = "all";
-};
-
-async function load() {
-  loading.value = true;
-  error.value = "";
-  try {
-    areas.value = await locationApi.operationalRegions(props.locationId);
-    emit("loaded", areas.value);
-  } catch (e: any) {
-    error.value = e?.data?.message || e?.message || "Operasyonel alanlar yüklenemedi.";
-  } finally {
-    loading.value = false;
-  }
-}
-
-function openCreate() {
-  error.value = "";
-  showCreate.value = true;
-}
-
-async function createArea(payload: { name: string; type: string; is_active: boolean }) {
-  saving.value = true;
-  error.value = "";
-  try {
-    const created = await locationApi.createOperationalRegion(props.locationId, payload);
-    areas.value.push(created);
-    showCreate.value = false;
-    emit("created", created);
-  } catch (e: any) {
-    error.value = e?.data?.message || e?.message || "Operasyonel alan eklenemedi.";
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function editArea(area: OperationalRegion) {
-  const name = window.prompt("Operasyonel alan adı", area.name);
-  if (!name?.trim()) return;
-
-  saving.value = true;
-  error.value = "";
-  try {
-    const updated = await locationApi.updateOperationalRegion(props.locationId, area.id, {
-      name: name.trim(),
-      type: area.type || "facility",
-      is_active: area.is_active,
-    });
-    const index = areas.value.findIndex((item) => item.id === area.id);
-    if (index !== -1) areas.value[index] = updated;
-    emit("updated", updated);
-  } catch (e: any) {
-    error.value = e?.data?.message || e?.message || "Operasyonel alan güncellenemedi.";
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function deleteArea(area: OperationalRegion) {
-  if (!window.confirm(`"${area.name}" silinsin mi?`)) return;
-
-  saving.value = true;
-  error.value = "";
-  try {
-    await locationApi.removeOperationalRegion(props.locationId, area.id);
-    areas.value = areas.value.filter((item) => item.id !== area.id);
-    emit("deleted", area.id);
-  } catch (e: any) {
-    error.value = e?.data?.message || e?.message || "Operasyonel alan silinemedi.";
-  } finally {
-    saving.value = false;
-  }
-}
-
-onMounted(load);
-defineExpose({ openCreate, load });
+const showCreate = ref(false); const loading = ref(false); const saving = ref(false); const error = ref(""); const search = ref(""); const statusFilter = ref<"all" | "active" | "passive">("all"); const areas = ref<OperationalRegion[]>([]);
+const filteredAreas = computed(() => { const term = search.value.trim().toLocaleLowerCase("tr-TR"); return areas.value.filter((x) => (!term || `${x.name} ${x.type || ""}`.toLocaleLowerCase("tr-TR").includes(term)) && (statusFilter.value === "all" || (x.is_active ? "active" : "passive") === statusFilter.value)); });
+const resetFilters = () => { search.value = ""; statusFilter.value = "all"; };
+async function load() { loading.value = true; error.value = ""; try { areas.value = await locationApi.operationalRegions(props.locationId); emit("loaded", areas.value); } catch (e: any) { error.value = e?.data?.message || e?.message || "Operasyonel alanlar yüklenemedi."; } finally { loading.value = false; } }
+function openCreate() { error.value = ""; showCreate.value = true; }
+async function createArea(payload: { name: string; type: string; is_active: boolean }) { saving.value = true; error.value = ""; try { const created = await locationApi.createOperationalRegion(props.locationId, payload); areas.value.push(created); showCreate.value = false; emit("created", created); } catch (e: any) { error.value = e?.data?.message || e?.message || "Operasyonel alan eklenemedi."; } finally { saving.value = false; } }
+async function editArea(area: OperationalRegion) { const name = window.prompt("Operasyonel alan adı", area.name); if (!name?.trim()) return; saving.value = true; error.value = ""; try { const updated = await locationApi.updateOperationalRegion(props.locationId, area.id, { name: name.trim(), type: area.type || "facility", is_active: area.is_active }); const index = areas.value.findIndex((item) => item.id === area.id); if (index !== -1) areas.value[index] = updated; emit("updated", updated); } catch (e: any) { error.value = e?.data?.message || e?.message || "Operasyonel alan güncellenemedi."; } finally { saving.value = false; } }
+async function deleteArea(area: OperationalRegion) { if (!window.confirm(`"${area.name}" silinsin mi?`)) return; saving.value = true; error.value = ""; try { await locationApi.removeOperationalRegion(props.locationId, area.id); areas.value = areas.value.filter((item) => item.id !== area.id); emit("deleted", area.id); } catch (e: any) { error.value = e?.data?.message || e?.message || "Operasyonel alan silinemedi."; } finally { saving.value = false; } }
+onMounted(load); defineExpose({ openCreate, load });
 </script>
-
-<template>
-  <div>
-    <section class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs">
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1.2fr)_1fr_auto] md:items-center">
-        <div class="relative"><input v-model="search" type="search" placeholder="Operasyonel alan ara..." class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none" /></div>
-        <div class="relative"><select v-model="statusFilter" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm"><option value="all">Tümü</option><option value="active">Aktif</option><option value="passive">Pasif</option></select></div>
-        <button class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600" @click="resetFilters">Filtreleri Temizle</button>
-      </div>
-    </section>
-
-    <div v-if="error" class="mb-3 rounded-lg bg-error-50 px-3 py-2 text-sm text-error-600">{{ error }}</div>
-    <div v-if="loading" class="py-12 text-center text-sm text-gray-500">Yükleniyor...</div>
-    <section v-else class="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs">
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[760px] text-left">
-          <thead class="border-b border-gray-100 bg-gray-50/70"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Tip</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500">İşlemler</th></tr></thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="area in filteredAreas" :key="area.id">
-              <td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ area.name }}</td>
-              <td class="px-4 py-4 text-sm text-gray-500">{{ area.type || "—" }}</td>
-              <td class="px-4 py-4 text-sm" :class="area.is_active ? 'text-success-600' : 'text-gray-500'">{{ area.is_active ? 'Aktif' : 'Pasif' }}</td>
-              <td class="px-4 py-4"><div class="flex justify-end gap-2"><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-50" @click="editArea(area)"><Pencil :size="15" /></button><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-error-600 disabled:opacity-50" @click="deleteArea(area)"><Trash2 :size="15" /></button></div></td>
-            </tr>
-            <tr v-if="!filteredAreas.length"><td colspan="4" class="px-4 py-10 text-center text-sm text-gray-500">Operasyonel alan bulunamadı.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <OperationalAreaCreateModal v-model="showCreate" @save="createArea" />
-  </div>
-</template>
+<template><div><section class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs"><div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1.2fr)_1fr_auto] md:items-center"><div class="relative"><input v-model="search" type="search" placeholder="Operasyonel alan ara..." class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none" /></div><div class="relative"><select v-model="statusFilter" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm"><option value="all">Tümü</option><option value="active">Aktif</option><option value="passive">Pasif</option></select></div><button class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600" @click="resetFilters">Filtreleri Temizle</button></div></section><div v-if="error" class="mb-3 rounded-lg bg-error-50 px-3 py-2 text-sm text-error-600">{{ error }}</div><div v-if="loading" class="py-12 text-center text-sm text-gray-500">Yükleniyor...</div><section v-else class="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-xs"><div class="overflow-x-auto"><table class="w-full min-w-[760px] text-left"><thead class="border-b border-gray-100 bg-gray-50/70"><tr><th class="px-4 py-4 text-xs font-medium text-gray-500">Operasyonel Alan</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Tip</th><th class="px-4 py-4 text-xs font-medium text-gray-500">Durum</th><th class="px-4 py-4 text-right text-xs font-medium text-gray-500">İşlemler</th></tr></thead><tbody class="divide-y divide-gray-100"><tr v-for="area in filteredAreas" :key="area.id"><td class="px-4 py-4 text-sm font-semibold text-gray-800">{{ area.name }}</td><td class="px-4 py-4 text-sm text-gray-500">{{ area.type || "—" }}</td><td class="px-4 py-4 text-sm" :class="area.is_active ? 'text-success-600' : 'text-gray-500'">{{ area.is_active ? 'Aktif' : 'Pasif' }}</td><td class="px-4 py-4"><div class="flex justify-end gap-2"><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 disabled:opacity-50" @click="editArea(area)"><Pencil :size="15" /></button><button :disabled="saving" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-error-600 disabled:opacity-50" @click="deleteArea(area)"><Trash2 :size="15" /></button></div></td></tr><tr v-if="!filteredAreas.length"><td colspan="4" class="px-4 py-10 text-center text-sm text-gray-500">Operasyonel alan bulunamadı.</td></tr></tbody></table></div></section><OperationalAreaCreateModal v-model="showCreate" :saving="saving" @save="createArea" /></div></template>
