@@ -23,4 +23,13 @@ export const contractorApi = {
       method: 'POST',
       body: payload,
     }),
+
+  update: async (
+    id: number,
+    payload: { name: string; contractor_type: 'permanent' | 'temporary' }
+  ) =>
+    apiClient<ContractorApiRecord>(`/api/contractors/${id}`, {
+      method: 'PUT',
+      body: payload,
+    }),
 }
