@@ -3,7 +3,7 @@ import { Check, X } from 'lucide-vue-next'
 const props=defineProps<{ modelValue:boolean; saving?:boolean }>()
 const emit=defineEmits<{ 'update:modelValue':[value:boolean]; save:[payload:{name:string;type:string;is_active:boolean}] }>()
 const name=ref(''); const type=ref('facility'); const isActive=ref(true)
-const types=[{value:'facility',label:'Tesis / Genel Alan'},{value:'warehouse',label:'Depo / Lojistik'},{value:'business',label:'İşletme / Ticari Alan'},{value:'depot',label:'Dağıtım / Depo'},{value:'office',label:'İdari / Ofis'},{value:'store',label:'Mağaza / Satış Alanı'}]
+const types=[{value:'facility',label:'Tesis'},{value:'warehouse',label:'Depo'},{value:'business',label:'İşletme'},{value:'depot',label:'Dağıtım Merkezi'},{value:'office',label:'Ofis'},{value:'store',label:'Mağaza'}]
 watch(()=>props.modelValue,value=>{if(value){name.value='';type.value='facility';isActive.value=true}})
 const close=()=>{if(!props.saving) emit('update:modelValue',false)}
 const save=()=>{const value=name.value.trim();if(value&&!props.saving)emit('save',{name:value,type:type.value,is_active:isActive.value})}
