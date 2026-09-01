@@ -38,6 +38,7 @@ const saveContractor = async (payload: { id?: number; name: string; shortName: s
       name: payload.name,
       shortName: payload.shortName,
       contractor_type: payload.type === "Daimi" ? "permanent" as const : "temporary" as const,
+      status: payload.status,
       logo: payload.logo,
     };
     if (!payload.id) {
