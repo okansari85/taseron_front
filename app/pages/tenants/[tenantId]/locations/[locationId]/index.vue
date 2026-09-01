@@ -45,8 +45,11 @@ const locationView = computed(() => ({
   district: location.value?.district?.name ?? "",
   address: location.value?.address ?? "",
   image: location.value?.image
-    ? new URL(location.value.image, useRuntimeConfig().public.apiBaseUrl).toString()
-    : "",
+  ? new URL(
+      `/storage${location.value.image.startsWith("/") ? "" : "/"}${location.value.image}`,
+      useRuntimeConfig().public.apiBaseUrl,
+    ).toString()
+  : "",
   status: location.value?.is_active === false ? ("passive" as const) : ("active" as const),
 }));
 const loadLocation = async () => {
