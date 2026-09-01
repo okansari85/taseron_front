@@ -15,6 +15,9 @@ export type ContractorApiRecord = {
 export type ContractorCreateResponse = ContractorApiRecord
 
 export const contractorApi = {
+  list: async () =>
+    apiClient<ContractorApiRecord[]>('/api/contractors'),
+
   create: async (payload: { name: string; contractor_type: 'permanent' | 'temporary' }) =>
     apiClient<ContractorCreateResponse>('/api/contractors', {
       method: 'POST',
