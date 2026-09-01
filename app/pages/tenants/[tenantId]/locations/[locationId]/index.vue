@@ -11,36 +11,28 @@ import {
   Search,
   UserRound,
 } from "lucide-vue-next";
+
 import { locationApi, type LocationApiItem } from "~/api/location";
 import CompanyCreateModal from "./components/CompanyCreateModal.vue";
 import ContractorCreateModal from "./components/ContractorCreateModal.vue";
 import OperationalAreaCreateModal from "./components/OperationalAreaCreateModal.vue";
 
+import {
+  companies as mockCompanies,
+  contractors as mockContractors,
+  areas as mockAreas,
+  groupOptions,
+  companyOptions,
+  permanentContractorOptions,
+  type DangerClass,
+  type Company,
+  type Contractor,
+  type OperationalArea,
+} from "~/data/location-detail.mock";
+
 definePageMeta({ layout: "default" });
 
-type DangerClass = "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli";
-type Company = {
-  id: number;
-  name: string;
-  logo: string;
-  operationalArea: string;
-  nace: string;
-  dangerClass: DangerClass;
-  sgk: string;
-  status: "active" | "passive";
-};
-type Contractor = Company & {
-  activity: string;
-  subActivity: string;
-  contractorType: "Daimi" | "Geçici";
-};
-type OperationalArea = {
-  id: number;
-  name: string;
-  description: string;
-  status: "active" | "passive";
-};
-type CompanyOption = { name: string; logo: string; group: string };
+
 const route = useRoute();
 const locationId = computed(() => Number(route.params.locationId ?? 1));
 const { setScope } = useOrganizationScope();
@@ -80,122 +72,13 @@ const perPage = ref(10);
 const showCompanyModal = ref(false),
   showContractorModal = ref(false),
   showAreaModal = ref(false);
-const companies = ref<Company[]>([
-  {
-    id: 1,
-    name: "Arçelik A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg",
-    operationalArea: "Üretim Alanı",
-    nace: "27.51.01",
-    dangerClass: "Çok Tehlikeli",
-    sgk: "1234567890",
-    status: "active",
-  },
-  {
-    id: 2,
-    name: "Arçelik Pazarlama A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg",
-    operationalArea: "İdari Alan",
-    nace: "46.43.02",
-    dangerClass: "Az Tehlikeli",
-    sgk: "9876543210",
-    status: "active",
-  },
-  {
-    id: 3,
-    name: "Beko Elektronik A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beko_logo.svg",
-    operationalArea: "Üretim Alanı",
-    nace: "27.51.02",
-    dangerClass: "Çok Tehlikeli",
-    sgk: "1122334455",
-    status: "active",
-  },
-]);
-const contractors = ref<Contractor[]>([
-  {
-    id: 1,
-    name: "ISS Tesis Yönetim Hizmetleri A.Ş.",
-    logo: "",
-    operationalArea: "Temizlik Hizmetleri",
-    activity: "Temizlik",
-    subActivity: "Genel Temizlik",
-    nace: "81.21.01",
-    dangerClass: "Az Tehlikeli",
-    sgk: "481210101103597601140113000",
-    status: "active",
-    contractorType: "Daimi",
-  },
-  {
-    id: 2,
-    name: "Tepe Savunma ve Güvenlik Sistemleri A.Ş.",
-    logo: "",
-    operationalArea: "Güvenlik Hizmetleri",
-    activity: "Güvenlik",
-    subActivity: "Özel Güvenlik",
-    nace: "80.10.01",
-    dangerClass: "Az Tehlikeli",
-    sgk: "48001010110479600140166000",
-    status: "active",
-    contractorType: "Daimi",
-  },
-  {
-    id: 3,
-    name: "ABC Teknik Hizmetler Ltd. Şti.",
-    logo: "",
-    operationalArea: "Teknik Bakım",
-    activity: "Teknik Hizmet",
-    subActivity: "Bakım ve Onarım",
-    nace: "33.12.01",
-    dangerClass: "Çok Tehlikeli",
-    sgk: "—",
-    status: "active",
-    contractorType: "Daimi",
-  },
-]);
-const areas = ref<OperationalArea[]>([
-  {
-    id: 1,
-    name: "Üretim Alanı",
-    description: "Ana üretim faaliyetlerinin yürütüldüğü alan.",
-    status: "active",
-  },
-  {
-    id: 2,
-    name: "Bakım Alanı",
-    description: "Bakım ve teknik faaliyetlerin yürütüldüğü alan.",
-    status: "active",
-  },
-  {
-    id: 3,
-    name: "İdari Alan",
-    description: "Ofis ve idari faaliyetlerin yürütüldüğü alan.",
-    status: "active",
-  },
-]);
-const groupOptions = ["Arçelik Grubu", "Arçelik Pazarlama Grubu", "Beko Grubu"];
-const companyOptions: CompanyOption[] = [
-  {
-    name: "Arçelik A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg",
-    group: "Arçelik Grubu",
-  },
-  {
-    name: "Arçelik Pazarlama A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Arcelik_Logo.svg",
-    group: "Arçelik Pazarlama Grubu",
-  },
-  {
-    name: "Beko Elektronik A.Ş.",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beko_logo.svg",
-    group: "Beko Grubu",
-  },
-];
-const permanentContractorOptions = [
-  { name: "ISS Tesis Yönetim Hizmetleri A.Ş.", logo: "" },
-  { name: "Tepe Savunma ve Güvenlik Sistemleri A.Ş.", logo: "" },
-  { name: "ABC Teknik Hizmetler Ltd. Şti.", logo: "" },
-];
+
+
+const companies = ref<Company[]>(mockCompanies);
+const contractors = ref<Contractor[]>(mockContractors);
+const areas = ref<OperationalArea[]>(mockAreas);
+
+
 const filteredCompanies = computed(() => {
   const t = search.value.trim().toLocaleLowerCase("tr-TR");
   return companies.value.filter(
