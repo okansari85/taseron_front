@@ -27,4 +27,8 @@ export const locationApi = {
  createOperationalRegion: async (locationId:number,payload:{name:string;type?:string;is_active?:boolean}) => unwrap<OperationalRegion>(await apiClient<any>(`/api/locations/${locationId}/operational-regions`,{method:'POST',body:payload})),
  updateOperationalRegion: async (locationId:number,regionId:number,payload:{name:string;type?:string;is_active?:boolean}) => unwrap<OperationalRegion>(await apiClient<any>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'PUT',body:payload})),
  removeOperationalRegion: (locationId:number,regionId:number) => apiClient<void>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'DELETE'}),
+ businessEntities: async (locationId:number) => unwrap<LocationBusinessEntity[]>(await apiClient<any>(`/api/locations/${locationId}/business-entities`)),
+ createBusinessEntity: async (locationId:number,payload:Record<string, any>) => unwrap<LocationBusinessEntity>(await apiClient<any>(`/api/locations/${locationId}/business-entities`,{method:'POST',body:payload})),
+ updateBusinessEntity: async (locationId:number,businessEntityId:number,payload:Record<string, any>) => unwrap<LocationBusinessEntity>(await apiClient<any>(`/api/locations/${locationId}/business-entities/${businessEntityId}`,{method:'PUT',body:payload})),
+ removeBusinessEntity: (locationId:number,businessEntityId:number) => apiClient<void>(`/api/locations/${locationId}/business-entities/${businessEntityId}`,{method:'DELETE'}),
 }
