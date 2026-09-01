@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Check, ChevronDown, X } from 'lucide-vue-next'
 
-type CompanyOption = { name: string; logo: string; group: string }
+type CompanyOption = { id?: number; name: string; logo: string; group: string; businessEntityId?: number }
 type OperationalArea = { id: number; name: string }
 
 const props = defineProps<{
@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  save: [payload: { group: string; company: string; area: string; nace: string; dangerClass: string; sgk: string }]
+  save: [payload: { group: string; company: string; companyId?: number; area: string; areaId?: number; nace: string; dangerClass: string; sgk: string }]
 }>()
 
 const selectedGroup = ref('')
@@ -24,6 +24,8 @@ const dangerClass = ref('')
 const sgk = ref('')
 
 const filteredCompanies = computed(() => selectedGroup.value ? props.companies.filter(item => item.group === selectedGroup.value) : [])
+const selectedCompanyOption = computed(() => filteredCompanies.value.find(item => item.name === selectedCompany.value))
+const selectedAreaOption = computed(() => props.areas.find(item => item.name === selectedArea.value))
 
 const reset = () => {
   selectedGroup.value = ''
@@ -40,7 +42,7 @@ watch(selectedGroup, () => { selectedCompany.value = '' })
 const close = () => emit('update:modelValue', false)
 const save = () => {
   if (!selectedGroup.value || !selectedCompany.value || !nace.value || !dangerClass.value || !sgk.value) return
-  emit('save', { group: selectedGroup.value, company: selectedCompany.value, area: selectedArea.value, nace: nace.value, dangerClass: dangerClass.value, sgk: sgk.value })
+  emit('save', { group: selectedGroup.value, company: selectedCompany.value, companyId: selectedCompanyOption.value?.id, area: selectedArea.value, areaId: selectedAreaOption.value?.id, nace: nace.value, dangerClass: dangerClass.value, sgk: sgk.value })
 }
 </script>
 
