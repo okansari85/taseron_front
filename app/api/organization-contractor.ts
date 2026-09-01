@@ -21,25 +21,15 @@ export type ContractorOrganizationMatch = {
 }
 
 export const organizationContractorApi = {
-  listContractors: async () =>
-    apiClient<ContractorOrganizationMatch[]>('/api/organization-contractors'),
-
-  list: async (organizationId: number) =>
-    apiClient(`/api/organizations/${organizationId}/contractors`),
-
+  listContractors: async () => apiClient<ContractorOrganizationMatch[]>('/api/organization-contractors'),
+  list: async (organizationId: number) => apiClient(`/api/organizations/${organizationId}/contractors`),
   bulkAttach: async (organizationIds: number[], contractorIds: number[]) =>
-    apiClient<{ message: string; count: number }>('/api/organizations/contractors/bulk', {
+    apiClient<{ message: string; count: number }>('/api/organization-contractors/bulk', {
       method: 'POST',
       body: { organization_ids: organizationIds, contractor_ids: contractorIds },
     }),
-
   attach: async (organizationId: number, contractorId: number) =>
-    apiClient<{ id: number; message?: string }>(`/api/organizations/${organizationId}/contractors/${contractorId}`, {
-      method: 'POST',
-    }),
-
+    apiClient<{ id: number; message?: string }>(`/api/organizations/${organizationId}/contractors/${contractorId}`, { method: 'POST' }),
   detach: async (organizationId: number, contractorId: number) =>
-    apiClient<{ message: string }>(`/api/organizations/${organizationId}/contractors/${contractorId}`, {
-      method: 'DELETE',
-    }),
+    apiClient<{ message: string }>(`/api/organizations/${organizationId}/contractors/${contractorId}`, { method: 'DELETE' }),
 }
