@@ -32,4 +32,9 @@ export const contractorApi = {
       method: 'PUT',
       body: payload,
     }),
+
+  remove: async (id: number) =>
+    apiClient<void>(`/api/contractors/${id}`, {
+      method: 'DELETE',
+    }),
 }
