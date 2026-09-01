@@ -31,13 +31,19 @@ watch([search, typeFilter, statusFilter, perPage], () => (currentPage.value = 1)
 const resetFilters = () => { search.value = ""; typeFilter.value = "all"; statusFilter.value = "all"; };
 const editContractor = (contractor: Contractor) => { editingContractor.value = contractor; drawerOpen.value = true; };
 
-const saveContractor = async (payload: { id?: number; name: string; shortName: string; type: "Daimi" | "Geçici"; status: "active" | "passive" }) => {
+const saveContractor = async (payload: { id?: number; name: string; shortName: string; type: "Daimi" | "Geçici"; status: "active" | "passive"; logo: File | null; logoPreview: string }) => {
   createError.value = "";
   try {
+    const apiPayload = {
+      name: payload.name,
+      shortName: payload.shortName,
+      contractor_type: payload.type === "Daimi" ? "permanent" as const : "temporary" as const,
+      logo: payload.logo,
+    };
     if (!payload.id) {
-      await contractorStore.createContractor({ name: payload.name, contractor_type: payload.type === "Daimi" ? "permanent" : "temporary" });
+      await contractorStore.createContractor(apiPayload);
     } else {
-      await contractorStore.updateContractor(payload.id, { name: payload.name, contractor_type: payload.type === "Daimi" ? "permanent" : "temporary" });
+      await contractorStore.updateContractor(payload.id, apiPayload);
     }
     editingContractor.value = null;
     drawerOpen.value = false;
