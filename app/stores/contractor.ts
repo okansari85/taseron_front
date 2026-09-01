@@ -23,7 +23,7 @@ const normalizeContractor = (record: ContractorApiRecord): Contractor => {
     shortName,
     logoPath: record.logo_path ?? null,
     type: record.contractor_type === 'permanent' ? 'Daimi' : 'Geçici',
-    status: 'active',
+    status: record.status ?? 'active',
     initials,
     avatarClass: 'bg-brand-50 text-brand-500',
   }
@@ -39,7 +39,6 @@ export const useContractorStore = defineStore('contractor', () => {
   const fetchContractors = async () => {
     loading.value = true
     error.value = null
-
     try {
       const response = await contractorApi.list()
       contractors.value = response.map(normalizeContractor)
@@ -55,7 +54,6 @@ export const useContractorStore = defineStore('contractor', () => {
   const createContractor = async (payload: ContractorPayload) => {
     saving.value = true
     error.value = null
-
     try {
       const response = await contractorApi.create(payload)
       const contractor = normalizeContractor(response)
@@ -72,7 +70,6 @@ export const useContractorStore = defineStore('contractor', () => {
   const updateContractor = async (id: number, payload: ContractorPayload) => {
     saving.value = true
     error.value = null
-
     try {
       const response = await contractorApi.update(id, payload)
       const contractor = normalizeContractor(response)
@@ -90,7 +87,6 @@ export const useContractorStore = defineStore('contractor', () => {
   const deleteContractor = async (id: number) => {
     deleting.value = true
     error.value = null
-
     try {
       await contractorApi.remove(id)
       contractors.value = contractors.value.filter(item => item.id !== id)
@@ -102,15 +98,5 @@ export const useContractorStore = defineStore('contractor', () => {
     }
   }
 
-  return {
-    contractors,
-    loading,
-    saving,
-    deleting,
-    error,
-    fetchContractors,
-    createContractor,
-    updateContractor,
-    deleteContractor,
-  }
+  return { contractors, loading, saving, deleting, error, fetchContractors, createContractor, updateContractor, deleteContractor }
 })
