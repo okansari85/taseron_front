@@ -12,9 +12,8 @@ const contractors = ref<ContractorOrganizationMatch[]>([]);
 const organizations = ref<Array<{ id: number; name: string; type: string; parent_id: number | null }>>([]);
 const loading = ref(false);
 const saving = ref(false);
-const errorMessage = ref("");
-const successMessage = ref("");
 const logoErrors = ref<Record<number, boolean>>({});
+const { $toast } = useNuxtApp();
 
 const filteredContractors = computed(() => {
   const t = contractorSearch.value.trim().toLocaleLowerCase("tr-TR");
@@ -48,36 +47,43 @@ const selectAllOrganizations = () => { selectedOrganizations.value = filteredOrg
 const clearOrganizations = () => { selectedOrganizations.value = []; };
 
 const fetchData = async () => {
-  loading.value = true; errorMessage.value = "";
+  loading.value = true;
   try {
     const [contractorData, organizationData] = await Promise.all([organizationContractorApi.listContractors(), organizationApi.list()]);
     contractors.value = contractorData;
     organizations.value = organizationData.filter((x) => x.type === "holding" || x.type === "group").map((x) => ({ id: x.id, name: x.name, type: x.type, parent_id: x.parent_id }));
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : "Organizasyon eşleştirme verileri alınamadı."; }
-  finally { loading.value = false; }
+  } catch (error) {
+    $toast.error(error instanceof Error ? error.message : "Organizasyon eşleştirme verileri alınamadı.");
+  } finally {
+    loading.value = false;
+  }
 };
 
 const removeMatching = async (organizationId: number, contractorId: number) => {
-  errorMessage.value = ""; successMessage.value = "";
   try {
     await organizationContractorApi.detach(organizationId, contractorId);
     const contractor = contractors.value.find((x) => x.id === contractorId);
     if (contractor) contractor.organizations = contractor.organizations.filter((x) => x.id !== organizationId);
-    successMessage.value = "Eşleştirme kaldırıldı.";
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : "Eşleştirme kaldırılamadı."; }
+    $toast.success("Eşleştirme kaldırıldı.");
+  } catch (error) {
+    $toast.error(error instanceof Error ? error.message : "Eşleştirme kaldırılamadı.");
+  }
 };
 
 const applyMatching = async () => {
   if (!selectedContractors.value.length || !selectedOrganizations.value.length) return;
-  saving.value = true; errorMessage.value = ""; successMessage.value = "";
+  saving.value = true;
   try {
     const result = await organizationContractorApi.bulkAttach(selectedOrganizations.value, selectedContractors.value);
-    successMessage.value = `${result.count} organizasyon eşleştirmesi uygulandı.`;
+    $toast.success(`${result.count} organizasyon eşleştirmesi uygulandı.`);
     selectedContractors.value = [];
     selectedOrganizations.value = [];
     await fetchData();
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : "Organizasyon eşleştirmesi uygulanamadı."; }
-  finally { saving.value = false; }
+  } catch (error) {
+    $toast.error(error instanceof Error ? error.message : "Organizasyon eşleştirmesi uygulanamadı.");
+  } finally {
+    saving.value = false;
+  }
 };
 
 onMounted(fetchData);
@@ -85,8 +91,6 @@ onMounted(fetchData);
 
 <template>
   <section class="rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-    <div v-if="errorMessage" class="border-b border-error-100 bg-error-50 px-5 py-3 text-sm text-error-600">{{ errorMessage }}</div>
-    <div v-if="successMessage" class="border-b border-success-100 bg-success-50 px-5 py-3 text-sm text-success-600">{{ successMessage }}</div>
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.75fr)_minmax(260px,0.65fr)]">
       <div class="border-b border-gray-200 p-5 dark:border-gray-800 lg:border-b-0 lg:border-r">
         <div class="mb-4 flex items-center justify-between gap-3"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white/90">Alt Yükleniciler</h2><p class="mt-1 text-xs text-gray-500">{{ selectedContractors.length }} alt yüklenici seçildi</p></div><div class="flex gap-2"><button type="button" class="text-xs font-medium text-brand-500" :disabled="loading" @click="selectAllContractors">Tümünü seç</button><button type="button" class="text-xs font-medium text-gray-500" @click="clearContractors">Temizle</button></div></div>
