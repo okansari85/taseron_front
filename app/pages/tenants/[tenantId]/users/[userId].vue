@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowLeft, Check, LoaderCircle, ShieldCheck, UserRound, X } from 'lucide-vue'
+import { ArrowLeft, Check, LoaderCircle, ShieldCheck, UserRound, X } from '@lucide/vue'
 import { userAuthorizationApi, type AuthorizedUser, type AuthorizationRole, type AuthorizationScope } from '~/api/user-authorization'
 import { organizationApi } from '~/api/organization'
 import { locationApi } from '~/api/location'
