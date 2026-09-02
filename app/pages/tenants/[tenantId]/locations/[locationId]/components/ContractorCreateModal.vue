@@ -35,7 +35,7 @@ const reset = () => {
 watch(() => props.modelValue, value => { if (value) reset() })
 const close = () => emit('update:modelValue', false)
 const save = () => {
-  const contractor = props.contractors.find(item => String(item.businessEntityId) === selectedContractor.value)
+  const contractor = props.contractors.find(item => String(item.businessEntityId) === String(selectedContractor.value))
   if (!contractor || !contractorDangerClass.value) return
   emit('save', { businessEntityId: contractor.businessEntityId, areaId: contractorArea.value ? Number(contractorArea.value) : null, activity: contractorActivity.value, subActivity: contractorSubActivity.value, nace: contractorNace.value, dangerClass: contractorDangerClass.value, sgk: contractorSgk.value })
 }
