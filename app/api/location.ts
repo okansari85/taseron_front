@@ -8,6 +8,7 @@ export type City = { id: number; name: string }
 export type District = { id: number; city_id: number; name: string }
 export type OperationalRegion = { id:number; tenant_id:number; location_id:number; name:string; type?:string|null; is_active:boolean }
 export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[]; operationalRegions?:OperationalRegion[] }
+export type LocationOrganizationContractor = { id:number; name:string; contractor_type:'permanent'|'temporary'; short_name?:string|null; logo_path?:string|null; status?:'active'|'passive' }
 
 const unwrap = <T>(response: any): T => response?.data ?? response
 
@@ -28,6 +29,7 @@ export const locationApi = {
  updateOperationalRegion: async (locationId:number,regionId:number,payload:{name:string;type?:string;is_active?:boolean}) => unwrap<OperationalRegion>(await apiClient<any>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'PUT',body:payload})),
  removeOperationalRegion: (locationId:number,regionId:number) => apiClient<void>(`/api/locations/${locationId}/operational-regions/${regionId}`,{method:'DELETE'}),
  businessEntities: async (locationId:number) => unwrap<LocationBusinessEntity[]>(await apiClient<any>(`/api/locations/${locationId}/business-entities`)),
+ organizationContractors: async (locationId:number) => unwrap<LocationOrganizationContractor[]>(await apiClient<any>(`/api/locations/${locationId}/organization-contractors`)),
  createBusinessEntity: async (locationId:number,payload:Record<string, any>) => unwrap<LocationBusinessEntity>(await apiClient<any>(`/api/locations/${locationId}/business-entities`,{method:'POST',body:payload})),
  updateBusinessEntity: async (locationId:number,businessEntityId:number,payload:Record<string, any>) => unwrap<LocationBusinessEntity>(await apiClient<any>(`/api/locations/${locationId}/business-entities/${businessEntityId}`,{method:'PUT',body:payload})),
  removeBusinessEntity: (locationId:number,businessEntityId:number) => apiClient<void>(`/api/locations/${locationId}/business-entities/${businessEntityId}`,{method:'DELETE'}),
