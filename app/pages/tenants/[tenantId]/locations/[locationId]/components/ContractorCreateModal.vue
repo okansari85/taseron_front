@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Check, ChevronDown, X } from 'lucide-vue-next'
 
-type ContractorOption = { name: string; logo: string }
+type ContractorOption = { businessEntityId: number; name: string; logo: string }
 type OperationalArea = { id: number; name: string }
 
 const props = defineProps<{
@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  save: [payload: { contractor: string; area: string; activity: string; subActivity: string; nace: string; dangerClass: string; sgk: string }]
+  save: [payload: { businessEntityId: number; areaId: number|null; activity: string; subActivity: string; nace: string; dangerClass: string; sgk: string }]
 }>()
 
 const selectedContractor = ref('')
@@ -35,8 +35,9 @@ const reset = () => {
 watch(() => props.modelValue, value => { if (value) reset() })
 const close = () => emit('update:modelValue', false)
 const save = () => {
-  if (!selectedContractor.value || !contractorActivity.value || !contractorSubActivity.value || !contractorNace.value || !contractorDangerClass.value || !contractorSgk.value) return
-  emit('save', { contractor: selectedContractor.value, area: contractorArea.value, activity: contractorActivity.value, subActivity: contractorSubActivity.value, nace: contractorNace.value, dangerClass: contractorDangerClass.value, sgk: contractorSgk.value })
+  const contractor = props.contractors.find(item => String(item.businessEntityId) === selectedContractor.value)
+  if (!contractor || !contractorActivity.value || !contractorSubActivity.value || !contractorNace.value || !contractorDangerClass.value || !contractorSgk.value) return
+  emit('save', { businessEntityId: contractor.businessEntityId, areaId: contractorArea.value ? Number(contractorArea.value) : null, activity: contractorActivity.value, subActivity: contractorSubActivity.value, nace: contractorNace.value, dangerClass: contractorDangerClass.value, sgk: contractorSgk.value })
 }
 </script>
 
@@ -45,8 +46,8 @@ const save = () => {
     <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
       <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800"><div><h2 class="text-base font-semibold text-gray-900 dark:text-white/90">Alt Yüklenici Ekle</h2><p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Daimi taşeron firmayı bu lokasyon ile ilişkilendirin.</p></div><button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5" @click="close"><X :size="18" /></button></div>
       <div class="grid gap-4 p-5 sm:grid-cols-2">
-        <label class="sm:col-span-2"><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Daimi Taşeron Firma</span><div class="relative"><select v-model="selectedContractor" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90"><option value="">Firma seçiniz</option><option v-for="item in contractors" :key="item.name" :value="item.name">{{ item.name }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div></label>
-        <label class="sm:col-span-2"><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Operasyonel Alan <span class="font-normal text-gray-400">(opsiyonel)</span></span><div class="relative"><select v-model="contractorArea" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90"><option value="">Operasyonel alan seçiniz</option><option value="Tüm Tesis">Tüm Tesis</option><option v-for="item in areas" :key="item.id" :value="item.name">{{ item.name }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div></label>
+        <label class="sm:col-span-2"><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Daimi Taşeron Firma</span><div class="relative"><select v-model="selectedContractor" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90"><option value="">Firma seçiniz</option><option v-for="item in contractors" :key="item.businessEntityId" :value="item.businessEntityId">{{ item.name }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div></label>
+        <label class="sm:col-span-2"><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Operasyonel Alan <span class="font-normal text-gray-400">(opsiyonel)</span></span><div class="relative"><select v-model="contractorArea" class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90"><option value="">Operasyonel alan seçiniz</option><option value="">Tüm Tesis</option><option v-for="item in areas" :key="item.id" :value="item.id">{{ item.name }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /></div></label>
         <label><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Faaliyet</span><input v-model="contractorActivity" type="text" placeholder="Faaliyet" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90" /></label>
         <label><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Alt Faaliyet</span><input v-model="contractorSubActivity" type="text" placeholder="Alt faaliyet" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90" /></label>
         <label><span class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">SGK Sicil No</span><input v-model="contractorSgk" type="text" placeholder="SGK sicil numarası" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-white/90" /></label>
