@@ -34,6 +34,7 @@ export type AuthorizedUser = {
   email: string
   roles?: AuthorizationRole[]
   permissions?: AuthorizationPermission[]
+  forbidden_permissions?: AuthorizationPermission[]
   scopes?: AuthorizationScope[]
   status?: string | number | boolean
 }
@@ -49,6 +50,11 @@ export const userAuthorizationApi = {
   })),
 
   syncPermissions: async (userId: number, permissions: string[]) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/permissions`, {
+    method: 'PUT',
+    body: { permissions },
+  })),
+
+  syncForbiddenPermissions: async (userId: number, permissions: string[]) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/forbidden-permissions`, {
     method: 'PUT',
     body: { permissions },
   })),
