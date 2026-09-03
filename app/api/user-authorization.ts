@@ -15,12 +15,14 @@ export type AuthorizationScope = { id: number; scope_type: 'tenant' | 'organizat
 export type AuthorizedUser = {
   id: number; name: string; email: string; roles?: AuthorizationRole[]; permissions?: AuthorizationPermission[]; forbidden_permissions?: AuthorizationPermission[]; scopes?: AuthorizationScope[]; status?: string | number | boolean
 }
+export type ImpersonationResponse = { message: string; token: string; user: { id: number; name: string; email: string; roles: string[] } }
 
 export const userAuthorizationApi = {
   listUsers: async () => unwrap<AuthorizedUser[]>(await apiClient<ApiResponse<AuthorizedUser[]>>('/api/users/authorization')),
   getUser: async (userId: number) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/authorization`)),
   createUser: async (payload: { name: string; email: string; password: string; role?: string }) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>('/api/users', { method: 'POST', body: payload })),
   deleteUser: async (userId: number) => apiClient<void>(`/api/users/${userId}`, { method: 'DELETE' }),
+  impersonate: async (userId: number) => apiClient<ImpersonationResponse>(`/api/users/${userId}/impersonate`, { method: 'POST' }),
   assignRole: async (userId: number, role: string) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/role`, { method: 'POST', body: { role } })),
   syncPermissions: async (userId: number, permissions: string[]) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/permissions`, { method: 'PUT', body: { permissions } })),
   syncForbiddenPermissions: async (userId: number, permissions: string[]) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/forbidden-permissions`, { method: 'PUT', body: { permissions } })),
