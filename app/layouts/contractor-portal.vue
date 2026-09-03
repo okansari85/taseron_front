@@ -8,6 +8,7 @@
       ]
     >
       <TailAdminHeader />
+      <ImpersonationBanner />
       <main class="mx-auto w-full max-w-[2000px] p-4 md:p-6">
         <slot />
       </main>
