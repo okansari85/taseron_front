@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Search, ShieldCheck, UserRound, MoreHorizontal, LockKeyhole, LoaderCircle, Check } from '@lucide/vue'
+import { Search, ShieldCheck, UserRound, MoreHorizontal, LockKeyhole, LoaderCircle, Check, Trash2 } from '@lucide/vue'
 import { userAuthorizationApi, type AuthorizedUser, type AuthorizationPermission, type AuthorizationRole } from '~/api/user-authorization'
 import UserCreateButton from './UserCreateButton.vue'
 
@@ -23,6 +23,7 @@ const loading = ref(true)
 const loadingUser = ref(false)
 const savingRole = ref(false)
 const savingPermissions = ref(false)
+const deletingUser = ref(false)
 const { $toast } = useNuxtApp()
 const router = useRouter()
 const route = useRoute()
@@ -110,7 +111,7 @@ const saveRolePermissions = async () => {
   }
 }
 const openUserAuthorization = async (user: User) => {
-  if (loadingUser.value || savingRole.value) return
+  if (loadingUser.value || savingRole.value || deletingUser.value) return
   selectedUser.value = user
   userRole.value = user.roles?.[0]?.name ?? ''
   userPermissions.value = user.permissions?.map(permission => permission.name) ?? []
@@ -129,7 +130,7 @@ const openUserAuthorization = async (user: User) => {
   }
 }
 const saveUserAuthorization = async () => {
-  if (!selectedUser.value || savingRole.value || loadingUser.value) return
+  if (!selectedUser.value || savingRole.value || loadingUser.value || deletingUser.value) return
   savingRole.value = true
   try {
     if (userRole.value) await userAuthorizationApi.assignRole(selectedUser.value.id, userRole.value)
@@ -145,8 +146,26 @@ const saveUserAuthorization = async () => {
     savingRole.value = false
   }
 }
+const deleteSelectedUser = async () => {
+  if (!selectedUser.value || deletingUser.value || loadingUser.value || selectedUser.value.roles?.some(role => role.name === 'super-admin')) return
+  if (!window.confirm(`${selectedUser.value.name} kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return
+
+  deletingUser.value = true
+  try {
+    await userAuthorizationApi.deleteUser(selectedUser.value.id)
+    users.value = users.value.filter(user => user.id !== selectedUser.value?.id)
+    $toast.success('Kullanıcı silindi.')
+    showUserForm.value = false
+    selectedUser.value = null
+  } catch (error) {
+    console.error(error)
+    $toast.error('Kullanıcı silinemedi.')
+  } finally {
+    deletingUser.value = false
+  }
+}
 const closeUserAuthorization = () => {
-  if (!savingRole.value) {
+  if (!savingRole.value && !deletingUser.value) {
     showUserForm.value = false
     selectedUser.value = null
   }
@@ -158,39 +177,39 @@ onMounted(loadAuthorization)
   <section class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl font-semibold text-gray-900">Kullanıcılar</h1>
-        <p class="mt-1 text-sm text-gray-500">Kullanıcı, rol ve erişim yetkilerini yönetin.</p>
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Kullanıcılar</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Kullanıcı, rol ve erişim yetkilerini yönetin.</p>
       </div>
       <UserCreateButton />
     </div>
 
-    <div class="flex gap-1 rounded-xl border border-gray-200 bg-white p-1">
-      <button v-for="tab in [{ key: 'users', label: 'Kullanıcılar', icon: UserRound }, { key: 'roles', label: 'Roller', icon: ShieldCheck }, { key: 'permissions', label: 'Permissions', icon: LockKeyhole }]" :key="tab.key" type="button" @click="activeView = tab.key as any" class="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium" :class="activeView === tab.key ? 'bg-brand-50 text-brand-600' : 'text-gray-500 hover:bg-gray-50'">
+    <div class="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+      <button v-for="tab in [{ key: 'users', label: 'Kullanıcılar', icon: UserRound }, { key: 'roles', label: 'Roller', icon: ShieldCheck }, { key: 'permissions', label: 'Permissions', icon: LockKeyhole }]" :key="tab.key" type="button" @click="activeView = tab.key as any" class="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium" :class="activeView === tab.key ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'">
         <component :is="tab.icon" :size="15" />{{ tab.label }}
       </button>
     </div>
 
-    <div v-if="loading" class="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white"><LoaderCircle :size="28" class="animate-spin text-brand-500" /></div>
+    <div v-if="loading" class="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><LoaderCircle :size="28" class="animate-spin text-brand-500" /></div>
 
     <template v-else-if="activeView === 'users'">
       <div class="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3">
-        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4"><p class="text-xs text-gray-500">Toplam Kullanıcı</p><p class="mt-1 text-2xl font-semibold text-gray-900">{{ users.length }}</p></div>
-        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4"><p class="text-xs text-gray-500">Aktif</p><p class="mt-1 text-2xl font-semibold text-success-600">{{ users.filter(user => user.status === 'Aktif').length }}</p></div>
-        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4"><p class="text-xs text-gray-500">Rol Sayısı</p><p class="mt-1 text-2xl font-semibold text-brand-600">{{ roles.length }}</p></div>
+        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"><p class="text-xs text-gray-500 dark:text-gray-400">Toplam Kullanıcı</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ users.length }}</p></div>
+        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"><p class="text-xs text-gray-500 dark:text-gray-400">Aktif</p><p class="mt-1 text-2xl font-semibold text-success-600">{{ users.filter(user => user.status === 'Aktif').length }}</p></div>
+        <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"><p class="text-xs text-gray-500 dark:text-gray-400">Rol Sayısı</p><p class="mt-1 text-2xl font-semibold text-brand-600">{{ roles.length }}</p></div>
       </div>
 
-      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <div class="border-b border-gray-100 p-4"><div class="relative max-w-md"><Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-xs outline-none" placeholder="Kullanıcı ara..." /></div></div>
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div class="border-b border-gray-100 p-4 dark:border-gray-800"><div class="relative max-w-md"><Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="Kullanıcı ara..." /></div></div>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[800px] text-left">
-            <thead class="bg-gray-50/70 text-xs text-gray-500"><tr><th class="px-5 py-3">Kullanıcı</th><th class="px-4 py-3">Rol</th><th class="px-4 py-3">Erişim Alanı</th><th class="px-4 py-3">Durum</th><th class="w-12"></th></tr></thead>
+            <thead class="bg-gray-50/70 text-xs text-gray-500 dark:bg-gray-800/50 dark:text-gray-400"><tr><th class="px-5 py-3">Kullanıcı</th><th class="px-4 py-3">Rol</th><th class="px-4 py-3">Erişim Alanı</th><th class="px-4 py-3">Durum</th><th class="w-12"></th></tr></thead>
             <tbody>
-              <tr v-for="user in filteredUsers" :key="user.id" class="cursor-pointer border-t border-gray-100 hover:bg-gray-50" @click="openUserDetail(user)">
-                <td class="px-5 py-4"><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600">{{ user.initials }}</span><div><p class="text-sm font-medium text-gray-800">{{ user.name }}</p><p class="text-[11px] text-gray-400">{{ user.email }}</p></div></div></td>
-                <td class="px-4 py-4"><span class="rounded-md bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-600">{{ roleLabel(user) }}</span></td>
-                <td class="px-4 py-4 text-xs text-gray-600">{{ user.scope }}</td>
-                <td class="px-4 py-4"><span class="rounded-full px-2.5 py-1 text-[11px] font-medium" :class="user.status === 'Aktif' ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-500'">{{ user.status }}</span></td>
-                <td class="px-4"><button type="button" class="text-gray-400 hover:text-gray-700" @click.stop="openUserAuthorization(user)"><MoreHorizontal :size="17" /></button></td>
+              <tr v-for="user in filteredUsers" :key="user.id" class="cursor-pointer border-t border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60" @click="openUserDetail(user)">
+                <td class="px-5 py-4"><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">{{ user.initials }}</span><div><p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ user.name }}</p><p class="text-[11px] text-gray-400">{{ user.email }}</p></div></div></td>
+                <td class="px-4 py-4"><span class="rounded-md bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ roleLabel(user) }}</span></td>
+                <td class="px-4 py-4 text-xs text-gray-600 dark:text-gray-300">{{ user.scope }}</td>
+                <td class="px-4 py-4"><span class="rounded-full px-2.5 py-1 text-[11px] font-medium" :class="user.status === 'Aktif' ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'">{{ user.status }}</span></td>
+                <td class="px-4"><button type="button" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" @click.stop="openUserAuthorization(user)"><MoreHorizontal :size="17" /></button></td>
               </tr>
             </tbody>
           </table>
@@ -200,9 +219,9 @@ onMounted(loadAuthorization)
 
     <template v-else-if="activeView === 'roles'">
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div v-for="role in roles" :key="role.id" class="rounded-xl border border-gray-200 bg-white p-5">
-          <div class="flex items-start justify-between"><div><div class="flex items-center gap-2"><ShieldCheck :size="17" class="text-brand-600" /><h3 class="text-sm font-semibold text-gray-900">{{ role.name }}</h3></div><p class="mt-2 text-xs leading-5 text-gray-500">{{ role.permissions?.length ?? 0 }} yetki tanımlı.</p></div><span class="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-medium text-gray-500">{{ role.guard_name ?? 'web' }}</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span v-for="permission in role.permissions" :key="permission.id" class="rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-[10px] text-gray-600">{{ permission.name }}</span></div>
+        <div v-for="role in roles" :key="role.id" class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <div class="flex items-start justify-between"><div><div class="flex items-center gap-2"><ShieldCheck :size="17" class="text-brand-600" /><h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ role.name }}</h3></div><p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ role.permissions?.length ?? 0 }} yetki tanımlı.</p></div><span class="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ role.guard_name ?? 'web' }}</span></div>
+          <div class="mt-4 flex flex-wrap gap-1.5"><span v-for="permission in role.permissions" :key="permission.id" class="rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-[10px] text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-300">{{ permission.name }}</span></div>
           <button type="button" class="mt-4 text-xs font-medium text-brand-600 hover:underline" @click="selectRole(role.name); activeView = 'permissions'">Yetkileri düzenle →</button>
         </div>
       </div>
@@ -210,23 +229,26 @@ onMounted(loadAuthorization)
 
     <template v-else>
       <div class="grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
-        <div class="rounded-xl border border-gray-200 bg-white p-3"><p class="px-2 py-2 text-xs font-semibold text-gray-700">Roller</p><button v-for="role in roles" :key="role.id" type="button" class="mb-1 w-full rounded-lg px-3 py-2.5 text-left" :class="selectedRole === role.name ? 'bg-brand-50' : 'hover:bg-gray-50'" @click="selectRole(role.name)"><p class="text-xs font-medium" :class="selectedRole === role.name ? 'text-brand-600' : 'text-gray-700'">{{ role.name }}</p><p class="mt-0.5 text-[10px] text-gray-400">{{ role.permissions?.length ?? 0 }} yetki</p></button></div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5">
-          <div class="mb-5 flex items-center justify-between"><div><h2 class="text-sm font-semibold text-gray-900">{{ selectedRoleData?.name }} · Permissions</h2><p class="mt-1 text-xs text-gray-500">Bu rolün sahip olduğu yetkileri belirleyin.</p></div><span class="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-600">{{ selectedPermissions.length }} yetki</span></div>
-          <div class="space-y-4"><div v-for="group in permissionGroups" :key="group.name"><h3 class="mb-2 text-xs font-semibold text-gray-700">{{ group.name }}</h3><div class="divide-y divide-gray-100 rounded-lg border border-gray-100"><label v-for="item in group.items" :key="item[0]" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50"><span><span class="block text-xs font-medium text-gray-700">{{ item[1] }}</span><span class="text-[10px] text-gray-400">{{ item[0] }}</span></span><input type="checkbox" :checked="selectedPermissions.includes(item[0])" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="togglePermission(item[0])" /></label></div></div></div>
+        <div class="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"><p class="px-2 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Roller</p><button v-for="role in roles" :key="role.id" type="button" class="mb-1 w-full rounded-lg px-3 py-2.5 text-left" :class="selectedRole === role.name ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800'" @click="selectRole(role.name)"><p class="text-xs font-medium" :class="selectedRole === role.name ? 'text-brand-600 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">{{ role.name }}</p><p class="mt-0.5 text-[10px] text-gray-400">{{ role.permissions?.length ?? 0 }} yetki</p></button></div>
+        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <div class="mb-5 flex items-center justify-between"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedRoleData?.name }} · Permissions</h2><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Bu rolün sahip olduğu yetkileri belirleyin.</p></div><span class="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">{{ selectedPermissions.length }} yetki</span></div>
+          <div class="space-y-4"><div v-for="group in permissionGroups" :key="group.name"><h3 class="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ group.name }}</h3><div class="divide-y divide-gray-100 rounded-lg border border-gray-100 dark:divide-gray-800 dark:border-gray-800"><label v-for="item in group.items" :key="item[0]" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"><span><span class="block text-xs font-medium text-gray-700 dark:text-gray-200">{{ item[1] }}</span><span class="text-[10px] text-gray-400">{{ item[0] }}</span></span><input type="checkbox" :checked="selectedPermissions.includes(item[0])" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="togglePermission(item[0])" /></label></div></div></div>
           <div class="mt-5 flex justify-end"><button type="button" :disabled="savingPermissions || !selectedRole" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60" @click="saveRolePermissions"><LoaderCircle v-if="savingPermissions" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingPermissions ? 'Kaydediliyor...' : 'Yetkileri Kaydet' }}</button></div>
         </div>
       </div>
     </template>
 
     <div v-if="showUserForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="closeUserAuthorization">
-      <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <div class="flex items-start justify-between gap-3"><div><h2 class="text-base font-semibold text-gray-900">Kullanıcı Yetkileri</h2><p class="mt-1 text-xs text-gray-500">{{ selectedUser?.name }}</p></div><button type="button" class="text-gray-400 hover:text-gray-700" @click="closeUserAuthorization">×</button></div>
+      <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+        <div class="flex items-start justify-between gap-3"><div><h2 class="text-base font-semibold text-gray-900 dark:text-white">Kullanıcı Yetkileri</h2><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ selectedUser?.name }}</p></div><button type="button" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" @click="closeUserAuthorization">×</button></div>
         <div v-if="loadingUser" class="flex min-h-[240px] items-center justify-center"><LoaderCircle :size="24" class="animate-spin text-brand-500" /></div>
         <template v-else>
-          <div class="mt-5"><label class="mb-2 block text-xs font-medium text-gray-700">Rol</label><select v-model="userRole" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs outline-none"><option value="">Rol seçin</option><option v-for="role in roles.filter(role => role.name !== 'super-admin')" :key="role.id" :value="role.name">{{ role.name }}</option></select></div>
-          <div class="mt-5 max-h-[280px] space-y-3 overflow-y-auto"><div v-for="group in permissionGroups" :key="group.name"><h3 class="mb-2 text-xs font-semibold text-gray-700">{{ group.name }}</h3><div class="divide-y divide-gray-100 rounded-lg border border-gray-100"><label v-for="item in group.items" :key="item[0]" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50"><span class="text-xs text-gray-700">{{ item[1] }}</span><input type="checkbox" :checked="userPermissions.includes(item[0])" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="userPermissions = userPermissions.includes(item[0]) ? userPermissions.filter(permission => permission !== item[0]) : [...userPermissions, item[0]]" /></label></div></div></div>
-          <div class="mt-5 flex justify-end gap-2"><button type="button" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50" @click="closeUserAuthorization">Vazgeç</button><button type="button" :disabled="savingRole" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60" @click="saveUserAuthorization"><LoaderCircle v-if="savingRole" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingRole ? 'Kaydediliyor...' : 'Kaydet' }}</button></div>
+          <div class="mt-5"><label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Rol</label><select v-model="userRole" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"><option value="">Rol seçin</option><option v-for="role in roles.filter(role => role.name !== 'super-admin')" :key="role.id" :value="role.name">{{ role.name }}</option></select></div>
+          <div class="mt-5 max-h-[280px] space-y-3 overflow-y-auto"><div v-for="group in permissionGroups" :key="group.name"><h3 class="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ group.name }}</h3><div class="divide-y divide-gray-100 rounded-lg border border-gray-100 dark:divide-gray-800 dark:border-gray-800"><label v-for="item in group.items" :key="item[0]" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"><span class="text-xs text-gray-700 dark:text-gray-200">{{ item[1] }}</span><input type="checkbox" :checked="userPermissions.includes(item[0])" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="userPermissions = userPermissions.includes(item[0]) ? userPermissions.filter(permission => permission !== item[0]) : [...userPermissions, item[0]]" /></label></div></div></div>
+          <div class="mt-5 flex items-center justify-between gap-2">
+            <button v-if="!selectedUser?.roles?.some(role => role.name === 'super-admin')" type="button" :disabled="savingRole || deletingUser" class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:bg-gray-900 dark:text-red-400 dark:hover:bg-red-950/30" @click="deleteSelectedUser"><LoaderCircle v-if="deletingUser" :size="14" class="animate-spin" /><Trash2 v-else :size="14" />{{ deletingUser ? 'Siliniyor...' : 'Kullanıcıyı Sil' }}</button>
+            <div class="ml-auto flex gap-2"><button type="button" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" @click="closeUserAuthorization">Vazgeç</button><button type="button" :disabled="savingRole || deletingUser" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60" @click="saveUserAuthorization"><LoaderCircle v-if="savingRole" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingRole ? 'Kaydediliyor...' : 'Kaydet' }}</button></div>
+          </div>
         </template>
       </div>
     </div>
