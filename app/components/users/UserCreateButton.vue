@@ -94,35 +94,35 @@ onMounted(loadRoles)
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       @click.self="close"
     >
-      <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-base font-semibold text-gray-900">Yeni Kullanıcı Ekle</h2>
-            <p class="mt-1 text-xs text-gray-500">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Yeni Kullanıcı Ekle</h2>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Kullanıcıyı oluşturduktan sonra detay sayfasından scope ve yetkilerini belirleyebilirsiniz.
             </p>
           </div>
-          <button type="button" class="text-gray-400 hover:text-gray-700" @click="close">
+          <button type="button" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" @click="close">
             <X :size="17" />
           </button>
         </div>
 
         <div class="mt-5 space-y-4">
           <div>
-            <label class="mb-2 block text-xs font-medium text-gray-700">Ad Soyad</label>
-            <input v-model="name" type="text" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="Ad Soyad" />
+            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Ad Soyad</label>
+            <input v-model="name" type="text" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="Ad Soyad" />
           </div>
           <div>
-            <label class="mb-2 block text-xs font-medium text-gray-700">E-posta</label>
-            <input v-model="email" type="email" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="ornek@firma.com" />
+            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">E-posta</label>
+            <input v-model="email" type="email" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="ornek@firma.com" />
           </div>
           <div>
-            <label class="mb-2 block text-xs font-medium text-gray-700">Geçici Şifre</label>
-            <input v-model="password" type="password" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="En az 8 karakter" />
+            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Geçici Şifre</label>
+            <input v-model="password" type="password" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="En az 8 karakter" />
           </div>
           <div>
-            <label class="mb-2 block text-xs font-medium text-gray-700">Rol</label>
-            <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs outline-none">
+            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Rol</label>
+            <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white">
               <option value="">Rol seçin</option>
               <option v-for="item in availableRoles()" :key="item.id" :value="item.name">
                 {{ item.name }}
@@ -133,7 +133,7 @@ onMounted(loadRoles)
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
-          <button type="button" class="rounded-lg border border-gray-200 px-4 py-2 text-xs text-gray-600" @click="close">
+          <button type="button" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" @click="close">
             Vazgeç
           </button>
           <button
