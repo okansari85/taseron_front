@@ -1,5 +1,6 @@
 import { apiClient } from '~/api/client'
 import { userAuthorizationApi, type ImpersonationResponse } from '~/api/user-authorization'
+import type { AuthUser } from './useAuth'
 
 const normalizeRole = (role: string) => role.trim().toLocaleLowerCase('tr-TR').replace(/[_\s-]/g, '')
 
@@ -53,7 +54,7 @@ export const useUserImpersonation = () => {
       originalToken.value = null
       returnPath.value = null
       auth.token.value = savedToken
-      const user = await apiClient<ReturnType<typeof useAuth>['user']['value']>('/api/user')
+      const user = await apiClient<AuthUser>('/api/user')
       auth.user.value = user
       auth.initialized.value = true
       return savedPath
