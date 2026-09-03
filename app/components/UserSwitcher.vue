@@ -9,7 +9,8 @@ const route = useRoute()
 const { users, loading, activeUser, loadUsers, setPreviewUser, clearPreviewUser, activeWorkspace } = useUserPreview()
 const open = ref(false)
 
-const isSuperAdmin = computed(() => (auth.user.value?.roles ?? []).some(role => role.trim().toLocaleLowerCase('tr-TR').replace(/_/g, '-') === 'super-admin'))
+const normalizeRole = (role: string) => role.trim().toLocaleLowerCase('tr-TR').replace(/[_\s-]/g, '')
+const isSuperAdmin = computed(() => (auth.user.value?.roles ?? []).some(role => normalizeRole(role) === 'superadmin'))
 const displayUser = computed(() => activeUser.value ?? auth.user.value)
 const roleLabel = (user: AuthorizedUser) => user.roles?.map(role => role.name).join(', ') || 'Rol tanımlanmamış'
 const initials = (user: AuthorizedUser | null) => user?.name?.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') || 'K'
@@ -27,6 +28,10 @@ const resetUser = async () => {
   open.value = false
   if (route.path.startsWith('/contractor-portal') || route.path.startsWith('/security')) await router.push(`/tenants/${route.params.tenantId || 1}`)
 }
+
+onMounted(async () => {
+  await auth.initialize()
+})
 
 watch(open, async value => { if (value) await loadUsers() })
 </script>
