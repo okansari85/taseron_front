@@ -37,7 +37,7 @@ watch(open, async value => { if (value) await loadUsers() })
 </script>
 
 <template>
-  <div v-if="isSuperAdmin" class="relative hidden md:block">
+  <div v-if="isSuperAdmin" class="relative hidden sm:block">
     <button type="button" class="flex min-w-[220px] max-w-[300px] items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40" @click="open = !open">
       <span class="flex min-w-0 items-center gap-2.5">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><UserRound :size="15" /></span>
