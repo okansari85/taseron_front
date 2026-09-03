@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Search, ShieldCheck, UserRound, MoreHorizontal, LockKeyhole, LoaderCircle, Check } from 'lucide-vue-next'
+import { Search, ShieldCheck, UserRound, MoreHorizontal, LockKeyhole, LoaderCircle, Check } from '@lucide/vue'
 import { userAuthorizationApi, type AuthorizedUser, type AuthorizationPermission, type AuthorizationRole } from '~/api/user-authorization'
 
 type UserStatus='Aktif'|'Pasif'
