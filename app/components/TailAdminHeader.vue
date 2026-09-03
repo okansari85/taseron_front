@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { Bell, Building2, Check, ChevronDown, Menu, Moon, Sun } from '@lucide/vue'
+import UserSwitcher from './UserSwitcher.vue'
 const route = useRoute()
 const router = useRouter()
 const { toggle, toggleMobile } = useTailAdminSidebar()
