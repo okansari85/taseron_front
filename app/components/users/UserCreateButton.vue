@@ -17,7 +17,6 @@ const saving = ref(false)
 
 const loadRoles = async () => {
   loadingRoles.value = true
-
   try {
     roles.value = await userAuthorizationApi.listRoles()
   } catch (error) {
@@ -51,13 +50,7 @@ const close = () => {
 }
 
 const create = async () => {
-  if (
-    saving.value ||
-    loadingRoles.value ||
-    !name.value.trim() ||
-    !email.value.trim() ||
-    password.value.length < 8
-  ) {
+  if (saving.value || loadingRoles.value || !name.value.trim() || !email.value.trim() || password.value.length < 8) {
     return
   }
 
@@ -86,10 +79,10 @@ onMounted(loadRoles)
 </script>
 
 <template>
-  <>
+  <div>
     <button
-      class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700"
       type="button"
+      class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700"
       @click="openModal"
     >
       <UserPlus :size="15" />
@@ -109,12 +102,7 @@ onMounted(loadRoles)
               Kullanıcıyı oluşturduktan sonra detay sayfasından scope ve yetkilerini belirleyebilirsiniz.
             </p>
           </div>
-
-          <button
-            class="text-gray-400 hover:text-gray-700"
-            type="button"
-            @click="close"
-          >
+          <button type="button" class="text-gray-400 hover:text-gray-700" @click="close">
             <X :size="17" />
           </button>
         </div>
@@ -122,69 +110,36 @@ onMounted(loadRoles)
         <div class="mt-5 space-y-4">
           <div>
             <label class="mb-2 block text-xs font-medium text-gray-700">Ad Soyad</label>
-            <input
-              v-model="name"
-              class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none"
-              placeholder="Ad Soyad"
-              type="text"
-            />
+            <input v-model="name" type="text" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="Ad Soyad" />
           </div>
-
           <div>
             <label class="mb-2 block text-xs font-medium text-gray-700">E-posta</label>
-            <input
-              v-model="email"
-              class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none"
-              placeholder="ornek@firma.com"
-              type="email"
-            />
+            <input v-model="email" type="email" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="ornek@firma.com" />
           </div>
-
           <div>
             <label class="mb-2 block text-xs font-medium text-gray-700">Geçici Şifre</label>
-            <input
-              v-model="password"
-              class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none"
-              placeholder="En az 8 karakter"
-              type="password"
-            />
+            <input v-model="password" type="password" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-xs outline-none" placeholder="En az 8 karakter" />
           </div>
-
           <div>
             <label class="mb-2 block text-xs font-medium text-gray-700">Rol</label>
-            <select
-              v-model="role"
-              :disabled="loadingRoles"
-              class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs outline-none"
-            >
+            <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs outline-none">
               <option value="">Rol seçin</option>
-              <option
-                v-for="item in availableRoles()"
-                :key="item.id"
-                :value="item.name"
-              >
+              <option v-for="item in availableRoles()" :key="item.id" :value="item.name">
                 {{ item.name }}
               </option>
             </select>
-            <p class="mt-2 text-[10px] text-gray-400">
-              Super Admin hesabı bu ekrandan oluşturulmaz.
-            </p>
+            <p class="mt-2 text-[10px] text-gray-400">Super Admin hesabı bu ekrandan oluşturulmaz.</p>
           </div>
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
-          <button
-            class="rounded-lg border border-gray-200 px-4 py-2 text-xs text-gray-600"
-            type="button"
-            @click="close"
-          >
+          <button type="button" class="rounded-lg border border-gray-200 px-4 py-2 text-xs text-gray-600" @click="close">
             Vazgeç
           </button>
-
           <button
+            type="button"
             :disabled="saving || loadingRoles || !name.trim() || !email.trim() || password.length < 8"
             class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
-            type="button"
             @click="create"
           >
             <LoaderCircle v-if="saving" :size="14" class="animate-spin" />
@@ -194,5 +149,5 @@ onMounted(loadRoles)
         </div>
       </div>
     </div>
-  </>
+  </div>
 </template>
