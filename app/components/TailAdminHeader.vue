@@ -11,7 +11,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <div v-if="isTenantWorkspace && currentTenantOption && activeWorkspace === 'admin'" class="relative hidden lg:block">
+        <div v-if="isTenantWorkspace && currentTenantOption" class="relative hidden lg:block">
           <button type="button" class="flex min-w-[230px] max-w-[320px] items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40" @click="tenantSelectorOpen = !tenantSelectorOpen">
             <span class="flex min-w-0 items-center gap-2.5"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400"><component :is="currentTenantOption.icon" :size="15" /></span><span class="min-w-0"><span class="block text-[9px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">Tenant</span><span class="block truncate text-xs font-semibold text-gray-800 dark:text-white/90">{{ currentTenantOption.name }}</span></span></span><ChevronDown :size="15" class="shrink-0 text-gray-400" />
           </button>
@@ -25,13 +25,12 @@
             </div>
           </div>
         </div>
-        <UserSwitcher />
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Tema" @click="toggleTheme"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Bildirimler"><Bell :size="18" /></button>
         <div class="relative hidden sm:block">
           <button class="flex items-center gap-3 border-l border-gray-200 pl-3 text-left dark:border-gray-800" title="Profil menüsü" @click="profileOpen = !profileOpen">
             <div class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">{{ initials }}</div>
-            <div><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ displayUser?.name || 'Kullanıcı' }}</p><p class="text-xs text-gray-500 dark:text-gray-400">{{ roleLabel }}</p></div>
+            <div><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ auth.user.value?.name || 'Kullanıcı' }}</p><p class="text-xs text-gray-500 dark:text-gray-400">{{ roleLabel }}</p></div>
           </button>
           <div v-if="profileOpen" class="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900"><button class="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5" @click="handleLogout">Çıkış Yap</button></div>
         </div>
@@ -42,7 +41,6 @@
 
 <script setup lang="ts">
 import { Bell, Building2, Check, ChevronDown, Menu, Moon, Sun } from '@lucide/vue'
-import UserSwitcher from './UserSwitcher.vue'
 const route = useRoute()
 const router = useRouter()
 const { toggle, toggleMobile } = useTailAdminSidebar()
@@ -50,20 +48,16 @@ const { isDark, toggle: toggleTheme } = useTailAdminTheme()
 const auth = useAuth()
 const tenantStore = useTenantStore()
 const { currentTenantOption, tenantLocationContext, breadcrumbs, goToBreadcrumb } = useOrganizationScope()
-const { activeUser, activeWorkspace } = useUserPreview()
 const profileOpen = ref(false)
 const tenantSelectorOpen = ref(false)
 const tenantId = computed(() => Array.isArray(route.params.tenantId) ? route.params.tenantId[0] : route.params.tenantId)
 const isTenantWorkspace = computed(() => Boolean(tenantId.value))
 const tenantOptions = computed(() => tenantStore.tenants)
-const displayUser = computed(() => activeUser.value ?? auth.user.value)
-const displayRole = computed(() => displayUser.value?.roles?.[0])
-const displayRoleLabel = computed(() => { const role = displayRole.value; const labels: Record<string, string> = { 'super-admin': 'Sistem Yöneticisi', 'tenant-admin': 'Tenant Yöneticisi' }; return role ? labels[role] || role : 'Kullanıcı' })
-const roleLabel = computed(() => displayRoleLabel.value)
 const displayBreadcrumbs = computed(() => route.path.includes('/locations/') && tenantLocationContext.value ? [ ...(currentTenantOption.value ? [{ kind: 'tenant' as const, id: currentTenantOption.value.id, name: currentTenantOption.value.name }] : []), { kind: 'locations' as const, id: 'locations', name: 'Lokasyonlar' }, { kind: 'location' as const, id: tenantLocationContext.value.id, name: tenantLocationContext.value.name } ] : breadcrumbs.value)
-watch(isTenantWorkspace, async enabled => { if (enabled && tenantStore.tenants.length === 0 && activeWorkspace.value === 'admin') await tenantStore.fetchTenants() }, { immediate: true })
+watch(isTenantWorkspace, async enabled => { if (enabled && tenantStore.tenants.length === 0) await tenantStore.fetchTenants() }, { immediate: true })
 const selectTenant = async (id: number | string) => { tenantSelectorOpen.value = false; const selected = tenantStore.tenants.find(item => Number(item.id) === Number(id)); if (selected) tenantStore.currentTenant = selected; if (Number(id) === Number(tenantId.value)) return; const suffix = route.path.split(`/tenants/${tenantId.value}`)[1] || ''; await router.push(`/tenants/${id}${suffix}`) }
-const initials = computed(() => { const name = displayUser.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
+const initials = computed(() => { const name = auth.user.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
+const roleLabel = computed(() => { const role = auth.user.value?.roles?.[0]; const labels: Record<string, string> = { 'super-admin': 'Sistem Yöneticisi', 'tenant-admin': 'Tenant Yöneticisi' }; return role ? labels[role] || role : 'Kullanıcı' })
 const handleSidebar = () => { if (import.meta.client && window.innerWidth < 1024) toggleMobile(); else toggle() }
 const handleBreadcrumb = (item: (typeof displayBreadcrumbs.value)[number]) => { if (item.kind === 'locations') router.push(`/tenants/${tenantId.value}/locations`); else goToBreadcrumb(item.kind) }
 const handleLogout = async () => { profileOpen.value = false; await auth.logout(); await router.push('/login') }
