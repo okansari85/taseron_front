@@ -2,7 +2,7 @@
   <div>
     <div v-if="isMobileOpen" class="fixed inset-0 z-[9998] bg-black/30 lg:hidden" @click="closeMobile"></div>
     <aside :class="['fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r border-gray-200 bg-white px-5 transition-all duration-300 dark:border-gray-800 dark:bg-gray-900', isExpanded ? 'w-[290px]' : 'w-[90px]', isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0']">
-      <div :class="['flex py-8', isExpanded ? 'justify-start' : 'justify-center']"><NuxtLink to="/tenants" class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">T</span><span v-if="isExpanded" class="text-lg font-semibold text-gray-800 dark:text-white/90">Taseron</span></NuxtLink></div>
+      <div :class="['flex py-8', isExpanded ? 'justify-start' : 'justify-center']"><NuxtLink :to="logoPath" class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">T</span><span v-if="isExpanded" class="text-lg font-semibold text-gray-800 dark:text-white/90">Taseron</span></NuxtLink></div>
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
         <div><p v-if="isExpanded" class="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">Menü</p><div class="flex flex-col gap-2">
           <NuxtLink v-for="item in items" :key="item.path" :to="item.path" :class="['menu-item group', isActive(item.path) ? 'menu-item-active' : 'menu-item-inactive', isExpanded ? 'justify-start' : 'justify-center']" @click="closeMobile"><component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span></NuxtLink>
@@ -23,6 +23,7 @@ type WorkspaceMenuItem = { title: string; path: string; icon: unknown; children?
 const route = useRoute(); const tenantStore = useTenantStore(); const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar(); const auth = useAuth(); const organizationMenuOpen = ref(true)
 const normalizeRole = (role: string) => role.trim().toLocaleLowerCase('tr-TR').replace(/[_\s-]/g, '')
 const activeWorkspace = computed(() => { const roles = auth.user.value?.roles ?? []; if (roles.some(role => normalizeRole(role).includes('guvenlik') || normalizeRole(role).includes('security'))) return 'security'; if (roles.some(role => normalizeRole(role).includes('taseron') || normalizeRole(role).includes('contractor'))) return 'contractor'; return 'admin' })
+const logoPath = computed(() => { if (activeWorkspace.value === 'security') return '/security'; if (activeWorkspace.value === 'contractor') return '/contractor-portal/dashboard'; return '/tenants' })
 const items = computed(() => [{ title: 'Ana Sayfa', path: '/', icon: Home }, ...(activeWorkspace.value === 'admin' ? [{ title: 'Tenantlar', path: '/tenants', icon: LayoutGrid }] : [])])
 const tenantId = computed(() => { const value = route.params.tenantId; return Array.isArray(value) ? value[0] : value })
 const isTenantWorkspace = computed(() => Boolean(tenantId.value)); const currentTenant = computed(() => tenantStore.currentTenant); const tenantName = computed(() => currentTenant.value?.name ?? 'Tenant yükleniyor...'); const rootOrganization = computed(() => currentTenant.value?.root_organization ?? null)
