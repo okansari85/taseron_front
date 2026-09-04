@@ -14,7 +14,7 @@
 </template>
 <script setup lang="ts">
 import { Menu, Moon, Sun } from '@lucide/vue'
-const router = useRouter(); const auth = useAuth(); const { toggle, toggleMobile } = useTailAdminSidebar(); const { isDark, toggle: toggleTheme } = useTailAdminTheme(); const profileOpen = ref(false)
+const router = useRouter(); const auth = useAuth(); const { toggle, toggleMobile } = useContractorSidebar(); const { isDark, toggle: toggleTheme } = useTailAdminTheme(); const profileOpen = ref(false)
 const initials = computed(() => { const name = auth.user.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
 const handleSidebar = () => { if (import.meta.client && window.innerWidth < 1024) toggleMobile(); else toggle() }
 const handleLogout = async () => { profileOpen.value = false; await auth.logout(); await router.push('/login') }
