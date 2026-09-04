@@ -31,6 +31,7 @@ const selectedPermissionNames = ref<string[]>([])
 const selectedRole = ref('')
 const firstName = ref('')
 const lastName = ref('')
+const email = ref('')
 const scopes = ref<AuthorizationScope[]>([])
 const scopeType = ref<ScopeType>('organization')
 const selectedOrganizationIds = ref<number[]>([])
@@ -56,23 +57,29 @@ const rolePermissions = computed(() => permissions.value.filter(permission => ro
 const extraPermissions = computed(() => permissions.value.filter(permission => !rolePermissionNames.value.has(permission.name)))
 const permissionLabel = (name: string) => name.replace(/[._-]+/g, ' ').replace(/\b\w/g, value => value.toUpperCase())
 
-const syncProfileState = (name: string) => {
+const syncProfileState = (name: string, userEmail = user.value?.email ?? '') => {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   lastName.value = parts.length > 1 ? parts.pop() ?? '' : ''
   firstName.value = parts.join(' ')
+  email.value = userEmail
 }
 
 const saveProfile = async () => {
   if (!user.value || savingProfile.value || isSuperAdmin.value) return
   const name = `${firstName.value.trim()} ${lastName.value.trim()}`.trim()
+  const nextEmail = email.value.trim()
   if (!firstName.value.trim() || !lastName.value.trim()) {
     $toast.error('Ad ve soyad alanlarını doldurmalısınız.')
     return
   }
+  if (!nextEmail) {
+    $toast.error('E-posta alanını doldurmalısınız.')
+    return
+  }
   savingProfile.value = true
   try {
-    user.value = await userAuthorizationApi.updateProfile(user.value.id, name)
-    syncProfileState(user.value.name)
+    user.value = await userAuthorizationApi.updateProfile(user.value.id, name, nextEmail)
+    syncProfileState(user.value.name, user.value.email)
     $toast.success('Kullanıcı bilgileri kaydedildi.')
   } catch (error) {
     console.error(error)
@@ -131,7 +138,7 @@ const load = async () => {
     roles.value = roleList
     permissions.value = permissionList
     selectedRole.value = freshUser.roles?.[0]?.name ?? ''
-    syncProfileState(freshUser.name)
+    syncProfileState(freshUser.name, freshUser.email)
     syncPermissionState(freshUser.permissions)
     syncScopeState(scopeList)
     organizations.value = organizationList.map(item => ({ id: item.id, name: item.name }))
@@ -246,7 +253,7 @@ onMounted(load)
         </div>
 
         <div class="space-y-5">
-          <div v-if="activeTab === 'profile'" class="rounded-xl border border-gray-200 bg-white p-5"><div class="flex items-center gap-2"><UserRound :size="16" class="text-brand-600" /><h2 class="text-sm font-semibold text-gray-900">Kullanıcı Bilgileri</h2></div><div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2"><div><label class="text-[11px] font-medium text-gray-500">Ad</label><input v-model="firstName" type="text" autocomplete="given-name" class="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition focus:border-brand-400" /></div><div><label class="text-[11px] font-medium text-gray-500">Soyad</label><input v-model="lastName" type="text" autocomplete="family-name" class="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition focus:border-brand-400" /></div><div class="rounded-lg border border-gray-100 p-4"><p class="text-[11px] text-gray-400">E-posta</p><p class="mt-1 text-sm font-medium text-gray-800">{{ user.email }}</p></div><div class="rounded-lg border border-gray-100 p-4"><p class="text-[11px] text-gray-400">Rol</p><p class="mt-1 text-sm font-medium text-gray-800">{{ user.roles?.[0]?.name ?? 'Rol atanmadı' }}</p></div><div class="rounded-lg border border-gray-100 p-4"><p class="text-[11px] text-gray-400">Durum</p><p class="mt-1 text-sm font-medium text-gray-800">{{ user.status ?? '—' }}</p></div></div><div v-if="!isSuperAdmin" class="mt-5 flex justify-end"><button :disabled="savingProfile" @click="saveProfile" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"><LoaderCircle v-if="savingProfile" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingProfile ? 'Kaydediliyor...' : 'Bilgileri Kaydet' }}</button></div></div>
+          <div v-if="activeTab === 'profile'" class="rounded-xl border border-gray-200 bg-white p-5"><div class="flex items-center gap-2"><UserRound :size="16" class="text-brand-600" /><h2 class="text-sm font-semibold text-gray-900">Kullanıcı Bilgileri</h2></div><div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2"><div><label class="text-[11px] font-medium text-gray-500">Ad</label><input v-model="firstName" type="text" autocomplete="given-name" class="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition focus:border-brand-400" /></div><div><label class="text-[11px] font-medium text-gray-500">Soyad</label><input v-model="lastName" type="text" autocomplete="family-name" class="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition focus:border-brand-400" /></div><div class="md:col-span-2"><label class="text-[11px] font-medium text-gray-500">E-posta</label><input v-model="email" type="email" autocomplete="email" class="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition focus:border-brand-400" /></div><div class="rounded-lg border border-gray-100 p-4"><p class="text-[11px] text-gray-400">Rol</p><p class="mt-1 text-sm font-medium text-gray-800">{{ user.roles?.[0]?.name ?? 'Rol atanmadı' }}</p></div><div class="rounded-lg border border-gray-100 p-4"><p class="text-[11px] text-gray-400">Durum</p><p class="mt-1 text-sm font-medium text-gray-800">{{ user.status ?? '—' }}</p></div></div><div v-if="!isSuperAdmin" class="mt-5 flex justify-end"><button :disabled="savingProfile" @click="saveProfile" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"><LoaderCircle v-if="savingProfile" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingProfile ? 'Kaydediliyor...' : 'Bilgileri Kaydet' }}</button></div></div>
 
           <div v-else-if="activeTab === 'roles'">
             <div v-if="isSuperAdmin" class="rounded-xl border border-brand-100 bg-brand-50/50 p-5"><div class="flex items-center gap-2"><ShieldCheck :size="16" class="text-brand-600" /><h2 class="text-sm font-semibold text-gray-900">Rol Yönetimi</h2></div><p class="mt-3 text-xs leading-5 text-gray-600">Super Admin için ayrıca rol ataması yapılmaz.</p></div>
