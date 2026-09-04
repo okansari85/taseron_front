@@ -54,7 +54,11 @@ export const useUserImpersonation = () => {
       originalToken.value = null
       returnPath.value = null
       auth.token.value = savedToken
-      const user = await apiClient<AuthUser>('/api/user')
+      const user = await apiClient<AuthUser>('/api/user', {
+        headers: {
+          Authorization: `Bearer ${savedToken}`,
+        },
+      })
       auth.user.value = user
       auth.initialized.value = true
       return savedPath
