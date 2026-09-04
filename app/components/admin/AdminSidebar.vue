@@ -1,0 +1,3 @@
+<template>
+  <TailAdminSidebar />
+</template>
