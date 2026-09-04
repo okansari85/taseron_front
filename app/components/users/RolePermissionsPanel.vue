@@ -67,17 +67,51 @@ onMounted(load)
     <div v-if="loading" class="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><LoaderCircle :size="28" class="animate-spin text-brand-500" /></div>
     <template v-else-if="activeTab === 'roles'">
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <button v-for="role in roles" :key="role.id" type="button" class="rounded-xl border p-5 text-left transition" :class="selectedRole === role.name ? 'border-brand-300 bg-brand-50/40 dark:border-brand-700 dark:bg-brand-500/5' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'" @click="selectRole(role.name)">
-          <div class="flex items-start justify-between gap-3"><div><div class="flex items-center gap-2"><ShieldCheck :size="17" class="text-brand-600" /><h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ role.name }}</h3></div><p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ role.permissions?.length ?? 0 }} yetki tanımlı.</p></div><span class="rounded-md bg-gray-100 px-2 py-1 text-[10px] text-gray-500 dark:bg-gray-800">{{ role.guard_name ?? 'web' }}</span></div>
-        </button>
-      </div>
-      <div v-if="selectedRoleData" class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedRoleData.name }} yetkileri</h2><p class="mt-1 text-xs text-gray-500">Bu rol için izinleri seçin.</p></div><button type="button" :disabled="saving" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60" @click="save"><LoaderCircle v-if="saving" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ saving ? 'Kaydediliyor...' : 'Kaydet' }}</button></div>
-        <div class="mt-5 space-y-4"><div v-for="[group, items] in permissionGroups" :key="group"><h3 class="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ group }}</h3><div class="divide-y divide-gray-100 rounded-lg border border-gray-100 dark:divide-gray-800 dark:border-gray-800"><label v-for="permission in items" :key="permission.id" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"><span class="text-xs text-gray-700 dark:text-gray-200">{{ permission.name }}</span><input :checked="selectedPermissions.includes(permission.name)" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="togglePermission(permission.name)" /></label></div></div></div>
+        <div v-for="role in roles" :key="role.id" class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2"><ShieldCheck :size="17" class="text-brand-600" /><h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ role.name }}</h3></div>
+              <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ role.permissions?.length ?? 0 }} yetki tanımlı.</p>
+            </div>
+            <span class="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-medium text-gray-500 dark:bg-gray-800">{{ role.guard_name ?? 'web' }}</span>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-1.5">
+            <span v-for="permission in role.permissions" :key="permission.id" class="rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-[10px] text-gray-600 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-300">{{ permission.name }}</span>
+          </div>
+          <button type="button" class="mt-4 text-xs font-medium text-brand-600 hover:underline" @click="selectRole(role.name); activeTab = 'permissions'">Yetkileri düzenle →</button>
+        </div>
       </div>
     </template>
     <template v-else>
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2"><div v-for="[group, items] in permissionGroups" :key="group" class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center justify-between"><h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ group }}</h2><span class="text-[10px] text-gray-400">{{ items.length }} yetki</span></div><div class="mt-4 space-y-2"><div v-for="permission in items" :key="permission.id" class="rounded-lg border border-gray-100 px-3 py-2.5 text-xs text-gray-600 dark:border-gray-800 dark:text-gray-300">{{ permission.name }}</div></div></div></div>
+      <div class="grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+        <div class="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+          <p class="px-2 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Roller</p>
+          <button v-for="role in roles" :key="role.id" type="button" class="mb-1 w-full rounded-lg px-3 py-2.5 text-left" :class="selectedRole === role.name ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800'" @click="selectRole(role.name)">
+            <p class="text-xs font-medium" :class="selectedRole === role.name ? 'text-brand-600 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">{{ role.name }}</p>
+            <p class="mt-0.5 text-[10px] text-gray-400">{{ role.permissions?.length ?? 0 }} yetki</p>
+          </button>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <div class="mb-5 flex items-center justify-between">
+            <div><h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedRoleData?.name }} · Yetkiler</h2><p class="mt-1 text-xs text-gray-500">Bu rolün sahip olduğu yetkileri belirleyin.</p></div>
+            <span class="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">{{ selectedPermissions.length }} yetki</span>
+          </div>
+          <div class="space-y-4">
+            <div v-for="[group, items] in permissionGroups" :key="group">
+              <h3 class="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ group }}</h3>
+              <div class="divide-y divide-gray-100 rounded-lg border border-gray-100 dark:divide-gray-800 dark:border-gray-800">
+                <label v-for="permission in items" :key="permission.id" class="flex cursor-pointer items-center justify-between px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                  <span><span class="block text-xs font-medium text-gray-700 dark:text-gray-200">{{ permission.name }}</span><span class="text-[10px] text-gray-400">{{ permission.name }}</span></span>
+                  <input :checked="selectedPermissions.includes(permission.name)" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="togglePermission(permission.name)" />
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 flex justify-end">
+            <button type="button" :disabled="saving || !selectedRole" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60" @click="save"><LoaderCircle v-if="saving" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ saving ? 'Kaydediliyor...' : 'Yetkileri Kaydet' }}</button>
+          </div>
+        </div>
+      </div>
     </template>
   </section>
 </template>
