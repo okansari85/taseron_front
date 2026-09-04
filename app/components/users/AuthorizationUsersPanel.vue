@@ -8,7 +8,7 @@ type UserTab = 'system' | 'experts' | 'contractors'
 const route = useRoute(); const router = useRouter(); const { $toast } = useNuxtApp()
 const users = ref<AuthorizedUser[]>([]); const loading = ref(true); const search = ref(''); const activeTab = ref<UserTab>('system')
 const roleName = (user: AuthorizedUser) => user.roles?.[0]?.name ?? '-'
-const isExpert = (user: AuthorizedUser) => roleName(user) === 'isg-user'
+const isExpert = (user: AuthorizedUser) => roleName(user) === 'isg' && Number(user.is_expert) === 1
 const isContractor = (user: AuthorizedUser) => roleName(user) === 'contractor'
 const statusLabel = (user: AuthorizedUser) => user.status === false || user.status === 0 || user.status === '0' || user.status === 'pasif' || user.status === 'Pasif' ? 'Pasif' : 'Aktif'
 const scopeLabel = (user: AuthorizedUser) => { const scopes = user.scopes ?? []; if (!scopes.length) return 'Tanımlanmamış'; if (scopes.some(scope => scope.scope_type === 'tenant')) return 'Tüm tenant'; return scopes.map(scope => `${scope.scope_type} #${scope.scope_id}`).join(', ') }
@@ -19,13 +19,14 @@ const filteredUsers = computed(() => { const q = search.value.toLocaleLowerCase(
 const initials = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(value => value[0]).join('').toLocaleUpperCase('tr-TR')
 const contractorLabel = (user: AuthorizedUser) => user.contractor?.short_name || user.contractor?.business_entity?.name || 'Taşeron eşleştirilmemiş'
 const openDetail = (user: AuthorizedUser) => router.push(`/tenants/${route.params.tenantId}/users/${user.id}`)
+const addCreatedUser = (user: AuthorizedUser) => { const index = users.value.findIndex(item => item.id === user.id); if (index === -1) users.value.unshift(user); else users.value[index] = user }
 const load = async () => { loading.value = true; try { users.value = await userAuthorizationApi.listUsers() } catch (error) { console.error(error); $toast.error('Kullanıcılar alınamadı.') } finally { loading.value = false } }
 onMounted(load)
 </script>
 
 <template>
   <section class="space-y-5">
-    <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-xl font-semibold text-gray-900 dark:text-white">Kullanıcılar</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sistem kullanıcıları, uzmanlar ve alt yüklenici kullanıcılarını yönetin.</p></div><UserCreateButton /></div>
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-xl font-semibold text-gray-900 dark:text-white">Kullanıcılar</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sistem kullanıcıları, uzmanlar ve alt yüklenici kullanıcılarını yönetin.</p></div><UserCreateButton @created="addCreatedUser" /></div>
     <div class="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900"><button v-for="tab in [{ key: 'system', label: 'Sistem Kullanıcıları', icon: ShieldCheck }, { key: 'experts', label: 'Uzmanlar', icon: Wrench }, { key: 'contractors', label: 'Alt Yüklenici Kullanıcıları', icon: UsersRound }]" :key="tab.key" type="button" @click="activeTab = tab.key as UserTab" class="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium" :class="activeTab === tab.key ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'"><component :is="tab.icon" :size="15" />{{ tab.label }}</button></div>
     <div v-if="loading" class="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><LoaderCircle :size="28" class="animate-spin text-brand-500" /></div>
     <template v-else>
