@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Check, LoaderCircle, UserPlus, X } from '@lucide/vue'
-import { userAuthorizationApi, type AuthorizationContractor, type AuthorizationRole } from '~/api/user-authorization'
+import { userAuthorizationApi, type AuthorizedUser, type AuthorizationContractor, type AuthorizationRole } from '~/api/user-authorization'
 
-const router = useRouter()
 const { $toast } = useNuxtApp()
+const emit = defineEmits<{ created: [user: AuthorizedUser] }>()
 
 const open = ref(false)
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const role = ref('')
+const isExpert = ref(false)
 const contractorId = ref<number | ''>('')
 const roles = ref<AuthorizationRole[]>([])
 const contractors = ref<AuthorizationContractor[]>([])
@@ -44,12 +45,14 @@ const loadContractors = async () => {
 
 const availableRoles = () => roles.value.filter((item) => item.name !== 'super-admin')
 const isContractorRole = () => role.value === 'contractor'
+const isIsgRole = () => role.value === 'isg'
 
 const openModal = async () => {
   name.value = ''
   email.value = ''
   password.value = ''
   role.value = ''
+  isExpert.value = false
   contractorId.value = ''
   open.value = true
 
@@ -65,6 +68,7 @@ const openModal = async () => {
 }
 
 const onRoleChange = async () => {
+  isExpert.value = false
   contractorId.value = ''
   if (isContractorRole() && !contractors.value.length) {
     await loadContractors()
@@ -95,12 +99,13 @@ const create = async () => {
       email: email.value.trim(),
       password: password.value,
       role: role.value || undefined,
+      is_expert: isIsgRole() && isExpert.value ? 1 : 0,
       contractor_id: isContractorRole() ? Number(contractorId.value) : undefined,
     })
 
+    emit('created', user)
     open.value = false
     $toast.success('Kullanıcı başarıyla oluşturuldu.')
-    await router.push(`/tenants/${router.currentRoute.value.params.tenantId}/users/${user.id}`)
   } catch (error) {
     console.error(error)
     $toast.error('Kullanıcı oluşturulamadı.')
@@ -163,6 +168,15 @@ onMounted(loadRoles)
               </option>
             </select>
             <p class="mt-2 text-[10px] text-gray-400">Super Admin hesabı bu ekrandan oluşturulmaz.</p>
+          </div>
+          <div v-if="isIsgRole()" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+            <label class="flex cursor-pointer items-center gap-3">
+              <input v-model="isExpert" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+              <span>
+                <span class="block text-xs font-medium text-gray-700 dark:text-gray-200">Uzman olarak ekle</span>
+                <span class="mt-0.5 block text-[10px] text-gray-400">Bu kullanıcıyı uzmanlar listesine ekler.</span>
+              </span>
+            </label>
           </div>
           <div v-if="isContractorRole()">
             <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Taşeron Firması</label>
