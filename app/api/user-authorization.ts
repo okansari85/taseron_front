@@ -21,6 +21,7 @@ export const userAuthorizationApi = {
   listUsers: async () => unwrap<AuthorizedUser[]>(await apiClient<ApiResponse<AuthorizedUser[]>>('/api/users/authorization')),
   getUser: async (userId: number) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/authorization`)),
   createUser: async (payload: { name: string; email: string; password: string; role?: string }) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>('/api/users', { method: 'POST', body: payload })),
+  updateProfile: async (userId: number, name: string) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/profile`, { method: 'PATCH', body: { name } })),
   deleteUser: async (userId: number) => apiClient<void>(`/api/users/${userId}`, { method: 'DELETE' }),
   impersonate: async (userId: number) => apiClient<ImpersonationResponse>(`/api/users/${userId}/impersonate`, { method: 'POST' }),
   assignRole: async (userId: number, role: string) => unwrap<AuthorizedUser>(await apiClient<ApiResponse<AuthorizedUser>>(`/api/users/${userId}/role`, { method: 'POST', body: { role } })),
