@@ -12,6 +12,12 @@ export const useUserImpersonation = () => {
     secure: !import.meta.dev,
     watch: true,
   })
+  const originalUser = useCookie<AuthUser | null>('super_admin_auth_user', {
+    default: () => null,
+    sameSite: 'lax',
+    secure: !import.meta.dev,
+    watch: true,
+  })
   const returnPath = useCookie<string | null>('impersonation_return_path', {
     default: () => null,
     sameSite: 'lax',
@@ -28,6 +34,7 @@ export const useUserImpersonation = () => {
     try {
       const response = await userAuthorizationApi.impersonate(userId)
       originalToken.value = auth.token.value
+      originalUser.value = auth.user.value
       returnPath.value = path
       auth.token.value = response.token
       auth.user.value = response.user
@@ -42,6 +49,7 @@ export const useUserImpersonation = () => {
     if (!originalToken.value || loading.value) return null
 
     const savedToken = originalToken.value
+    const savedUser = originalUser.value
     const savedPath = returnPath.value
     loading.value = true
     try {
@@ -51,16 +59,12 @@ export const useUserImpersonation = () => {
         console.warn('Impersonation token could not be revoked.', error)
       }
 
-      originalToken.value = null
-      returnPath.value = null
       auth.token.value = savedToken
-      const user = await apiClient<AuthUser>('/api/user', {
-        headers: {
-          Authorization: `Bearer ${savedToken}`,
-        },
-      })
-      auth.user.value = user
+      auth.user.value = savedUser
       auth.initialized.value = true
+      originalToken.value = null
+      originalUser.value = null
+      returnPath.value = null
       return savedPath
     } finally {
       loading.value = false
