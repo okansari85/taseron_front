@@ -9,7 +9,7 @@
 </template>
 <script setup lang="ts">
 import { FileText, Home, ClipboardCheck, GraduationCap } from '@lucide/vue'
-const route = useRoute(); const auth = useAuth(); const { isExpanded, isMobileOpen, closeMobile } = useTailAdminSidebar()
+const route = useRoute(); const auth = useAuth(); const { isExpanded, isMobileOpen, closeMobile } = useContractorSidebar()
 const items = [{ title: 'Genel Durum', path: '/contractor-portal/dashboard', icon: Home }, { title: 'İş Talepleri', path: '/contractor-portal/work-requests', icon: ClipboardCheck }, { title: 'Belgeler', path: '/contractor-portal/documents', icon: FileText }, { title: 'Eğitimler', path: '/contractor-portal/training', icon: GraduationCap }]
 const isActive = (path: string) => route.path === path || route.path.startsWith(`${path}/`)
 const initials = computed(() => { const name = auth.user.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
