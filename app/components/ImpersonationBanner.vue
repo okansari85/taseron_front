@@ -9,6 +9,7 @@ const returnToSuperAdmin = async () => {
   if (loading.value) return
   try {
     const path = await stop()
+    await nextTick()
     await router.push(path || '/tenants')
   } catch (error) {
     console.error(error)
