@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Check, LoaderCircle, UserPlus, X } from '@lucide/vue'
-import { userAuthorizationApi, type AuthorizationRole } from '~/api/user-authorization'
+import { userAuthorizationApi, type AuthorizationContractor, type AuthorizationRole } from '~/api/user-authorization'
 
 const router = useRouter()
 const { $toast } = useNuxtApp()
@@ -11,8 +11,11 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const role = ref('')
+const contractorId = ref<number | ''>('')
 const roles = ref<AuthorizationRole[]>([])
+const contractors = ref<AuthorizationContractor[]>([])
 const loadingRoles = ref(false)
+const loadingContractors = ref(false)
 const saving = ref(false)
 
 const loadRoles = async () => {
@@ -27,13 +30,27 @@ const loadRoles = async () => {
   }
 }
 
+const loadContractors = async () => {
+  loadingContractors.value = true
+  try {
+    contractors.value = await userAuthorizationApi.listContractors()
+  } catch (error) {
+    console.error(error)
+    $toast.error('Taşeronlar alınamadı.')
+  } finally {
+    loadingContractors.value = false
+  }
+}
+
 const availableRoles = () => roles.value.filter((item) => item.name !== 'super-admin')
+const isContractorRole = () => role.value === 'contractor'
 
 const openModal = async () => {
   name.value = ''
   email.value = ''
   password.value = ''
   role.value = ''
+  contractorId.value = ''
   open.value = true
 
   if (!roles.value.length) {
@@ -41,6 +58,17 @@ const openModal = async () => {
   }
 
   role.value = availableRoles()[0]?.name ?? ''
+
+  if (isContractorRole() && !contractors.value.length) {
+    await loadContractors()
+  }
+}
+
+const onRoleChange = async () => {
+  contractorId.value = ''
+  if (isContractorRole() && !contractors.value.length) {
+    await loadContractors()
+  }
 }
 
 const close = () => {
@@ -50,7 +78,12 @@ const close = () => {
 }
 
 const create = async () => {
-  if (saving.value || loadingRoles.value || !name.value.trim() || !email.value.trim() || password.value.length < 8) {
+  if (saving.value || loadingRoles.value || loadingContractors.value || !name.value.trim() || !email.value.trim() || password.value.length < 8) {
+    return
+  }
+
+  if (isContractorRole() && contractorId.value === '') {
+    $toast.error('Contractor rolündeki kullanıcı için taşeron firma seçmelisiniz.')
     return
   }
 
@@ -62,6 +95,7 @@ const create = async () => {
       email: email.value.trim(),
       password: password.value,
       role: role.value || undefined,
+      contractor_id: isContractorRole() ? Number(contractorId.value) : undefined,
     })
 
     open.value = false
@@ -122,13 +156,23 @@ onMounted(loadRoles)
           </div>
           <div>
             <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Rol</label>
-            <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+            <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" @change="onRoleChange">
               <option value="">Rol seçin</option>
               <option v-for="item in availableRoles()" :key="item.id" :value="item.name">
                 {{ item.name }}
               </option>
             </select>
             <p class="mt-2 text-[10px] text-gray-400">Super Admin hesabı bu ekrandan oluşturulmaz.</p>
+          </div>
+          <div v-if="isContractorRole()">
+            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Taşeron Firması</label>
+            <select v-model="contractorId" :disabled="loadingContractors" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+              <option value="">Taşeron firması seçin</option>
+              <option v-for="item in contractors" :key="item.id" :value="item.id">
+                {{ item.short_name || item.business_entity?.name || `Taşeron #${item.id}` }}
+              </option>
+            </select>
+            <p class="mt-2 text-[10px] text-gray-400">Bu kullanıcı doğrudan seçilen taşeron firmasına bağlanır.</p>
           </div>
         </div>
 
@@ -138,7 +182,7 @@ onMounted(loadRoles)
           </button>
           <button
             type="button"
-            :disabled="saving || loadingRoles || !name.trim() || !email.trim() || password.length < 8"
+            :disabled="saving || loadingRoles || loadingContractors || !name.trim() || !email.trim() || password.length < 8 || (isContractorRole() && contractorId === '')"
             class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
             @click="create"
           >
