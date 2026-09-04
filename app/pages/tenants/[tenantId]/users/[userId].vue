@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowLeft, Check, LoaderCircle, LogIn, ShieldCheck, UserRound, X } from '@lucide/vue'
+import { ArrowLeft, Check, LoaderCircle, LogIn, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
 import { userAuthorizationApi, type AuthorizedUser, type AuthorizationPermission, type AuthorizationRole, type AuthorizationScope } from '~/api/user-authorization'
 import { organizationApi } from '~/api/organization'
 import { locationApi } from '~/api/location'
@@ -44,10 +44,12 @@ const savingProfile = ref(false)
 const savingRole = ref(false)
 const savingPermissions = ref(false)
 const savingScope = ref(false)
+const deletingUser = ref(false)
 
 const isSuperAdmin = computed(() => user.value?.roles?.some(role => role.name === 'super-admin') ?? false)
 const currentUserIsSuperAdmin = computed(() => auth.user.value?.roles?.some(role => role === 'super-admin') ?? false)
 const canImpersonate = computed(() => currentUserIsSuperAdmin.value && Boolean(user.value) && !isSuperAdmin.value && auth.user.value?.id !== user.value?.id)
+const canDeleteUser = computed(() => Boolean(user.value) && !isSuperAdmin.value && auth.user.value?.id !== user.value?.id)
 const initials = computed(() => user.value?.name?.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(x => x.charAt(0).toLocaleUpperCase('tr-TR')).join('') ?? '')
 const selectedScopeCount = computed(() => scopeType.value === 'tenant' ? 1 : scopeType.value === 'organization' ? selectedOrganizationIds.value.length : selectedLocationIds.value.length)
 const selectedScopeLabel = computed(() => scopeType.value === 'tenant' ? 'Tüm Tenant' : scopeType.value === 'organization' ? 'Organizasyon' : 'Lokasyon')
@@ -219,6 +221,23 @@ const loginAsUser = async () => {
   }
 }
 
+const deleteUser = async () => {
+  if (!user.value || !canDeleteUser.value || deletingUser.value) return
+  if (!window.confirm(`${user.value.name} kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return
+
+  deletingUser.value = true
+  try {
+    await userAuthorizationApi.deleteUser(user.value.id)
+    $toast.success('Kullanıcı silindi.')
+    await router.push(`/tenants/${tenantId}/users`)
+  } catch (error) {
+    console.error(error)
+    $toast.error('Kullanıcı silinemedi.')
+  } finally {
+    deletingUser.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -248,6 +267,8 @@ onMounted(load)
             <button @click="activeTab = 'permissions'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'permissions' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'permissions' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Yetkiler</p><p class="mt-0.5 text-[10px] text-gray-400">Rol ve ek yetkiler</p></div></button>
             <button @click="activeTab = 'scopes'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'scopes' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'scopes' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Kapsamlar</p><p class="mt-0.5 text-[10px] text-gray-400">Erişim alanları</p></div></button>
           </div>
+
+          <button v-if="canDeleteUser" type="button" :disabled="deletingUser" @click="deleteUser" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"><LoaderCircle v-if="deletingUser" :size="14" class="animate-spin" /><Trash2 v-else :size="14" />{{ deletingUser ? 'Siliniyor...' : 'Kullanıcıyı Sil' }}</button>
 
           <div v-if="isSuperAdmin" class="rounded-xl border border-brand-100 bg-brand-50/50 p-5"><div class="flex items-center gap-2"><ShieldCheck :size="16" class="text-brand-600" /><h2 class="text-sm font-semibold text-gray-900">Tam Platform Erişimi</h2></div><p class="mt-3 text-xs leading-5 text-gray-600">Super Admin platform yöneticisidir. Tüm tenant, organizasyon ve lokasyonlara tam erişime sahiptir. Bu kullanıcı için ayrıca scope veya rol yetkisi seçilmez.</p></div>
         </div>
