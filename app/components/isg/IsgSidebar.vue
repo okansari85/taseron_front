@@ -13,10 +13,10 @@
         isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
     >
-      <div :class="['flex', desktop ? 'py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
+      <div :class="['flex', desktop ? 'px-5 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
         <NuxtLink to="/isg-portal/documents" class="flex items-center gap-3">
           <template v-if="desktop && context.branchLogo">
-            <img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl object-contain bg-white p-1" />
+            <img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl bg-white p-1 object-contain" />
           </template>
           <span v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
           <span v-if="isExpanded" :class="['text-lg font-semibold', desktop ? 'text-white' : 'text-gray-800 dark:text-white/90']">İSG Portalı</span>
@@ -98,6 +98,6 @@ const menuSections = computed(() => props.desktop ? desktopSections : defaultSec
 const isActive = (path: string) => path === '/isg-portal/desktop' ? route.path === path : route.path === path || route.path.startsWith(`${path}/`)
 const initials = computed(() => {
   const name = auth.user.value?.name?.trim() || 'K'
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR')
+  return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')
 })
 </script>
