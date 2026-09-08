@@ -92,7 +92,6 @@ const features = [
     headline="Güvenli İşletmeler Güçlü Gelecek"
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
-    footer-note="Güvenlik Her Zaman Önceliğimiz"
   >
     <div class="isg-location-page mx-auto max-w-6xl px-8 py-8">
       <div class="mb-8 flex justify-center">
