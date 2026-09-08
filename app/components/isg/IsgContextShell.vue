@@ -69,14 +69,17 @@ const handleLogout = async () => {
       </aside>
       <main class="min-w-0 flex-1 overflow-y-auto"><slot /></main>
     </div>
-    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div><span>Daha güvenli yarınlar için.</span></div>
+    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900">
+      <div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div>
+      <span>Daha güvenli yarınlar için.</span>
+    </footer>
   </div>
 </template>
 
 <style scoped>
 .isg-context-shell--location { --location-sidebar-width: 340px; background: #f7fbff; }
 .isg-context-shell--location > header { min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
-.isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: cover !important; background-position: center top !important; background-color: transparent !important; }
+.isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: cover !important; background-position: center 60% !important; background-color: transparent !important; }
 .isg-context-shell--location > .flex > aside > div > div:first-child { padding: 58px 48px 0; }
 .isg-context-shell--location > .flex > aside h1 { max-width: 205px; margin-top: 0; font-size: 30px; line-height: 1.04; letter-spacing: -0.025em; color: #101d5c; }
 .isg-context-shell--location > .flex > aside > div > div:first-child > span { display: none; }
