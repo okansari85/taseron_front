@@ -259,7 +259,10 @@ watch(() => context.branchId, () => loadFindings())
                     <td class="px-3 py-3.5 align-middle text-sm font-medium text-[#64748b]">{{ finding.id }}</td>
                     <td class="px-3 py-3.5 align-middle">
                       <div class="flex min-w-0 items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-[#d71920] dark:bg-red-500/10"><ShieldAlert :size="18" /></div>
+                        <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#e5e7eb] bg-red-50 dark:border-gray-700 dark:bg-red-500/10">
+                          <img v-if="finding.photos?.[0]?.photo_url" :src="finding.photos[0].photo_url" :alt="finding.description || 'Saha bulgusu fotoğrafı'" class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                          <div v-else class="flex h-full w-full items-center justify-center text-[#d71920]"><ShieldAlert :size="18" /></div>
+                        </div>
                         <div class="min-w-0">
                           <p class="truncate text-sm font-semibold text-[#172033] dark:text-white">{{ finding.description || 'Açıklama belirtilmemiş' }}</p>
                           <p v-if="finding.location_note" class="mt-0.5 truncate text-xs text-[#718096]">{{ finding.location_note }}</p>
