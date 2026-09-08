@@ -1,15 +1,15 @@
 import { apiClient } from './client'
 
 export type LocationOrganization = { id: number; name: string }
-export type LocationBrand = { id: number; name: string }
+export type LocationBrand = { id: number; name: string; logo_url?: string | null }
 export type LocationCompany = { id: number; name: string; brands?: LocationBrand[] }
 export type LocationBusinessEntityPhoto = { id: number; photo_url: string; order_no: number }
-export type LocationBusinessEntityPivot = { id?: number; operational_region_id?: number|null; activity?: string|null; sub_activity?: string|null; nace_code?: string|null; hazard_class?: string|null; sgk_workplace_number?: string|null; photos?: LocationBusinessEntityPhoto[] }
+export type LocationBusinessEntityPivot = { id?: number; code?: string|null; floor?: string|null; operational_region_id?: number|null; activity?: string|null; sub_activity?: string|null; nace_code?: string|null; hazard_class?: string|null; sgk_workplace_number?: string|null; address?: string|null; is_active?: boolean; equipment_count?: number; brands?: LocationBrand[]; photos?: LocationBusinessEntityPhoto[] }
 export type LocationBusinessEntity = { id: number; name: string; type?: string; company?: LocationCompany|null; pivot?: LocationBusinessEntityPivot }
 export type City = { id: number; name: string }
 export type District = { id: number; city_id: number; name: string }
 export type OperationalRegion = { id:number; tenant_id:number; location_id:number; name:string; type?:string|null; is_active:boolean }
-export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; allows_multiple_branches?:boolean; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[]; operationalRegions?:OperationalRegion[] }
+export type LocationApiItem = { id:number; tenant_id:number; name:string; address?:string|null; city_id?:number|null; district_id?:number|null; city?:City|null; district?:District|null; image?:string|null; latitude?:number|null; longitude?:number|null; is_active?:boolean; allows_multiple_branches?:boolean; branch_count?:number; equipment_count?:number; organizations?:LocationOrganization[]; businessEntities?:LocationBusinessEntity[]; operationalRegions?:OperationalRegion[] }
 export type LocationOrganizationContractor = { id:number; business_entity_id:number; name:string; contractor_type:'permanent'|'temporary'; short_name?:string|null; logo_path?:string|null; status?:'active'|'passive' }
 
 const unwrap = <T>(response: any): T => response?.data ?? response

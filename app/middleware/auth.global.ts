@@ -23,6 +23,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   await auth.initialize()
 
+  // contractor-portal/isg-portal/operation-portal'da tenantId route param'ı
+  // olmadığı için sadece login anında set ediliyordu — sayfa yenilenince
+  // (login.vue tekrar çalışmadığı için) X-Tenant-ID kayboluyor ve backend
+  // TenantScope filtresiz kalıp TÜM tenant'ların verisini döndürüyordu.
+  // Burada auth.initialize()'ın zaten getirdiği kullanıcının kendi
+  // tenant_id'siyle her navigasyonda kendini onarır.
+  if (
+    !to.params.tenantId
+    && (to.path.startsWith('/contractor-portal') || to.path.startsWith('/isg-portal') || to.path.startsWith('/operation-portal'))
+    && !tenantContext.tenantId.value
+    && auth.user.value?.tenant_id
+  ) {
+    tenantContext.setTenantId(auth.user.value.tenant_id)
+  }
+
   if (isPublicRoute(to.path)) {
     if (auth.isAuthenticated.value) {
       return navigateTo('/')

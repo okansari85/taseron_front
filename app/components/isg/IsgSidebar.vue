@@ -41,13 +41,16 @@
   </div>
 </template>
 <script setup lang="ts">
-import { FileCheck2 } from '@lucide/vue'
+import { FileCheck2, Flame } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 
 const route = useRoute()
 const auth = useAuth()
 const { isExpanded, isMobileOpen, closeMobile } = useIsgSidebar()
-const items = [{ title: 'Evrak Onayı', path: '/isg-portal/documents', icon: FileCheck2 }]
+const items = [
+  { title: 'Evrak Onayı', path: '/isg-portal/documents', icon: FileCheck2 },
+  { title: 'Yangın Denetimi', path: '/isg-portal/fire-inspection', icon: Flame },
+]
 const isActive = (path: string) => route.path === path || route.path.startsWith(`${path}/`)
 const initials = computed(() => {
   const name = auth.user.value?.name?.trim() || 'K'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarClock, ChevronLeft, ClipboardCheck, Flame, LoaderCircle, Plus, ShieldAlert, ShieldCheck, Trash2, X } from 'lucide-vue-next'
+import { CalendarClock, ChevronLeft, ClipboardCheck, Flame, LoaderCircle, Plus, Settings, ShieldAlert, ShieldCheck, Trash2, X } from 'lucide-vue-next'
 import { locationEmergencyEquipmentApi } from '~/api/location-emergency-equipment'
 import { emergencyEquipmentTypeApi } from '~/api/emergency-equipment-type'
 import type { EmergencyEquipmentChecklistItem, EmergencyEquipmentType } from '~/types/emergency-equipment'
@@ -13,7 +13,7 @@ const { $toast } = useNuxtApp()
 
 const close = () => emit('update:modelValue', false)
 
-type View = 'list' | 'add' | 'inspect'
+type View = 'list' | 'add' | 'inspect' | 'maintenance'
 const view = ref<View>('list')
 
 const equipment = ref<LocationEmergencyEquipmentItem[]>([])
@@ -98,6 +98,46 @@ const submitAdd = async () => {
   }
 }
 
+// --- Bakım Bilgileri (düzenle) ---
+const maintainingItem = ref<LocationEmergencyEquipmentItem | null>(null)
+const maintenanceForm = ref({ last_fill_date: '', last_annual_maintenance_date: '', next_annual_maintenance_date: '', service_company: '' })
+const maintenanceError = ref('')
+const savingMaintenance = ref(false)
+
+const openMaintenance = (item: LocationEmergencyEquipmentItem) => {
+  maintainingItem.value = item
+  maintenanceForm.value = {
+    last_fill_date: item.last_fill_date ?? '',
+    last_annual_maintenance_date: item.last_annual_maintenance_date ?? '',
+    next_annual_maintenance_date: item.next_annual_maintenance_date ?? '',
+    service_company: item.service_company ?? '',
+  }
+  maintenanceError.value = ''
+  view.value = 'maintenance'
+}
+
+const submitMaintenance = async () => {
+  if (!maintainingItem.value) return
+  savingMaintenance.value = true
+  maintenanceError.value = ''
+  try {
+    await locationEmergencyEquipmentApi.update(maintainingItem.value.id, {
+      last_fill_date: maintenanceForm.value.last_fill_date || null,
+      last_annual_maintenance_date: maintenanceForm.value.last_annual_maintenance_date || null,
+      next_annual_maintenance_date: maintenanceForm.value.next_annual_maintenance_date || null,
+      service_company: maintenanceForm.value.service_company || null,
+    })
+    $toast.success('Bakım bilgileri güncellendi.')
+    view.value = 'list'
+    maintainingItem.value = null
+    await load()
+  } catch (e: any) {
+    maintenanceError.value = e?.data?.message || e?.message || 'Bakım bilgileri güncellenemedi.'
+  } finally {
+    savingMaintenance.value = false
+  }
+}
+
 // --- Silme ---
 const showDeleteConfirmation = ref(false)
 const deletingItem = ref<LocationEmergencyEquipmentItem | null>(null)
@@ -162,6 +202,7 @@ const toggleIssue = (id: number) => {
 const backToList = () => {
   view.value = 'list'
   inspectingItem.value = null
+  maintainingItem.value = null
 }
 
 const submitInspection = async () => {
@@ -215,7 +256,7 @@ const resultBadge = (item: LocationEmergencyEquipmentItem) => {
             </div>
             <div class="min-w-0">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white/90">
-                {{ view === 'add' ? 'Ekipman Ekle' : view === 'inspect' ? 'Denetim Kaydet' : 'Acil Durum Ekipmanları' }}
+                {{ view === 'add' ? 'Ekipman Ekle' : view === 'inspect' ? 'Denetim Kaydet' : view === 'maintenance' ? 'Bakım Bilgileri' : 'Acil Durum Ekipmanları' }}
               </h2>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ entityLabel || 'Bu şube' }}</p>
             </div>
@@ -248,8 +289,14 @@ const resultBadge = (item: LocationEmergencyEquipmentItem) => {
                     <p v-if="item.latest_inspection" class="mt-2 flex items-center gap-1 text-xs text-gray-400">
                       <CalendarClock :size="12" /> Son denetim: {{ formatDate(item.latest_inspection.inspected_at) }}
                     </p>
+                    <p v-if="item.next_annual_maintenance_date" class="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                      <Settings :size="12" /> Sonraki yıllık bakım: {{ formatDate(item.next_annual_maintenance_date) }}
+                    </p>
                   </div>
                   <div class="flex shrink-0 items-center gap-1.5">
+                    <button title="Bakım Bilgileri" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-gray-700" @click="openMaintenance(item)">
+                      <Settings :size="15" />
+                    </button>
                     <button title="Denetim Kaydet" class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-brand-600 dark:border-gray-700" @click="openInspect(item)">
                       <ClipboardCheck :size="15" />
                     </button>
@@ -334,6 +381,34 @@ const resultBadge = (item: LocationEmergencyEquipmentItem) => {
               </div>
             </div>
           </template>
+
+          <!-- BAKIM BİLGİLERİ -->
+          <template v-else-if="view === 'maintenance'">
+            <div class="space-y-4 px-6 py-5">
+              <div v-if="maintenanceError" class="rounded-lg bg-error-50 px-3 py-2 text-sm text-error-600">{{ maintenanceError }}</div>
+              <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/5">
+                <p class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ maintainingItem?.equipment_type ? displayTypeName(maintainingItem.equipment_type) : '' }}{{ maintainingItem?.code ? ` — ${maintainingItem.code}` : '' }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Son Dolum Tarihi</label>
+                  <input v-model="maintenanceForm.last_fill_date" type="date" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Son Yıllık Bakım</label>
+                  <input v-model="maintenanceForm.last_annual_maintenance_date" type="date" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sonraki Yıllık Bakım</label>
+                  <input v-model="maintenanceForm.next_annual_maintenance_date" type="date" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Servis Firması</label>
+                  <input v-model="maintenanceForm.service_company" type="text" placeholder="Örn. ABC Yangın" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <div class="flex justify-end gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
@@ -341,11 +416,14 @@ const resultBadge = (item: LocationEmergencyEquipmentItem) => {
             Kapat
           </button>
           <template v-else>
-            <button type="button" class="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" @click="backToList" :disabled="saving || submittingInspection">
+            <button type="button" class="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" @click="backToList" :disabled="saving || submittingInspection || savingMaintenance">
               Vazgeç
             </button>
             <button v-if="view === 'add'" type="button" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60" :disabled="saving" @click="submitAdd">
               <LoaderCircle v-if="saving" :size="15" class="animate-spin" /> Kaydet
+            </button>
+            <button v-else-if="view === 'maintenance'" type="button" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60" :disabled="savingMaintenance" @click="submitMaintenance">
+              <LoaderCircle v-if="savingMaintenance" :size="15" class="animate-spin" /> Kaydet
             </button>
             <button v-else type="button" class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60" :disabled="submittingInspection" @click="submitInspection">
               <LoaderCircle v-if="submittingInspection" :size="15" class="animate-spin" /> Denetimi Kaydet
