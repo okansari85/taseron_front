@@ -216,6 +216,22 @@ const features = [
   padding: 14px 18px;
 }
 
+/* Keep the location artwork as a dedicated bottom panel instead of a flex-filling background. */
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:first-child) {
+  flex: 0 0 auto;
+}
+
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child) {
+  flex: 0 0 320px !important;
+  height: 320px;
+  min-height: 320px !important;
+  margin-top: 28px;
+}
+
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child img) {
+  object-position: center bottom;
+}
+
 @media (max-width: 1023px) {
   .isg-location-page {
     padding-left: 24px;
