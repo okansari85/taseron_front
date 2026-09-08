@@ -377,10 +377,14 @@ const features = [
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color .18s, background .18s;
+  transition: border-color .18s, background .18s, transform .18s ease, box-shadow .18s ease;
 }
 
-.isg-branch-card:hover { border-color: #c9cfe1; }
+.isg-branch-card:hover {
+  border-color: #c9cfe1;
+  box-shadow: 0 6px 16px rgba(42,55,103,.07);
+  transform: perspective(900px) rotateX(.35deg) rotateY(-.45deg) translateY(-1px);
+}
 
 .isg-branch-card.is-selected {
   border-color: #bcb8f7;
@@ -399,7 +403,10 @@ const features = [
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform .22s ease;
 }
+
+.isg-branch-card:hover .isg-branch-photo img { transform: scale(1.025); }
 
 .isg-branch-photo-empty {
   display: flex;
