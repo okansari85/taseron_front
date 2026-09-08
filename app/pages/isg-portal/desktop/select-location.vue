@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BarChart3, Building2, ChevronRight, Filter, Info, LoaderCircle, Search, Settings, ShieldCheck, Users } from '@lucide/vue'
+import { BarChart3, Building2, ChevronRight, Filter, Info, LoaderCircle, MapPin, Search, Settings, ShieldCheck, Users } from '@lucide/vue'
 import { locationApi, type LocationApiItem } from '~/api/location'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -152,12 +152,11 @@ const features = [
                 <h3>{{ location.name }}</h3>
                 <p>{{ [location.district?.name, location.city?.name].filter(Boolean).join(' / ') || 'Konum bilgisi yok' }}</p>
               </div>
-              <span class="isg-location-card-arrow"><ChevronRight :size="18" /></span>
             </div>
 
             <div class="isg-location-card-meta">
               <div class="isg-location-meta-item">
-                <span class="isg-location-meta-icon"><span class="isg-location-pin-dot" /></span>
+                <span class="isg-location-meta-icon"><MapPin :size="15" /></span>
                 <div>
                   <small>Fiziksel konum</small>
                   <strong>{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') || '—' }}</strong>
@@ -447,27 +446,6 @@ const features = [
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.isg-location-card-arrow {
-  display: inline-flex;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e3e7f0;
-  border-radius: 9px;
-  color: #8b95ad;
-  background: #fff;
-  transition: .2s;
-}
-
-.isg-location-card:hover .isg-location-card-arrow,
-.isg-location-card.is-selected .isg-location-card-arrow {
-  border-color: #d9d7ff;
-  color: #5149e8;
-  background: #f1f0ff;
 }
 
 .isg-location-card-meta {
@@ -773,10 +751,6 @@ const features = [
 
   .isg-location-card-heading p {
     font-size: 9px;
-  }
-
-  .isg-location-card-arrow {
-    display: none;
   }
 
   .isg-location-card-meta {
