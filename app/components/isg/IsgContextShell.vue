@@ -83,7 +83,7 @@ const handleLogout = async () => {
           </div>
 
           <div class="relative mt-6 min-h-[180px] flex-1">
-            <img src="/images/taseron-login-workers.jpg" alt="" class="absolute inset-0 h-full w-full object-cover object-center" />
+            <img src="/images/ChatGPT Image 8 Eyl 2026 19_20_54.png" alt="" class="absolute inset-0 h-full w-full object-cover object-center" />
             <div class="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-white to-transparent" />
           </div>
         </div>
@@ -138,7 +138,6 @@ const handleLogout = async () => {
 }
 
 .isg-context-shell--location > .flex > aside > div > div:last-child img {
-  content: url('/images/ChatGPT Image 8 Eyl 2026 19_20_54.png');
   object-position: center bottom;
 }
 
