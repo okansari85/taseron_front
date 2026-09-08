@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Bell, ChevronDown, Flame } from '@lucide/vue'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   headline: string
   description?: string
   features: { icon: any; title: string; subtitle?: string }[]
   footerNote: string
-}>()
+  variant?: 'default' | 'location'
+}>(), {
+  variant: 'default',
+})
 
 const auth = useAuth()
 const router = useRouter()
@@ -25,7 +28,10 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col bg-gray-50 font-outfit dark:bg-gray-950">
+  <div
+    class="flex min-h-screen flex-col bg-gray-50 font-outfit dark:bg-gray-950"
+    :class="props.variant === 'location' ? 'isg-context-shell--location' : ''"
+  >
     <header class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3.5 dark:border-gray-800 dark:bg-gray-900">
       <div class="flex items-center gap-2.5">
         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-error-50 text-error-500 dark:bg-error-500/10"><Flame :size="18" /></span>
@@ -97,3 +103,56 @@ const handleLogout = async () => {
     </footer>
   </div>
 </template>
+
+<style scoped>
+.isg-context-shell--location {
+  --location-sidebar-width: 394px;
+  background: #f7fbff;
+}
+
+.isg-context-shell--location > header {
+  min-height: 60px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.isg-context-shell--location > .flex > aside {
+  width: var(--location-sidebar-width);
+  background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 72%, #ffffff 100%);
+}
+
+.isg-context-shell--location > .flex > aside > div > div:first-child {
+  padding: 58px 48px 0;
+}
+
+.isg-context-shell--location > .flex > aside h1 {
+  max-width: 290px;
+  font-size: 34px;
+  line-height: 1.08;
+  color: #101d5c;
+}
+
+.isg-context-shell--location > .flex > aside > div > div:last-child {
+  margin-top: 28px;
+  min-height: 340px;
+}
+
+.isg-context-shell--location > .flex > aside > div > div:last-child img {
+  content: url('/images/ChatGPT Image 8 Eyl 2026 19_20_54.png');
+  object-position: center bottom;
+}
+
+.isg-context-shell--location > .flex > aside > div > div:last-child::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(247, 251, 255, 0.9) 0%, rgba(247, 251, 255, 0) 18%, rgba(8, 20, 70, 0.03) 100%);
+  pointer-events: none;
+}
+
+@media (max-width: 1279px) {
+  .isg-context-shell--location > .flex > aside {
+    width: 360px;
+  }
+}
+</style>
