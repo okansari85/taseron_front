@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { Bell, ChevronDown, Flame } from '@lucide/vue'
 
-defineProps<{
-  headline: string
-  description?: string
-  features: { icon: any; title: string; subtitle?: string }[]
-  footerNote: string
-  variant?: 'default' | 'location'
-}>()
-
 const props = withDefaults(defineProps<{
   headline: string
   description?: string
