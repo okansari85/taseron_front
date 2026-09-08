@@ -62,7 +62,7 @@ const handleLogout = async () => {
                 <div><p class="text-sm font-semibold text-brand-950">{{ feature.title }}</p><p v-if="feature.subtitle" class="mt-0.5 text-xs text-brand-700/70">{{ feature.subtitle }}</p></div>
               </div>
             </div>
-            <p class="mt-8 text-base font-semibold italic text-brand-950">{{ footerNote }}</p>
+            <p v-if="footerNote && props.variant !== 'location'" class="mt-8 text-base font-semibold italic text-brand-950">{{ footerNote }}</p>
           </div>
           <div class="absolute inset-0 z-0"><img :src="props.imageSrc" alt="" class="h-full w-full object-cover object-center" /><div class="absolute inset-0 bg-gradient-to-b from-white/80 via-white/10 to-transparent" /></div>
         </div>
