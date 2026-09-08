@@ -87,6 +87,7 @@ const features = [
 
 <template>
   <IsgContextShell
+    variant="location"
     headline="Güvenli İşletmeler Güçlü Gelecek"
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
@@ -117,27 +118,27 @@ const features = [
           v-for="location in filtered"
           :key="location.id"
           type="button"
-          class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-colors dark:bg-gray-900"
-          :class="selectedId === location.id ? 'border-error-400 bg-error-50/40 dark:border-error-500/50 dark:bg-error-500/5' : 'border-gray-200 dark:border-gray-800'"
+          class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-900"
+          :class="selectedId === location.id ? 'border-error-400 bg-error-50/40 shadow-sm dark:border-error-500/50 dark:bg-error-500/5' : 'border-gray-200 dark:border-gray-800'"
           @click="selectedId = location.id"
         >
           <div class="h-36 w-full overflow-hidden bg-gray-100 dark:bg-white/5">
-            <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" class="h-full w-full object-cover" />
+            <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" class="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
             <div v-else class="flex h-full w-full items-center justify-center text-gray-300"><Building2 :size="28" /></div>
           </div>
           <div class="p-4">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-gray-900 dark:text-white/90">{{ location.name }}</p>
-                <p class="truncate text-xs text-gray-400">{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') }}</p>
+                <p class="truncate text-sm font-bold text-brand-950 dark:text-white/90">{{ location.name }}</p>
+                <p class="mt-0.5 truncate text-xs text-gray-400">{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') }}</p>
               </div>
-              <ChevronRight :size="16" class="mt-0.5 shrink-0 text-gray-300" />
+              <ChevronRight :size="16" class="mt-0.5 shrink-0 text-brand-900/70" />
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
+              <span class="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 dark:bg-white/5 dark:text-gray-300">
                 <Building2 :size="13" />{{ location.branch_count ?? 0 }} şube
               </span>
-              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
+              <span class="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 dark:bg-white/5 dark:text-gray-300">
                 <Settings :size="13" />{{ location.equipment_count ?? 0 }} ekipman
               </span>
             </div>
@@ -146,7 +147,7 @@ const features = [
         <p v-if="!filtered.length" class="col-span-full py-16 text-center text-sm text-gray-400">Lokasyon bulunamadı.</p>
       </div>
 
-      <div class="mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+      <div class="mt-6 flex flex-col gap-4 rounded-2xl border border-brand-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10"><Info :size="15" /></span>
           <div>
@@ -157,7 +158,7 @@ const features = [
         <button
           type="button"
           :disabled="!selected || continuing"
-          class="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-error-500 px-6 py-3 text-sm font-semibold text-white disabled:opacity-40"
+          class="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-error-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-error-600 disabled:opacity-40"
           @click="continueNext"
         >
           <LoaderCircle v-if="continuing" :size="16" class="animate-spin" />
