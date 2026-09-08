@@ -77,7 +77,7 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-.isg-context-shell--location { --location-sidebar-width: 340px; background: #f7fbff; }
+.isg-context-shell--location { --location-sidebar-width: 340px; background: #f8fafc; }
 .isg-context-shell--location > header { min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
 .isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: auto 147% !important; background-position: left 17% !important; background-color: transparent !important; }
 .isg-context-shell--location > .flex > aside > div > div:first-child { padding: 58px 48px 0; }
@@ -94,40 +94,16 @@ const handleLogout = async () => {
 .isg-context-shell--location > .flex > aside > div > div:last-child img { opacity: 0; }
 .isg-context-shell--location > .flex > aside > div > div:last-child > div { display: none; }
 
-/* Lokasyon ekranında footer, görsel panelin bittiği yerden başlar. */
-.isg-context-shell--location > footer {
-  margin-left: var(--location-sidebar-width);
-  width: calc(100% - var(--location-sidebar-width));
-  box-sizing: border-box;
-  min-height: 43px;
-  padding-top: 9px;
-  padding-bottom: 9px;
-}
-
-.isg-context-shell--location > footer > div:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.isg-context-shell--location > footer > div:first-child > svg {
-  width: 22px;
-  height: 22px;
-  padding: 4px;
-  box-sizing: border-box;
-  border-radius: 7px;
-  background: #fff1f1;
-  color: #ef4444;
-}
-
-.isg-context-shell--location > footer > span {
-  color: #8a95ac;
-  font-size: 10px;
-}
+/* Location ekraninda kartlari daha flat bir yuzeye yaklastir. */
+.isg-context-shell--location :deep(.isg-location-card) { box-shadow: none; }
+.isg-context-shell--location :deep(.isg-location-card:hover) { box-shadow: none; transform: none; }
+.isg-context-shell--location :deep(.isg-location-counter),
+.isg-context-shell--location :deep(.isg-search-box),
+.isg-context-shell--location :deep(.isg-filter-button) { box-shadow: none; }
+.isg-context-shell--location :deep(.isg-location-card.is-selected) { box-shadow: inset 3px 0 0 #5149e8; }
+.isg-context-shell--location :deep(.isg-continue-button) { box-shadow: none; }
 
 @media (max-width: 1279px) {
-  .isg-context-shell--location > .flex > aside,
-  .isg-context-shell--location > footer { width: 320px; }
-  .isg-context-shell--location > footer { margin-left: 320px; width: calc(100% - 320px); }
+  .isg-context-shell--location > .flex > aside { width: 320px; }
 }
 </style>
