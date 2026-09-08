@@ -93,78 +93,121 @@ const features = [
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
   >
-    <div class="isg-location-page mx-auto max-w-6xl px-8 py-8">
-      <div class="mb-8 flex justify-center">
-        <IsgContextSteps :current-step="1" />
-      </div>
-
-      <h2 class="text-2xl font-bold text-brand-950 dark:text-white/90">Lokasyon Seç</h2>
-      <p class="mt-1 text-sm text-gray-500">İşlem yapmak istediğiniz lokasyonu seçin.</p>
-
-      <div class="mt-6 flex items-center gap-3">
-        <div class="relative flex-1">
-          <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input v-model="search" type="search" placeholder="Lokasyon ara..." class="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900" />
+    <div class="isg-location-page">
+      <div class="isg-location-intro">
+        <div>
+          <p class="isg-location-eyebrow">ÇALIŞMA ALANI</p>
+          <h2>Lokasyon Seç</h2>
+          <p class="isg-location-subtitle">İşlem yapmak istediğiniz lokasyonu seçin.</p>
         </div>
-        <button type="button" class="flex h-12 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-          <Filter :size="15" />
-          Filtrele
-        </button>
+        <div class="isg-location-counter">
+          <span class="isg-location-counter-dot" />
+          {{ locations.length }} lokasyon
+        </div>
       </div>
 
-      <div v-if="loading" class="py-16 text-center text-sm text-gray-400">Yükleniyor...</div>
-      <div v-else class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        <button
-          v-for="location in filtered"
-          :key="location.id"
-          type="button"
-          class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-900"
-          :class="selectedId === location.id ? 'border-error-500 bg-error-50/50 shadow-md ring-4 ring-error-100 dark:border-error-500 dark:bg-error-500/5 dark:ring-error-500/10' : 'border-gray-200 dark:border-gray-800'"
-          @click="selectedId = location.id"
-        >
-          <div class="h-36 w-full overflow-hidden bg-gray-100 dark:bg-white/5">
-            <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" class="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
-            <div v-else class="flex h-full w-full items-center justify-center text-gray-300"><Building2 :size="28" /></div>
+      <div class="isg-location-panel">
+        <div class="isg-location-panel-head">
+          <div class="isg-location-tabs">
+            <span class="isg-location-tab is-active">Lokasyonlar</span>
+            <span class="isg-location-tab">Erişiminiz Olanlar</span>
           </div>
-          <div class="p-4">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-brand-950 dark:text-white/90">{{ location.name }}</p>
-                <p class="mt-0.5 truncate text-xs text-gray-400">{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') }}</p>
-              </div>
-              <ChevronRight :size="16" class="mt-0.5 shrink-0 text-gray-300" />
-            </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
-                <Building2 :size="13" />{{ location.branch_count ?? 0 }} şube
-              </span>
-              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
-                <Settings :size="13" />{{ location.equipment_count ?? 0 }} ekipman
-              </span>
-            </div>
-          </div>
-        </button>
-        <p v-if="!filtered.length" class="col-span-full py-16 text-center text-sm text-gray-400">Lokasyon bulunamadı.</p>
-      </div>
+        </div>
 
-      <div class="mt-6 flex flex-col gap-4 rounded-2xl border border-brand-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-start gap-3">
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10"><Info :size="15" /></span>
+        <div class="isg-location-toolbar">
+          <div class="isg-search-box">
+            <Search :size="17" />
+            <input v-model="search" type="search" placeholder="Lokasyon ara..." />
+          </div>
+          <button type="button" class="isg-filter-button">
+            <Filter :size="16" />
+            Filtrele
+          </button>
+        </div>
+
+        <div class="isg-location-table-head">
+          <span>LOKASYON</span>
+          <span>FİZİKSEL KONUM</span>
+          <span>ŞUBELER</span>
+          <span>EKİPMAN</span>
+          <span class="text-right">İŞLEM</span>
+        </div>
+
+        <div v-if="loading" class="isg-location-state">
+          <LoaderCircle :size="22" class="animate-spin" />
+          Lokasyonlar yükleniyor...
+        </div>
+
+        <div v-else-if="!filtered.length" class="isg-location-state is-empty">
+          <Building2 :size="26" />
           <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Listede aradığınız lokasyonu göremiyor musunuz?</p>
-            <p class="text-xs text-gray-400">Erişim talebi için sistem yöneticiniz ile iletişime geçin.</p>
+            <strong>Lokasyon bulunamadı.</strong>
+            <p>Arama kriterinizi değiştirerek tekrar deneyin.</p>
           </div>
         </div>
-        <button
-          type="button"
-          :disabled="!selected || continuing"
-          class="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-error-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-error-600 disabled:opacity-40"
-          @click="continueNext"
-        >
-          <LoaderCircle v-if="continuing" :size="16" class="animate-spin" />
-          Devam Et
-          <ChevronRight :size="16" />
-        </button>
+
+        <div v-else class="isg-location-list">
+          <button
+            v-for="location in filtered"
+            :key="location.id"
+            type="button"
+            class="isg-location-row"
+            :class="{ 'is-selected': selectedId === location.id }"
+            @click="selectedId = location.id"
+          >
+            <div class="isg-location-name-cell">
+              <div class="isg-location-image">
+                <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" />
+                <Building2 v-else :size="22" />
+              </div>
+              <div class="min-w-0">
+                <p class="isg-location-name">{{ location.name }}</p>
+                <p class="isg-location-region">{{ [location.district?.name, location.city?.name].filter(Boolean).join(' / ') || 'Konum bilgisi yok' }}</p>
+              </div>
+            </div>
+
+            <div class="isg-location-address">
+              <span class="isg-location-pin"><span /></span>
+              <span>{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') || '—' }}</span>
+            </div>
+
+            <div class="isg-location-metric">
+              <span class="isg-metric-badge">{{ location.branch_count ?? 0 }}</span>
+              <span>şube</span>
+            </div>
+
+            <div class="isg-location-metric">
+              <span class="isg-metric-badge">{{ location.equipment_count ?? 0 }}</span>
+              <span>ekipman</span>
+            </div>
+
+            <div class="isg-location-action">
+              <span class="isg-select-state">{{ selectedId === location.id ? 'Seçildi' : 'Seç' }}</span>
+              <span class="isg-chevron"><ChevronRight :size="17" /></span>
+            </div>
+          </button>
+        </div>
+
+        <div class="isg-location-footer">
+          <div class="isg-location-help">
+            <span class="isg-help-icon"><Info :size="15" /></span>
+            <div>
+              <strong>Listede aradığınız lokasyonu göremiyor musunuz?</strong>
+              <p>Erişim talebi için sistem yöneticiniz ile iletişime geçin.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            :disabled="!selected || continuing"
+            class="isg-continue-button"
+            @click="continueNext"
+          >
+            <LoaderCircle v-if="continuing" :size="16" class="animate-spin" />
+            {{ continuing ? 'Hazırlanıyor' : 'Devam Et' }}
+            <ChevronRight :size="17" />
+          </button>
+        </div>
       </div>
     </div>
   </IsgContextShell>
@@ -172,89 +215,547 @@ const features = [
 
 <style scoped>
 .isg-location-page {
-  min-height: 100%;
+  width: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 34px 42px 36px;
 }
 
-.isg-location-page h2 {
-  font-size: 32px;
-  line-height: 1.1;
+.isg-location-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
-.isg-location-page > .mb-8 {
-  margin-bottom: 34px;
+.isg-location-eyebrow {
+  margin: 0 0 7px;
+  color: #7a89b0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
 }
 
-.isg-location-page .grid > button {
-  border-radius: 10px;
+.isg-location-intro h2 {
+  margin: 0;
+  color: #17245f;
+  font-size: 29px;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -.025em;
 }
 
-.isg-location-page .grid > button > div:first-child {
-  height: 122px;
+.isg-location-subtitle {
+  margin: 7px 0 0;
+  color: #7885a5;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.isg-location-page .grid > button > div:last-child {
-  padding: 12px 16px 14px;
+.isg-location-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e5e9f4;
+  border-radius: 9px;
+  background: #fff;
+  color: #657294;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(42, 58, 106, .035);
 }
 
-.isg-location-page .grid > button > div:last-child > div:first-child p:first-child {
-  font-size: 15px;
+.isg-location-counter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4c46e8;
+  box-shadow: 0 0 0 3px #efefff;
 }
 
-.isg-location-page .grid > button > div:last-child > div:first-child p:last-child {
-  color: #6072ad;
+.isg-location-panel {
+  overflow: hidden;
+  border: 1px solid #e3e7f1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 22px rgba(37, 51, 93, .045);
 }
 
-.isg-location-page .grid > button > div:last-child > div:last-child span {
-  border-radius: 6px;
-  background: #edf3ff;
-  color: #344d8e;
-  padding: 5px 9px;
+.isg-location-panel-head {
+  height: 58px;
+  border-bottom: 1px solid #edf0f6;
 }
 
-.isg-location-page > div:last-child {
-  border-radius: 10px;
-  padding: 14px 18px;
+.isg-location-tabs {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+  padding-left: 20px;
+  gap: 25px;
 }
 
-/* Location page: use abc.png as a full-height sidebar background so its built-in slogan remains visible. */
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside) {
+.isg-location-tab {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #6e7b9c;
+  font-size: 12px;
+  font-weight: 650;
 }
 
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div) {
-  position: relative;
+.isg-location-tab.is-active {
+  color: #4b46e9;
 }
 
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:first-child) {
-  position: relative;
-  z-index: 2;
-  flex: 1 1 auto;
-  min-height: 100%;
-  padding-top: 38px;
-}
-
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child) {
+.isg-location-tab.is-active::after {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #5149ed;
+  content: '';
+}
+
+.isg-location-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #edf0f6;
+}
+
+.isg-search-box {
+  display: flex;
+  height: 42px;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  max-width: 410px;
+  padding: 0 13px;
+  border: 1px solid #e0e5ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #8792ac;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.isg-search-box:focus-within {
+  border-color: #aaa7f5;
+  box-shadow: 0 0 0 3px rgba(81, 73, 237, .07);
+}
+
+.isg-search-box input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #24315d;
+  font-size: 12px;
+}
+
+.isg-search-box input::placeholder {
+  color: #9aa4bb;
+}
+
+.isg-filter-button {
+  display: inline-flex;
+  height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid #e0e5ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #53617f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.isg-filter-button:hover {
+  border-color: #cfd5e4;
+  background: #fafbfe;
+}
+
+.isg-location-table-head,
+.isg-location-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.55fr) minmax(170px, 1fr) 110px 110px minmax(100px, .65fr);
+  align-items: center;
+  column-gap: 20px;
+}
+
+.isg-location-table-head {
+  min-height: 43px;
+  padding: 0 20px;
+  border-bottom: 1px solid #edf0f6;
+  background: #fbfcfe;
+  color: #7b87a4;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .055em;
+}
+
+.isg-location-row {
+  width: 100%;
+  min-height: 92px;
+  padding: 13px 20px;
+  border: 0;
+  border-bottom: 1px solid #edf0f6;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s, box-shadow .18s;
+}
+
+.isg-location-row:last-child {
+  border-bottom: 0;
+}
+
+.isg-location-row:hover {
+  background: #fafbff;
+}
+
+.isg-location-row.is-selected {
+  background: #f7f7ff;
+  box-shadow: inset 3px 0 0 #5149ed;
+}
+
+.isg-location-name-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+}
+
+.isg-location-image {
+  display: flex;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #e6e9f0;
+  border-radius: 10px;
+  background: #f2f4f9;
+  color: #9aa5be;
+}
+
+.isg-location-image img {
   width: 100%;
   height: 100%;
-  min-height: 0 !important;
+  object-fit: cover;
+}
+
+.isg-location-name {
   margin: 0;
+  overflow: hidden;
+  color: #1d2a59;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child img) {
-  object-position: center center;
+.isg-location-region {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #8290ae;
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child > div) {
-  z-index: 1;
+.isg-location-address {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: #5f6e8e;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
-@media (max-width: 1023px) {
+.isg-location-pin {
+  position: relative;
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #7786a8;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.isg-location-pin span {
+  width: 4px;
+  height: 4px;
+  border: 1px solid #7786a8;
+  border-radius: 50%;
+}
+
+.isg-location-metric {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7c88a3;
+  font-size: 10px;
+}
+
+.isg-metric-badge {
+  display: inline-flex;
+  min-width: 30px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: #f0efff;
+  color: #5149e7;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.isg-location-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.isg-select-state {
+  color: #8b96ad;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.is-selected .isg-select-state {
+  color: #5149e7;
+}
+
+.isg-chevron {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e3e7f0;
+  border-radius: 8px;
+  color: #8792aa;
+  background: #fff;
+}
+
+.is-selected .isg-chevron {
+  border-color: #d8d6ff;
+  background: #eeedff;
+  color: #5149e7;
+}
+
+.isg-location-state {
+  display: flex;
+  min-height: 260px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #8792ab;
+  font-size: 12px;
+}
+
+.isg-location-state.is-empty {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.isg-location-state.is-empty > svg {
+  color: #a1abc0;
+}
+
+.isg-location-state strong {
+  display: block;
+  color: #455273;
+  font-size: 12px;
+  text-align: center;
+}
+
+.isg-location-state p {
+  margin: 4px 0 0;
+  color: #9aa4b8;
+  font-size: 10px;
+  text-align: center;
+}
+
+.isg-location-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 20px;
+  border-top: 1px solid #edf0f6;
+  background: #fcfdff;
+}
+
+.isg-location-help {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.isg-help-icon {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f0f1ff;
+  color: #5b55e9;
+}
+
+.isg-location-help strong {
+  display: block;
+  color: #495674;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.isg-location-help p {
+  margin: 3px 0 0;
+  color: #98a1b4;
+  font-size: 9px;
+}
+
+.isg-continue-button {
+  display: inline-flex;
+  height: 40px;
+  min-width: 130px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 9px;
+  background: #5149ed;
+  color: #fff;
+  box-shadow: 0 5px 13px rgba(81, 73, 237, .17);
+  font-size: 11px;
+  font-weight: 700;
+  transition: transform .18s, box-shadow .18s, background .18s;
+}
+
+.isg-continue-button:hover:not(:disabled) {
+  background: #453dde;
+  box-shadow: 0 7px 17px rgba(81, 73, 237, .22);
+  transform: translateY(-1px);
+}
+
+.isg-continue-button:disabled {
+  cursor: not-allowed;
+  opacity: .42;
+}
+
+@media (max-width: 1180px) {
   .isg-location-page {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .isg-location-table-head,
+  .isg-location-row {
+    grid-template-columns: minmax(230px, 1.4fr) minmax(150px, .9fr) 90px 90px minmax(90px, .55fr);
+    column-gap: 13px;
+  }
+}
+
+@media (max-width: 900px) {
+  .isg-location-page {
+    padding: 26px 20px 28px;
+  }
+
+  .isg-location-table-head {
+    display: none;
+  }
+
+  .isg-location-row {
+    grid-template-columns: 1fr auto;
+    row-gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .isg-location-address {
+    grid-column: 1 / 2;
+  }
+
+  .isg-location-metric {
+    display: none;
+  }
+
+  .isg-location-action {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .isg-location-page {
+    padding: 22px 14px 24px;
+  }
+
+  .isg-location-intro {
+    align-items: flex-start;
+  }
+
+  .isg-location-counter {
+    display: none;
+  }
+
+  .isg-location-intro h2 {
+    font-size: 25px;
+  }
+
+  .isg-location-panel-head {
+    height: 52px;
+  }
+
+  .isg-location-tabs {
+    padding-left: 16px;
+    gap: 18px;
+  }
+
+  .isg-location-toolbar {
+    padding: 14px 15px;
+  }
+
+  .isg-filter-button {
+    padding: 0 11px;
+  }
+
+  .isg-filter-button {
+    font-size: 0;
+  }
+
+  .isg-filter-button svg {
+    margin: 0;
+  }
+
+  .isg-location-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .isg-continue-button {
+    width: 100%;
   }
 }
 </style>
