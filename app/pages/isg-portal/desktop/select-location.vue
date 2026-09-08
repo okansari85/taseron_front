@@ -87,12 +87,13 @@ const features = [
 
 <template>
   <IsgContextShell
+    variant="location"
     headline="Güvenli İşletmeler Güçlü Gelecek"
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
     footer-note="Güvenlik Her Zaman Önceliğimiz"
   >
-    <div class="mx-auto max-w-6xl px-8 py-8">
+    <div class="isg-location-page mx-auto max-w-6xl px-8 py-8">
       <div class="mb-8 flex justify-center">
         <IsgContextSteps :current-step="1" />
       </div>
@@ -168,3 +169,57 @@ const features = [
     </div>
   </IsgContextShell>
 </template>
+
+<style scoped>
+.isg-location-page {
+  min-height: 100%;
+}
+
+.isg-location-page h2 {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.isg-location-page > .mb-8 {
+  margin-bottom: 34px;
+}
+
+.isg-location-page .grid > button {
+  border-radius: 10px;
+}
+
+.isg-location-page .grid > button > div:first-child {
+  height: 122px;
+}
+
+.isg-location-page .grid > button > div:last-child {
+  padding: 12px 16px 14px;
+}
+
+.isg-location-page .grid > button > div:last-child > div:first-child p:first-child {
+  font-size: 15px;
+}
+
+.isg-location-page .grid > button > div:last-child > div:first-child p:last-child {
+  color: #6072ad;
+}
+
+.isg-location-page .grid > button > div:last-child > div:last-child span {
+  border-radius: 6px;
+  background: #edf3ff;
+  color: #344d8e;
+  padding: 5px 9px;
+}
+
+.isg-location-page > div:last-child {
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+@media (max-width: 1023px) {
+  .isg-location-page {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+</style>
