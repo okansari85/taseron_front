@@ -7,8 +7,10 @@ const props = withDefaults(defineProps<{
   features: { icon: any; title: string; subtitle?: string }[]
   footerNote: string
   variant?: 'default' | 'location'
+  imageSrc?: string
 }>(), {
   variant: 'default',
+  imageSrc: '/images/ChatGPT Image 8 Eyl 2026 19_20_54.png',
 })
 
 const auth = useAuth()
@@ -83,7 +85,7 @@ const handleLogout = async () => {
           </div>
 
           <div class="relative mt-6 min-h-[180px] flex-1">
-            <img src="/images/ChatGPT Image 8 Eyl 2026 19_20_54.png" alt="" class="absolute inset-0 h-full w-full object-cover object-center" />
+            <img :src="props.imageSrc" alt="" class="absolute inset-0 h-full w-full object-cover object-center" />
             <div class="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-white to-transparent" />
           </div>
         </div>
