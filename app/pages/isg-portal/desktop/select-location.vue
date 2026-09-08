@@ -217,20 +217,38 @@ const features = [
   padding: 14px 18px;
 }
 
-/* Keep the location artwork as a dedicated bottom panel instead of a flex-filling background. */
+/* Location page: use abc.png as a full-height sidebar background so its built-in slogan remains visible. */
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside) {
+  position: relative;
+}
+
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div) {
+  position: relative;
+}
+
 .isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:first-child) {
-  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-height: 100%;
 }
 
 .isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child) {
-  flex: 0 0 320px !important;
-  height: 320px;
-  min-height: 320px !important;
-  margin-top: 28px;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  margin: 0;
 }
 
 .isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child img) {
-  object-position: center bottom;
+  object-position: center center;
+}
+
+.isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child > div) {
+  z-index: 1;
 }
 
 @media (max-width: 1023px) {
