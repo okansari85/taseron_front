@@ -130,7 +130,7 @@ const features = [
         </div>
       </div>
 
-      <div v-else class="isg-location-list">
+      <TransitionGroup v-else name="location-list" tag="div" class="isg-location-list">
         <button
           v-for="location in filtered"
           :key="location.id"
@@ -188,7 +188,7 @@ const features = [
             </span>
           </div>
         </button>
-      </div>
+      </TransitionGroup>
 
       <div class="isg-location-footer">
         <div class="isg-location-help">
@@ -345,6 +345,27 @@ const features = [
   display: flex;
   flex-direction: column;
   gap: 11px;
+}
+
+.location-list-move,
+.location-list-enter-active,
+.location-list-leave-active {
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.location-list-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.location-list-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.location-list-leave-active {
+  position: absolute;
+  width: 100%;
 }
 
 .isg-location-card {
