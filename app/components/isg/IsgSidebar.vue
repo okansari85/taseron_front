@@ -66,7 +66,7 @@ const desktopSections = [
     title: 'Ana Menü',
     items: [
       { title: 'Ekipman Denetimi', path: '/isg-portal/desktop', icon: ShieldCheck },
-      { title: 'Saha Bulguları', path: '/isg-portal/desktop', icon: SearchCheck },
+      { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
       { title: 'Yangın Yönetimi', path: '/isg-portal/fire-inspection', icon: Flame },
     ],
   },
@@ -79,7 +79,7 @@ const desktopSections = [
 ]
 
 const menuSections = computed(() => props.desktop ? desktopSections : defaultSections)
-const isActive = (path: string) => path !== '/isg-portal/desktop' && (route.path === path || route.path.startsWith(`${path}/`))
+const isActive = (path: string) => path === '/isg-portal/desktop' ? route.path === path : route.path === path || route.path.startsWith(`${path}/`)
 const initials = computed(() => {
   const name = auth.user.value?.name?.trim() || 'K'
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR')
