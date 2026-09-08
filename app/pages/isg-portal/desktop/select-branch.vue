@@ -105,8 +105,8 @@ const features = [
           v-for="b in filtered"
           :key="b.pivot?.id ?? b.id"
           type="button"
-          class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-colors dark:bg-gray-900"
-          :class="selectedId === (b.pivot?.id ?? b.id) ? 'border-error-400 bg-error-50/40 dark:border-error-500/50 dark:bg-error-500/5' : 'border-gray-200 dark:border-gray-800'"
+          class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-900"
+          :class="selectedId === (b.pivot?.id ?? b.id) ? 'border-error-500 bg-error-50/50 shadow-md ring-4 ring-error-100 dark:border-error-500 dark:bg-error-500/5 dark:ring-error-500/10' : 'border-gray-200 dark:border-gray-800'"
           @click="selectedId = b.pivot?.id ?? b.id"
         >
           <div class="h-32 w-full overflow-hidden bg-gray-100 dark:bg-white/5">

@@ -87,7 +87,6 @@ const features = [
 
 <template>
   <IsgContextShell
-    variant="location"
     headline="Güvenli İşletmeler Güçlü Gelecek"
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
@@ -119,7 +118,7 @@ const features = [
           :key="location.id"
           type="button"
           class="overflow-hidden rounded-2xl border-2 bg-white text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-900"
-          :class="selectedId === location.id ? 'border-error-400 bg-error-50/40 shadow-sm dark:border-error-500/50 dark:bg-error-500/5' : 'border-gray-200 dark:border-gray-800'"
+          :class="selectedId === location.id ? 'border-error-500 bg-error-50/50 shadow-md ring-4 ring-error-100 dark:border-error-500 dark:bg-error-500/5 dark:ring-error-500/10' : 'border-gray-200 dark:border-gray-800'"
           @click="selectedId = location.id"
         >
           <div class="h-36 w-full overflow-hidden bg-gray-100 dark:bg-white/5">
@@ -132,13 +131,13 @@ const features = [
                 <p class="truncate text-sm font-bold text-brand-950 dark:text-white/90">{{ location.name }}</p>
                 <p class="mt-0.5 truncate text-xs text-gray-400">{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') }}</p>
               </div>
-              <ChevronRight :size="16" class="mt-0.5 shrink-0 text-brand-900/70" />
+              <ChevronRight :size="16" class="mt-0.5 shrink-0 text-gray-300" />
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <span class="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 dark:bg-white/5 dark:text-gray-300">
+              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
                 <Building2 :size="13" />{{ location.branch_count ?? 0 }} şube
               </span>
-              <span class="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 dark:bg-white/5 dark:text-gray-300">
+              <span class="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
                 <Settings :size="13" />{{ location.equipment_count ?? 0 }} ekipman
               </span>
             </div>

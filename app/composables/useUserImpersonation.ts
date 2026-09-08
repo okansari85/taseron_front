@@ -6,6 +6,7 @@ const normalizeRole = (role: string) => role.trim().toLocaleLowerCase('tr-TR').r
 
 export const useUserImpersonation = () => {
   const auth = useAuth()
+  const tenantContext = useTenantRequestContext()
   const originalToken = useCookie<string | null>('super_admin_auth_token', {
     default: () => null,
     sameSite: 'lax',
@@ -39,6 +40,12 @@ export const useUserImpersonation = () => {
       auth.token.value = response.token
       auth.user.value = response.user
       auth.initialized.value = true
+      // Taklit edilen kullanıcının tenant'ı, admin'in o an aktif olan tenant'ından
+      // farklı olabilir. tenantContext burada temizlenmezse eski (yanlış) tenant
+      // ID'si kalır ve auth.global.ts'deki "sadece boşsa kendini onar" kontrolü
+      // bunu yakalamaz (değer zaten dolu) — bir sonraki navigasyonda middleware
+      // bunu response.user.tenant_id ile yeniden kurar.
+      tenantContext.clearTenantId()
       return response
     } finally {
       loading.value = false
@@ -65,6 +72,9 @@ export const useUserImpersonation = () => {
       originalToken.value = null
       originalUser.value = null
       returnPath.value = null
+      // Aynı sebeple: taklit sona erince de tenant context temizlenir, admin'in
+      // kendi context'i (varsa) middleware tarafından yeniden kurulur.
+      tenantContext.clearTenantId()
       return savedPath
     } finally {
       loading.value = false
