@@ -69,16 +69,16 @@ const handleLogout = async () => {
       </aside>
       <main class="min-w-0 flex-1 overflow-y-auto"><slot /></main>
     </div>
-    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div><span>Daha güvenli yarınlar için.</span></footer>
+    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div><span>Daha güvenli yarınlar için.</span></div>
   </div>
 </template>
 
 <style scoped>
-.isg-context-shell--location { --location-sidebar-width: 360px; background: #f7fbff; }
+.isg-context-shell--location { --location-sidebar-width: 340px; background: #f7fbff; }
 .isg-context-shell--location > header { min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
 .isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: cover !important; background-position: center top !important; background-color: transparent !important; }
 .isg-context-shell--location > .flex > aside > div > div:first-child { padding: 58px 48px 0; }
-.isg-context-shell--location > .flex > aside h1 { max-width: 225px; margin-top: 0; font-size: 30px; line-height: 1.04; letter-spacing: -0.025em; color: #101d5c; }
+.isg-context-shell--location > .flex > aside h1 { max-width: 205px; margin-top: 0; font-size: 30px; line-height: 1.04; letter-spacing: -0.025em; color: #101d5c; }
 .isg-context-shell--location > .flex > aside > div > div:first-child > span { display: none; }
 .isg-context-shell--location > .flex > aside > div > div:first-child > p:first-of-type { margin-bottom: 14px; font-size: 9px; letter-spacing: 0.22em; }
 .isg-context-shell--location > .flex > aside h1 + p { margin-top: 12px; font-size: 13px; line-height: 1.55; }
@@ -90,5 +90,5 @@ const handleLogout = async () => {
 .isg-context-shell--location > .flex > aside > div > div:last-child { position: absolute; inset: 0; margin: 0; min-height: 0; height: 100%; background: transparent; }
 .isg-context-shell--location > .flex > aside > div > div:last-child img { opacity: 0; }
 .isg-context-shell--location > .flex > aside > div > div:last-child > div { display: none; }
-@media (max-width: 1279px) { .isg-context-shell--location > .flex > aside { width: 340px; } }
+@media (max-width: 1279px) { .isg-context-shell--location > .flex > aside { width: 320px; } }
 </style>
