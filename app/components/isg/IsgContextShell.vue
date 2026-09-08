@@ -93,5 +93,41 @@ const handleLogout = async () => {
 .isg-context-shell--location > .flex > aside > div > div:last-child { position: absolute; inset: 0; margin: 0; min-height: 0; height: 100%; background: transparent; }
 .isg-context-shell--location > .flex > aside > div > div:last-child img { opacity: 0; }
 .isg-context-shell--location > .flex > aside > div > div:last-child > div { display: none; }
-@media (max-width: 1279px) { .isg-context-shell--location > .flex > aside { width: 320px; } }
+
+/* Lokasyon ekranında footer, görsel panelin bittiği yerden başlar. */
+.isg-context-shell--location > footer {
+  margin-left: var(--location-sidebar-width);
+  width: calc(100% - var(--location-sidebar-width));
+  box-sizing: border-box;
+  min-height: 43px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.isg-context-shell--location > footer > div:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.isg-context-shell--location > footer > div:first-child > svg {
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  background: #fff1f1;
+  color: #ef4444;
+}
+
+.isg-context-shell--location > footer > span {
+  color: #8a95ac;
+  font-size: 10px;
+}
+
+@media (max-width: 1279px) {
+  .isg-context-shell--location > .flex > aside,
+  .isg-context-shell--location > footer { width: 320px; }
+  .isg-context-shell--location > footer { margin-left: 320px; width: calc(100% - 320px); }
+}
 </style>
