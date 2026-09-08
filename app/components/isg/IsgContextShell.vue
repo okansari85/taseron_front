@@ -120,7 +120,11 @@ const handleLogout = async () => {
 
 .isg-context-shell--location > .flex > aside {
   width: var(--location-sidebar-width);
-  background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 72%, #ffffff 100%);
+  background-image: url('/images/abc.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-color: transparent !important;
 }
 
 .isg-context-shell--location > .flex > aside > div > div:first-child {
@@ -140,13 +144,14 @@ const handleLogout = async () => {
   margin: 0;
   min-height: 0;
   height: 100%;
+  background: transparent;
 }
 
 .isg-context-shell--location > .flex > aside > div > div:last-child img {
-  object-position: center center;
+  opacity: 0;
 }
 
-.isg-context-shell--location > .flex > aside > div > div:last-child::after {
+.isg-context-shell--location > .flex > aside > div > div:last-child > div {
   display: none;
 }
 
