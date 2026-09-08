@@ -15,18 +15,20 @@
         </NuxtLink>
       </div>
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
-        <p v-if="isExpanded" class="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">Portal</p>
-        <div class="flex flex-col gap-2">
-          <NuxtLink
-            v-for="item in items"
-            :key="item.path"
-            :to="item.path"
-            :class="['menu-item group', isActive(item.path) ? 'menu-item-active' : 'menu-item-inactive', isExpanded ? 'justify-start' : 'justify-center']"
-            @click="closeMobile"
-          >
-            <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
-          </NuxtLink>
-        </div>
+        <template v-for="(section, sectionIndex) in menuSections" :key="section.title">
+          <p v-if="isExpanded" :class="['text-xs font-medium uppercase tracking-wide text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
+          <div class="flex flex-col gap-2">
+            <NuxtLink
+              v-for="item in section.items"
+              :key="item.title"
+              :to="item.path"
+              :class="['menu-item group', isActive(item.path) ? 'menu-item-active' : 'menu-item-inactive', isExpanded ? 'justify-start' : 'justify-center']"
+              @click="closeMobile"
+            >
+              <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
+            </NuxtLink>
+          </div>
+        </template>
         <div class="mt-auto border-t border-gray-100 pt-4 dark:border-gray-800">
           <div :class="['flex items-center gap-3 rounded-lg px-2 py-3', isExpanded ? 'justify-start' : 'justify-center']">
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500">{{ initials }}</div>
@@ -41,24 +43,45 @@
   </div>
 </template>
 <script setup lang="ts">
-import { FileCheck2, Flame } from '@lucide/vue'
+import { FileCheck2, Flame, SearchCheck, ShieldCheck, Users } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 
+const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: false })
 const route = useRoute()
 const auth = useAuth()
 const { isExpanded, isMobileOpen, closeMobile } = useIsgSidebar()
-const items = [
-  { title: 'Evrak Onayı', path: '/isg-portal/documents', icon: FileCheck2 },
-  { title: 'Yangın Denetimi', path: '/isg-portal/fire-inspection', icon: Flame },
+
+const defaultSections = [
+  {
+    title: 'Portal',
+    items: [
+      { title: 'Evrak Onayı', path: '/isg-portal/documents', icon: FileCheck2 },
+      { title: 'Yangın Denetimi', path: '/isg-portal/fire-inspection', icon: Flame },
+    ],
+  },
 ]
-const isActive = (path: string) => route.path === path || route.path.startsWith(`${path}/`)
+
+const desktopSections = [
+  {
+    title: 'Ana Menü',
+    items: [
+      { title: 'Ekipman Denetimi', path: '/isg-portal/desktop', icon: ShieldCheck },
+      { title: 'Saha Bulguları', path: '/isg-portal/desktop', icon: SearchCheck },
+      { title: 'Yangın Yönetimi', path: '/isg-portal/fire-inspection', icon: Flame },
+    ],
+  },
+  {
+    title: 'Taşeron Yönetimi',
+    items: [
+      { title: 'Taşeron Listesi', path: '/isg-portal/desktop', icon: Users },
+    ],
+  },
+]
+
+const menuSections = computed(() => props.desktop ? desktopSections : defaultSections)
+const isActive = (path: string) => path !== '/isg-portal/desktop' && (route.path === path || route.path.startsWith(`${path}/`))
 const initials = computed(() => {
   const name = auth.user.value?.name?.trim() || 'K'
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toLocaleUpperCase('tr-TR')
+  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR')
 })
 </script>
