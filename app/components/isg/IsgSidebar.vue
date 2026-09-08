@@ -3,38 +3,52 @@
     <div v-if="isMobileOpen" class="fixed inset-0 z-[9998] bg-black/30 lg:hidden" @click="closeMobile"></div>
     <aside
       :class="[
-        'fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r border-gray-200 bg-white px-5 transition-all duration-300 dark:border-gray-800 dark:bg-gray-900',
-        isExpanded ? 'w-[290px]' : 'w-[90px]',
+        'fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r transition-all duration-300',
+        desktop
+          ? 'border-black bg-black text-white'
+          : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900',
+        desktop
+          ? (isExpanded ? 'w-[230px]' : 'w-[72px]')
+          : (isExpanded ? 'w-[290px]' : 'w-[90px]'),
         isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
     >
-      <div :class="['flex py-8', isExpanded ? 'justify-start' : 'justify-center']">
+      <div :class="['flex', desktop ? 'py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
         <NuxtLink to="/isg-portal/documents" class="flex items-center gap-3">
-          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
-          <span v-if="isExpanded" class="text-lg font-semibold text-gray-800 dark:text-white/90">İSG Portalı</span>
+          <template v-if="desktop && context.branchLogo">
+            <img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl object-contain bg-white p-1" />
+          </template>
+          <span v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
+          <span v-if="isExpanded" :class="['text-lg font-semibold', desktop ? 'text-white' : 'text-gray-800 dark:text-white/90']">İSG Portalı</span>
         </NuxtLink>
       </div>
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
         <template v-for="(section, sectionIndex) in menuSections" :key="section.title">
-          <p v-if="isExpanded" :class="['text-xs font-medium uppercase tracking-wide text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
+          <p v-if="isExpanded" :class="['text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
           <div class="flex flex-col gap-2">
             <NuxtLink
               v-for="item in section.items"
               :key="item.title"
               :to="item.path"
-              :class="['menu-item group', isActive(item.path) ? 'menu-item-active' : 'menu-item-inactive', isExpanded ? 'justify-start' : 'justify-center']"
+              :class="[
+                'menu-item group',
+                isActive(item.path)
+                  ? (desktop ? 'bg-[#d71920] text-white shadow-[0_8px_24px_rgba(215,25,32,0.22)]' : 'menu-item-active')
+                  : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'),
+                isExpanded ? 'justify-start' : 'justify-center',
+              ]"
               @click="closeMobile"
             >
               <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
             </NuxtLink>
           </div>
         </template>
-        <div class="mt-auto border-t border-gray-100 pt-4 dark:border-gray-800">
+        <div :class="['mt-auto pt-4', desktop ? 'border-t border-white/10' : 'border-t border-gray-100 dark:border-gray-800']">
           <div :class="['flex items-center gap-3 rounded-lg px-2 py-3', isExpanded ? 'justify-start' : 'justify-center']">
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500">{{ initials }}</div>
+            <div :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold', desktop ? 'bg-white/10 text-white' : 'bg-brand-50 text-brand-500 dark:bg-brand-500/10']">{{ initials }}</div>
             <div v-if="isExpanded" class="min-w-0">
-              <p class="truncate text-sm font-medium text-gray-800 dark:text-white/90">{{ auth.user.value?.name || 'Kullanıcı' }}</p>
-              <p class="truncate text-xs text-gray-500 dark:text-gray-400">İSG Uzmanı</p>
+              <p :class="['truncate text-sm font-medium', desktop ? 'text-white' : 'text-gray-800 dark:text-white/90']">{{ auth.user.value?.name || 'Kullanıcı' }}</p>
+              <p :class="['truncate text-xs', desktop ? 'text-white/45' : 'text-gray-500 dark:text-gray-400']">İSG Uzmanı</p>
             </div>
           </div>
         </div>
@@ -45,10 +59,12 @@
 <script setup lang="ts">
 import { FileCheck2, Flame, SearchCheck, ShieldCheck, Users } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
+import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
 const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: false })
 const route = useRoute()
 const auth = useAuth()
+const context = useIsgDesktopContextStore()
 const { isExpanded, isMobileOpen, closeMobile } = useIsgSidebar()
 
 const defaultSections = [
