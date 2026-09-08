@@ -102,112 +102,114 @@ const features = [
         </div>
         <div class="isg-location-counter">
           <span class="isg-location-counter-dot" />
-          {{ locations.length }} lokasyon
+          <strong>{{ locations.length }}</strong> lokasyon
         </div>
       </div>
 
-      <div class="isg-location-panel">
-        <div class="isg-location-panel-head">
-          <div class="isg-location-tabs">
-            <span class="isg-location-tab is-active">Lokasyonlar</span>
-            <span class="isg-location-tab">Erişiminiz Olanlar</span>
+      <div class="isg-location-toolbar">
+        <div class="isg-search-box">
+          <Search :size="17" />
+          <input v-model="search" type="search" placeholder="Lokasyon adı, şehir veya ilçe ara..." />
+        </div>
+        <button type="button" class="isg-filter-button">
+          <Filter :size="16" />
+          Filtrele
+        </button>
+      </div>
+
+      <div v-if="loading" class="isg-location-state">
+        <LoaderCircle :size="22" class="animate-spin" />
+        Lokasyonlar yükleniyor...
+      </div>
+
+      <div v-else-if="!filtered.length" class="isg-location-state is-empty">
+        <span class="isg-empty-icon"><Building2 :size="25" /></span>
+        <div>
+          <strong>Lokasyon bulunamadı.</strong>
+          <p>Arama kriterinizi değiştirerek tekrar deneyin.</p>
+        </div>
+      </div>
+
+      <div v-else class="isg-location-list">
+        <button
+          v-for="location in filtered"
+          :key="location.id"
+          type="button"
+          class="isg-location-card"
+          :class="{ 'is-selected': selectedId === location.id }"
+          @click="selectedId = location.id"
+        >
+          <div class="isg-location-card-image">
+            <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" />
+            <Building2 v-else :size="27" />
+            <span class="isg-location-image-overlay" />
           </div>
-        </div>
 
-        <div class="isg-location-toolbar">
-          <div class="isg-search-box">
-            <Search :size="17" />
-            <input v-model="search" type="search" placeholder="Lokasyon ara..." />
-          </div>
-          <button type="button" class="isg-filter-button">
-            <Filter :size="16" />
-            Filtrele
-          </button>
-        </div>
-
-        <div class="isg-location-table-head">
-          <span>LOKASYON</span>
-          <span>FİZİKSEL KONUM</span>
-          <span>ŞUBELER</span>
-          <span>EKİPMAN</span>
-          <span class="text-right">İŞLEM</span>
-        </div>
-
-        <div v-if="loading" class="isg-location-state">
-          <LoaderCircle :size="22" class="animate-spin" />
-          Lokasyonlar yükleniyor...
-        </div>
-
-        <div v-else-if="!filtered.length" class="isg-location-state is-empty">
-          <Building2 :size="26" />
-          <div>
-            <strong>Lokasyon bulunamadı.</strong>
-            <p>Arama kriterinizi değiştirerek tekrar deneyin.</p>
-          </div>
-        </div>
-
-        <div v-else class="isg-location-list">
-          <button
-            v-for="location in filtered"
-            :key="location.id"
-            type="button"
-            class="isg-location-row"
-            :class="{ 'is-selected': selectedId === location.id }"
-            @click="selectedId = location.id"
-          >
-            <div class="isg-location-name-cell">
-              <div class="isg-location-image">
-                <img v-if="location.image" :src="resolveImageUrl(location.image)" :alt="location.name" />
-                <Building2 v-else :size="22" />
-              </div>
+          <div class="isg-location-card-main">
+            <div class="isg-location-card-heading">
               <div class="min-w-0">
-                <p class="isg-location-name">{{ location.name }}</p>
-                <p class="isg-location-region">{{ [location.district?.name, location.city?.name].filter(Boolean).join(' / ') || 'Konum bilgisi yok' }}</p>
+                <span class="isg-location-card-label">LOKASYON</span>
+                <h3>{{ location.name }}</h3>
+                <p>{{ [location.district?.name, location.city?.name].filter(Boolean).join(' / ') || 'Konum bilgisi yok' }}</p>
               </div>
+              <span class="isg-location-card-arrow"><ChevronRight :size="18" /></span>
             </div>
 
-            <div class="isg-location-address">
-              <span class="isg-location-pin"><span /></span>
-              <span>{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') || '—' }}</span>
-            </div>
+            <div class="isg-location-card-meta">
+              <div class="isg-location-meta-item">
+                <span class="isg-location-meta-icon"><span class="isg-location-pin-dot" /></span>
+                <div>
+                  <small>Fiziksel konum</small>
+                  <strong>{{ [location.district?.name, location.city?.name].filter(Boolean).join(', ') || '—' }}</strong>
+                </div>
+              </div>
 
-            <div class="isg-location-metric">
-              <span class="isg-metric-badge">{{ location.branch_count ?? 0 }}</span>
-              <span>şube</span>
-            </div>
+              <div class="isg-location-meta-item is-compact">
+                <span class="isg-location-meta-icon"><Building2 :size="15" /></span>
+                <div>
+                  <small>Şube</small>
+                  <strong>{{ location.branch_count ?? 0 }}</strong>
+                </div>
+              </div>
 
-            <div class="isg-location-metric">
-              <span class="isg-metric-badge">{{ location.equipment_count ?? 0 }}</span>
-              <span>ekipman</span>
-            </div>
-
-            <div class="isg-location-action">
-              <span class="isg-select-state">{{ selectedId === location.id ? 'Seçildi' : 'Seç' }}</span>
-              <span class="isg-chevron"><ChevronRight :size="17" /></span>
-            </div>
-          </button>
-        </div>
-
-        <div class="isg-location-footer">
-          <div class="isg-location-help">
-            <span class="isg-help-icon"><Info :size="15" /></span>
-            <div>
-              <strong>Listede aradığınız lokasyonu göremiyor musunuz?</strong>
-              <p>Erişim talebi için sistem yöneticiniz ile iletişime geçin.</p>
+              <div class="isg-location-meta-item is-compact">
+                <span class="isg-location-meta-icon"><Settings :size="15" /></span>
+                <div>
+                  <small>Ekipman</small>
+                  <strong>{{ location.equipment_count ?? 0 }}</strong>
+                </div>
+              </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            :disabled="!selected || continuing"
-            class="isg-continue-button"
-            @click="continueNext"
-          >
-            <LoaderCircle v-if="continuing" :size="16" class="animate-spin" />
-            {{ continuing ? 'Hazırlanıyor' : 'Devam Et' }}
-            <ChevronRight :size="17" />
-          </button>
+          <div class="isg-location-card-select">
+            <span>{{ selectedId === location.id ? 'Seçildi' : 'Seç' }}</span>
+            <span class="isg-location-check" :class="{ 'is-checked': selectedId === location.id }">
+              <span v-if="selectedId === location.id">✓</span>
+            </span>
+          </div>
+        </button>
+      </div>
+
+      <div class="isg-location-footer">
+        <div class="isg-location-help">
+          <span class="isg-help-icon"><Info :size="15" /></span>
+          <div>
+            <strong>Listede aradığınız lokasyonu göremiyor musunuz?</strong>
+            <p>Erişim talebi için sistem yöneticiniz ile iletişime geçin.</p>
+          </div>
         </div>
+
+        <button
+          type="button"
+          :disabled="!selected || continuing"
+          class="isg-continue-button"
+          @click="continueNext"
+        >
+          <LoaderCircle v-if="continuing" :size="16" class="animate-spin" />
+          {{ continuing ? 'Hazırlanıyor' : 'Devam Et' }}
+          <ChevronRight :size="17" />
+        </button>
       </div>
     </div>
   </IsgContextShell>
@@ -216,9 +218,9 @@ const features = [
 <style scoped>
 .isg-location-page {
   width: 100%;
-  max-width: 1220px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 34px 42px 36px;
+  padding: 38px 46px 42px;
 }
 
 .isg-location-intro {
@@ -226,125 +228,83 @@ const features = [
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .isg-location-eyebrow {
-  margin: 0 0 7px;
-  color: #7a89b0;
+  margin: 0 0 8px;
+  color: #7e8caf;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .16em;
+  font-weight: 800;
+  letter-spacing: .18em;
 }
 
 .isg-location-intro h2 {
   margin: 0;
-  color: #17245f;
-  font-size: 29px;
-  font-weight: 750;
-  line-height: 1.15;
-  letter-spacing: -.025em;
+  color: #18265f;
+  font-size: 30px;
+  font-weight: 780;
+  line-height: 1.08;
+  letter-spacing: -.035em;
 }
 
 .isg-location-subtitle {
-  margin: 7px 0 0;
-  color: #7885a5;
+  margin: 8px 0 0;
+  color: #7886a6;
   font-size: 13px;
-  line-height: 1.45;
 }
 
 .isg-location-counter {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid #e5e9f4;
-  border-radius: 9px;
-  background: #fff;
-  color: #657294;
+  gap: 6px;
+  padding: 9px 13px;
+  border: 1px solid #e2e7f2;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .9);
+  color: #74809d;
+  font-size: 11px;
+  box-shadow: 0 5px 16px rgba(38, 54, 100, .035);
+}
+
+.isg-location-counter strong {
+  color: #5149e8;
   font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(42, 58, 106, .035);
 }
 
 .isg-location-counter-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4c46e8;
+  background: #5149e8;
   box-shadow: 0 0 0 3px #efefff;
-}
-
-.isg-location-panel {
-  overflow: hidden;
-  border: 1px solid #e3e7f1;
-  border-radius: 13px;
-  background: #fff;
-  box-shadow: 0 5px 22px rgba(37, 51, 93, .045);
-}
-
-.isg-location-panel-head {
-  height: 58px;
-  border-bottom: 1px solid #edf0f6;
-}
-
-.isg-location-tabs {
-  display: flex;
-  height: 100%;
-  align-items: stretch;
-  padding-left: 20px;
-  gap: 25px;
-}
-
-.isg-location-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  color: #6e7b9c;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.isg-location-tab.is-active {
-  color: #4b46e9;
-}
-
-.isg-location-tab.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: #5149ed;
-  content: '';
 }
 
 .isg-location-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #edf0f6;
+  gap: 10px;
+  margin-bottom: 17px;
 }
 
 .isg-search-box {
   display: flex;
-  height: 42px;
+  height: 43px;
   flex: 1;
   align-items: center;
   gap: 10px;
-  max-width: 410px;
-  padding: 0 13px;
-  border: 1px solid #e0e5ef;
-  border-radius: 9px;
+  max-width: 460px;
+  padding: 0 14px;
+  border: 1px solid #dfe5f0;
+  border-radius: 10px;
   background: #fff;
-  color: #8792ac;
+  color: #8994ae;
+  box-shadow: 0 3px 12px rgba(39, 53, 95, .025);
   transition: border-color .2s, box-shadow .2s;
 }
 
 .isg-search-box:focus-within {
-  border-color: #aaa7f5;
+  border-color: #aaa7f3;
   box-shadow: 0 0 0 3px rgba(81, 73, 237, .07);
 }
 
@@ -358,225 +318,280 @@ const features = [
 }
 
 .isg-search-box input::placeholder {
-  color: #9aa4bb;
+  color: #9aa4ba;
 }
 
 .isg-filter-button {
   display: inline-flex;
-  height: 42px;
+  height: 43px;
   align-items: center;
   gap: 8px;
   padding: 0 15px;
-  border: 1px solid #e0e5ef;
-  border-radius: 9px;
+  border: 1px solid #dfe5f0;
+  border-radius: 10px;
   background: #fff;
-  color: #53617f;
+  color: #596782;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
+  box-shadow: 0 3px 12px rgba(39, 53, 95, .025);
+  transition: .2s;
 }
 
 .isg-filter-button:hover {
-  border-color: #cfd5e4;
+  border-color: #cbd2e2;
   background: #fafbfe;
 }
 
-.isg-location-table-head,
-.isg-location-row {
+.isg-location-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.isg-location-card {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 1.55fr) minmax(170px, 1fr) 110px 110px minmax(100px, .65fr);
-  align-items: center;
-  column-gap: 20px;
-}
-
-.isg-location-table-head {
-  min-height: 43px;
-  padding: 0 20px;
-  border-bottom: 1px solid #edf0f6;
-  background: #fbfcfe;
-  color: #7b87a4;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .055em;
-}
-
-.isg-location-row {
+  grid-template-columns: 148px minmax(0, 1fr) 88px;
   width: 100%;
-  min-height: 92px;
-  padding: 13px 20px;
-  border: 0;
-  border-bottom: 1px solid #edf0f6;
+  min-height: 144px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e2e7f1;
+  border-radius: 13px;
   background: #fff;
   color: inherit;
   text-align: left;
+  box-shadow: 0 4px 16px rgba(36, 50, 91, .035);
   cursor: pointer;
-  transition: background .18s, box-shadow .18s;
+  transition: border-color .2s, box-shadow .2s, transform .2s, background .2s;
 }
 
-.isg-location-row:last-child {
-  border-bottom: 0;
+.isg-location-card:hover {
+  border-color: #cfd5e8;
+  box-shadow: 0 8px 24px rgba(42, 55, 103, .075);
+  transform: translateY(-1px);
 }
 
-.isg-location-row:hover {
-  background: #fafbff;
+.isg-location-card.is-selected {
+  border-color: #bdb9fb;
+  background: #fbfbff;
+  box-shadow: 0 8px 25px rgba(81, 73, 237, .09), inset 3px 0 0 #5149e8;
 }
 
-.isg-location-row.is-selected {
-  background: #f7f7ff;
-  box-shadow: inset 3px 0 0 #5149ed;
-}
-
-.isg-location-name-cell {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 13px;
-}
-
-.isg-location-image {
-  display: flex;
-  width: 58px;
-  height: 58px;
-  flex: 0 0 58px;
-  align-items: center;
-  justify-content: center;
+.isg-location-card-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 144px;
   overflow: hidden;
-  border: 1px solid #e6e9f0;
-  border-radius: 10px;
-  background: #f2f4f9;
-  color: #9aa5be;
+  background: #eef1f7;
+  color: #8b96af;
 }
 
-.isg-location-image img {
+.isg-location-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform .35s;
 }
 
-.isg-location-name {
+.isg-location-card:hover .isg-location-card-image img {
+  transform: scale(1.035);
+}
+
+.isg-location-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(19, 32, 79, .03), rgba(19, 32, 79, .11));
+  pointer-events: none;
+}
+
+.isg-location-card-main {
+  min-width: 0;
+  padding: 20px 22px 17px;
+}
+
+.isg-location-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.isg-location-card-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #929db5;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.isg-location-card h3 {
   margin: 0;
   overflow: hidden;
-  color: #1d2a59;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
+  color: #1b285d;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -.015em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.isg-location-region {
+.isg-location-card-heading p {
   margin: 5px 0 0;
   overflow: hidden;
-  color: #8290ae;
+  color: #7f8ba7;
   font-size: 10px;
-  line-height: 1.35;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.isg-location-address {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  color: #5f6e8e;
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.isg-location-pin {
-  position: relative;
+.isg-location-card-arrow {
   display: inline-flex;
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid #7786a8;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-}
-
-.isg-location-pin span {
-  width: 4px;
-  height: 4px;
-  border: 1px solid #7786a8;
-  border-radius: 50%;
-}
-
-.isg-location-metric {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #7c88a3;
-  font-size: 10px;
-}
-
-.isg-metric-badge {
-  display: inline-flex;
-  min-width: 30px;
-  height: 28px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 7px;
-  border-radius: 8px;
-  background: #f0efff;
-  color: #5149e7;
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.isg-location-action {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 9px;
-}
-
-.isg-select-state {
-  color: #8b96ad;
-  font-size: 10px;
-  font-weight: 650;
-}
-
-.is-selected .isg-select-state {
-  color: #5149e7;
-}
-
-.isg-chevron {
-  display: inline-flex;
-  width: 31px;
-  height: 31px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   align-items: center;
   justify-content: center;
   border: 1px solid #e3e7f0;
-  border-radius: 8px;
-  color: #8792aa;
+  border-radius: 9px;
+  color: #8b95ad;
   background: #fff;
+  transition: .2s;
 }
 
-.is-selected .isg-chevron {
-  border-color: #d8d6ff;
-  background: #eeedff;
-  color: #5149e7;
+.isg-location-card:hover .isg-location-card-arrow,
+.isg-location-card.is-selected .isg-location-card-arrow {
+  border-color: #d9d7ff;
+  color: #5149e8;
+  background: #f1f0ff;
+}
+
+.isg-location-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-top: 18px;
+}
+
+.isg-location-meta-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.isg-location-meta-item.is-compact {
+  min-width: 72px;
+}
+
+.isg-location-meta-icon {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e9ebf4;
+  border-radius: 9px;
+  background: #f7f8fc;
+  color: #677596;
+}
+
+.isg-location-card.is-selected .isg-location-meta-icon {
+  border-color: #e8e6ff;
+  background: #f3f2ff;
+  color: #5952e8;
+}
+
+.isg-location-meta-item small {
+  display: block;
+  margin-bottom: 2px;
+  color: #9aa3b7;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.isg-location-meta-item strong {
+  display: block;
+  overflow: hidden;
+  max-width: 170px;
+  color: #4d5b79;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isg-location-meta-item.is-compact strong {
+  color: #27345f;
+  font-size: 13px;
+}
+
+.isg-location-card-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-left: 1px solid #edf0f5;
+  color: #9aa3b8;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.isg-location-card.is-selected .isg-location-card-select {
+  border-left-color: #e7e5fb;
+  color: #5149e8;
+}
+
+.isg-location-check {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe4ee;
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.isg-location-check.is-checked {
+  border-color: #5149e8;
+  background: #5149e8;
+  box-shadow: 0 0 0 4px #efefff;
 }
 
 .isg-location-state {
   display: flex;
-  min-height: 260px;
+  min-height: 280px;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #8792ab;
+  color: #8994ad;
   font-size: 12px;
 }
 
 .isg-location-state.is-empty {
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.isg-location-state.is-empty > svg {
-  color: #a1abc0;
+.isg-empty-icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #f0f1ff;
+  color: #6861e8;
 }
 
 .isg-location-state strong {
@@ -598,9 +613,8 @@ const features = [
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 15px 20px;
-  border-top: 1px solid #edf0f6;
-  background: #fcfdff;
+  margin-top: 16px;
+  padding: 14px 3px 0;
 }
 
 .isg-location-help {
@@ -612,51 +626,51 @@ const features = [
 
 .isg-help-icon {
   display: inline-flex;
-  width: 31px;
-  height: 31px;
-  flex: 0 0 31px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 9px;
   background: #f0f1ff;
-  color: #5b55e9;
+  color: #5c55e8;
 }
 
 .isg-location-help strong {
   display: block;
-  color: #495674;
+  color: #56627e;
   font-size: 10px;
   font-weight: 650;
 }
 
 .isg-location-help p {
   margin: 3px 0 0;
-  color: #98a1b4;
+  color: #9aa3b7;
   font-size: 9px;
 }
 
 .isg-continue-button {
   display: inline-flex;
-  height: 40px;
-  min-width: 130px;
+  height: 41px;
+  min-width: 132px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 17px;
+  padding: 0 18px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: #5149ed;
   color: #fff;
-  box-shadow: 0 5px 13px rgba(81, 73, 237, .17);
+  box-shadow: 0 6px 15px rgba(81, 73, 237, .18);
   font-size: 11px;
   font-weight: 700;
-  transition: transform .18s, box-shadow .18s, background .18s;
+  transition: .2s;
 }
 
 .isg-continue-button:hover:not(:disabled) {
-  background: #453dde;
-  box-shadow: 0 7px 17px rgba(81, 73, 237, .22);
+  background: #453ddd;
+  box-shadow: 0 8px 19px rgba(81, 73, 237, .23);
   transform: translateY(-1px);
 }
 
@@ -665,51 +679,51 @@ const features = [
   opacity: .42;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1120px) {
   .isg-location-page {
-    padding-right: 28px;
-    padding-left: 28px;
+    padding-right: 30px;
+    padding-left: 30px;
   }
 
-  .isg-location-table-head,
-  .isg-location-row {
-    grid-template-columns: minmax(230px, 1.4fr) minmax(150px, .9fr) 90px 90px minmax(90px, .55fr);
-    column-gap: 13px;
+  .isg-location-card {
+    grid-template-columns: 128px minmax(0, 1fr) 78px;
+  }
+
+  .isg-location-card-meta {
+    gap: 18px;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 820px) {
   .isg-location-page {
-    padding: 26px 20px 28px;
+    padding: 28px 22px 34px;
   }
 
-  .isg-location-table-head {
-    display: none;
+  .isg-location-card {
+    grid-template-columns: 112px minmax(0, 1fr) 64px;
   }
 
-  .isg-location-row {
-    grid-template-columns: 1fr auto;
-    row-gap: 10px;
-    padding: 14px 16px;
+  .isg-location-card-main {
+    padding: 17px 17px 15px;
   }
 
-  .isg-location-address {
-    grid-column: 1 / 2;
+  .isg-location-card-meta {
+    gap: 12px;
+    margin-top: 14px;
   }
 
-  .isg-location-metric {
-    display: none;
+  .isg-location-meta-item:first-child {
+    max-width: 48%;
   }
 
-  .isg-location-action {
-    grid-column: 2;
-    grid-row: 1 / span 2;
+  .isg-location-meta-item:first-child strong {
+    max-width: 110px;
   }
 }
 
 @media (max-width: 640px) {
   .isg-location-page {
-    padding: 22px 14px 24px;
+    padding: 22px 14px 28px;
   }
 
   .isg-location-intro {
@@ -721,37 +735,90 @@ const features = [
   }
 
   .isg-location-intro h2 {
-    font-size: 25px;
-  }
-
-  .isg-location-panel-head {
-    height: 52px;
-  }
-
-  .isg-location-tabs {
-    padding-left: 16px;
-    gap: 18px;
+    font-size: 26px;
   }
 
   .isg-location-toolbar {
-    padding: 14px 15px;
+    margin-bottom: 13px;
   }
 
   .isg-filter-button {
-    padding: 0 11px;
-  }
-
-  .isg-filter-button {
+    width: 43px;
+    padding: 0;
+    justify-content: center;
     font-size: 0;
   }
 
-  .isg-filter-button svg {
-    margin: 0;
+  .isg-location-card {
+    grid-template-columns: 88px minmax(0, 1fr) 48px;
+    min-height: 128px;
+  }
+
+  .isg-location-card-image {
+    min-height: 128px;
+  }
+
+  .isg-location-card-main {
+    padding: 14px 12px;
+  }
+
+  .isg-location-card-label {
+    margin-bottom: 4px;
+    font-size: 7px;
+  }
+
+  .isg-location-card h3 {
+    font-size: 14px;
+  }
+
+  .isg-location-card-heading p {
+    font-size: 9px;
+  }
+
+  .isg-location-card-arrow {
+    display: none;
+  }
+
+  .isg-location-card-meta {
+    margin-top: 11px;
+  }
+
+  .isg-location-meta-item:first-child {
+    display: none;
+  }
+
+  .isg-location-meta-item.is-compact {
+    min-width: 54px;
+  }
+
+  .isg-location-meta-icon {
+    width: 27px;
+    height: 27px;
+    flex-basis: 27px;
+  }
+
+  .isg-location-meta-item small {
+    font-size: 7px;
+  }
+
+  .isg-location-meta-item.is-compact strong {
+    font-size: 12px;
+  }
+
+  .isg-location-card-select {
+    gap: 7px;
+    font-size: 8px;
+  }
+
+  .isg-location-check {
+    width: 21px;
+    height: 21px;
   }
 
   .isg-location-footer {
     align-items: stretch;
     flex-direction: column;
+    padding-top: 13px;
   }
 
   .isg-continue-button {
