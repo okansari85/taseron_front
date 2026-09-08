@@ -133,7 +133,7 @@ const features = [
       <TransitionGroup v-else name="location-list" tag="div" class="isg-location-list">
         <button
           v-for="location in filtered"
-          :key="location.id"
+          :key="`${location.id}-${search}`"
           type="button"
           class="isg-location-card"
           :class="{ 'is-selected': selectedId === location.id }"
@@ -350,17 +350,21 @@ const features = [
 .location-list-move,
 .location-list-enter-active,
 .location-list-leave-active {
-  transition: opacity .2s ease, transform .2s ease;
+  transition: opacity .32s cubic-bezier(.22, .61, .36, 1), transform .32s cubic-bezier(.22, .61, .36, 1);
 }
 
 .location-list-enter-from {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(10px) scale(.985);
+}
+
+.location-list-enter-active {
+  transition-delay: .02s;
 }
 
 .location-list-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-8px) scale(.985);
 }
 
 .location-list-leave-active {
