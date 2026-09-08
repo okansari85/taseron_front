@@ -1,10 +1,22 @@
 import { apiClient } from '~/api/client'
 
+export type AuthUserContractorRef = {
+  id: number
+  name: string | null
+  contractor_type: 'permanent' | 'temporary'
+  tenant_id: number | null
+}
+
 export type AuthUser = {
   id: number
   name: string
   email: string
   roles: string[]
+  contractor_id: number | null
+  contractor: AuthUserContractorRef | null
+  // Taşeron olmayan personel rolleri (isg, security, operation, tenant) için
+  // Yetkilendirme ekranından atanan UserScope('tenant') kaydından gelir.
+  tenant_id: number | null
 }
 
 type LoginResponse = {

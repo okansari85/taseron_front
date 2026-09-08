@@ -9,6 +9,12 @@ export type TenantRootOrganization = {
   parent_id: number | null
 }
 
+export type TenantFeaturedBrand = {
+  id: number
+  name: string
+  logo_url?: string | null
+}
+
 export type Tenant = {
   id: number
   name: string
@@ -17,6 +23,10 @@ export type Tenant = {
   onboarding_type: TenantOnboardingType
   logo_path?: string | null
   logo_url?: string | null
+  featured_brand_id?: number | null
+  featured_brand?: TenantFeaturedBrand | null
+  operational_area_enabled?: boolean
+  location_view_mode?: 'location' | 'business_entity'
   root_organization?: TenantRootOrganization | null
   created_at: string
   [key: string]: unknown

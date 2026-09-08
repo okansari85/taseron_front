@@ -13,6 +13,8 @@ export type AuthorizationPermission = { id: number; name: string; guard_name?: s
 export type AuthorizationRole = { id: number; name: string; guard_name?: string; permissions?: AuthorizationPermission[] }
 export type AuthorizationScope = { id: number; scope_type: 'tenant' | 'organization' | 'location' | string; scope_id: number }
 export type AuthorizationContractor = { id: number; short_name?: string; business_entity?: { id: number; name?: string } }
+export type AuthorizationLocationBusinessEntity = { id: number; location_id: number; business_entity_id: number; nace_code?: string | null; hazard_class?: string | null; sgk_workplace_number?: string | null; location?: { id: number; name: string }; business_entity?: { id: number; name: string } }
+export type AuthorizationLocationExpert = { id: number; location_business_entity_id: number; user_id: number; location_business_entity?: AuthorizationLocationBusinessEntity; user?: { id: number; name: string; email?: string } }
 export type AuthorizedUser = {
   id: number; name: string; email: string; is_expert?: number | boolean; contractor_id?: number | null; contractor?: AuthorizationContractor | null; roles?: AuthorizationRole[]; permissions?: AuthorizationPermission[]; forbidden_permissions?: AuthorizationPermission[]; scopes?: AuthorizationScope[]; status?: string | number | boolean
 }
@@ -34,4 +36,9 @@ export const userAuthorizationApi = {
   syncRolePermissions: async (role: string, permissions: string[]) => unwrap<AuthorizationRole>(await apiClient<ApiResponse<AuthorizationRole>>(`/api/roles/${encodeURIComponent(role)}/permissions`, { method: 'PUT', body: { permissions } })),
   listScopes: async (userId: number) => unwrap<AuthorizationScope[]>(await apiClient<ApiResponse<AuthorizationScope[]>>(`/api/users/${userId}/scopes`)),
   syncScopes: async (userId: number, scopes: Array<{ scope_type: string; scope_id: number }>) => unwrap<AuthorizationScope[]>(await apiClient<ApiResponse<AuthorizationScope[]>>(`/api/users/${userId}/scopes`, { method: 'PUT', body: { scopes } })),
+  listLocationExperts: async (userId: number) => unwrap<AuthorizationLocationExpert[]>(await apiClient<ApiResponse<AuthorizationLocationExpert[]>>(`/api/users/${userId}/location-experts`)),
+  listExpertsForEntity: async (locationBusinessEntityId: number) => unwrap<AuthorizationLocationExpert[]>(await apiClient<ApiResponse<AuthorizationLocationExpert[]>>(`/api/location-business-entities/${locationBusinessEntityId}/experts`)),
+  listLocationBusinessEntities: async () => unwrap<AuthorizationLocationBusinessEntity[]>(await apiClient<ApiResponse<AuthorizationLocationBusinessEntity[]>>('/api/location-business-entities')),
+  attachLocationExpert: async (locationBusinessEntityId: number, userId: number) => unwrap<AuthorizationLocationExpert[]>(await apiClient<ApiResponse<AuthorizationLocationExpert[]>>(`/api/location-business-entities/${locationBusinessEntityId}/experts`, { method: 'POST', body: { user_id: userId } })),
+  detachLocationExpert: async (locationBusinessEntityId: number, userId: number) => unwrap<AuthorizationLocationExpert[]>(await apiClient<ApiResponse<AuthorizationLocationExpert[]>>(`/api/location-business-entities/${locationBusinessEntityId}/experts/${userId}`, { method: 'DELETE' })),
 }

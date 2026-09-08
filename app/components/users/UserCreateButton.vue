@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Check, LoaderCircle, UserPlus, X } from '@lucide/vue'
 import { userAuthorizationApi, type AuthorizedUser, type AuthorizationContractor, type AuthorizationRole } from '~/api/user-authorization'
 
 const { $toast } = useNuxtApp()
+const props = defineProps<{ activeTab?: 'system' | 'experts' | 'contractors' }>()
 const emit = defineEmits<{ created: [user: AuthorizedUser] }>()
 
 const open = ref(false)
@@ -43,9 +44,15 @@ const loadContractors = async () => {
   }
 }
 
-const availableRoles = () => roles.value.filter((item) => item.name !== 'super-admin')
+const availableRoles = () => roles.value.filter((item) => item.name !== 'super-admin' && item.name !== 'contractor')
 const isContractorRole = () => role.value === 'contractor'
 const isIsgRole = () => role.value === 'isg'
+
+// Tab context forces the role (and for experts, is_expert) instead of asking via the form.
+const isExpertsTabContext = computed(() => props.activeTab === 'experts')
+const isContractorsTabContext = computed(() => props.activeTab === 'contractors')
+const showRoleField = computed(() => !isExpertsTabContext.value && !isContractorsTabContext.value)
+const createButtonLabel = computed(() => isExpertsTabContext.value ? 'Uzman Ekle' : isContractorsTabContext.value ? 'Taşeron Kullanıcısı Ekle' : 'Yeni Kullanıcı Ekle')
 
 const openModal = async () => {
   name.value = ''
@@ -60,7 +67,14 @@ const openModal = async () => {
     await loadRoles()
   }
 
-  role.value = availableRoles()[0]?.name ?? ''
+  if (isExpertsTabContext.value) {
+    role.value = 'isg'
+    isExpert.value = true
+  } else if (isContractorsTabContext.value) {
+    role.value = 'contractor'
+  } else {
+    role.value = availableRoles()[0]?.name ?? ''
+  }
 
   if (isContractorRole() && !contractors.value.length) {
     await loadContractors()
@@ -125,7 +139,7 @@ onMounted(loadRoles)
       @click="openModal"
     >
       <UserPlus :size="15" />
-      Yeni Kullanıcı Ekle
+      {{ createButtonLabel }}
     </button>
 
     <div
@@ -136,7 +150,7 @@ onMounted(loadRoles)
       <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Yeni Kullanıcı Ekle</h2>
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">{{ createButtonLabel }}</h2>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Kullanıcıyı oluşturduktan sonra detay sayfasından scope ve yetkilerini belirleyebilirsiniz.
             </p>
@@ -159,7 +173,7 @@ onMounted(loadRoles)
             <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Geçici Şifre</label>
             <input v-model="password" type="password" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="En az 8 karakter" />
           </div>
-          <div>
+          <div v-if="showRoleField">
             <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Rol</label>
             <select v-model="role" :disabled="loadingRoles" class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" @change="onRoleChange">
               <option value="">Rol seçin</option>
@@ -169,14 +183,8 @@ onMounted(loadRoles)
             </select>
             <p class="mt-2 text-[10px] text-gray-400">Super Admin hesabı bu ekrandan oluşturulmaz.</p>
           </div>
-          <div v-if="isIsgRole()" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
-            <label class="flex cursor-pointer items-center gap-3">
-              <input v-model="isExpert" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-              <span>
-                <span class="block text-xs font-medium text-gray-700 dark:text-gray-200">Uzman olarak ekle</span>
-                <span class="mt-0.5 block text-[10px] text-gray-400">Bu kullanıcıyı uzmanlar listesine ekler.</span>
-              </span>
-            </label>
+          <div v-else class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+            {{ isExpertsTabContext ? 'Bu kullanıcı İSG Uzmanı olarak eklenecek.' : 'Bu kullanıcı Taşeron Kullanıcısı olarak eklenecek.' }}
           </div>
           <div v-if="isContractorRole()">
             <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">Taşeron Firması</label>

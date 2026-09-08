@@ -74,6 +74,8 @@ export const useUserImpersonation = () => {
   const workspaceForRoles = (roles: string[]) => {
     if (roles.some(role => normalizeRole(role).includes('guvenlik') || normalizeRole(role).includes('security'))) return 'security' as const
     if (roles.some(role => normalizeRole(role).includes('taseron') || normalizeRole(role).includes('contractor'))) return 'contractor' as const
+    if (roles.some(role => normalizeRole(role) === 'isg')) return 'isg' as const
+    if (roles.some(role => normalizeRole(role) === 'operation')) return 'operation' as const
     return 'admin' as const
   }
 

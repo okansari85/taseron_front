@@ -26,7 +26,7 @@ onMounted(load)
 
 <template>
   <section class="space-y-5">
-    <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-xl font-semibold text-gray-900 dark:text-white">Kullanıcılar</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sistem kullanıcıları, uzmanlar ve alt yüklenici kullanıcılarını yönetin.</p></div><UserCreateButton @created="addCreatedUser" /></div>
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-xl font-semibold text-gray-900 dark:text-white">Kullanıcılar</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sistem kullanıcıları, uzmanlar ve alt yüklenici kullanıcılarını yönetin.</p></div><UserCreateButton :active-tab="activeTab" @created="addCreatedUser" /></div>
     <div class="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900"><button v-for="tab in [{ key: 'system', label: 'Sistem Kullanıcıları', icon: ShieldCheck }, { key: 'experts', label: 'Uzmanlar', icon: Wrench }, { key: 'contractors', label: 'Alt Yüklenici Kullanıcıları', icon: UsersRound }]" :key="tab.key" type="button" @click="activeTab = tab.key as UserTab" class="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium" :class="activeTab === tab.key ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'"><component :is="tab.icon" :size="15" />{{ tab.label }}</button></div>
     <div v-if="loading" class="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><LoaderCircle :size="28" class="animate-spin text-brand-500" /></div>
     <template v-else>

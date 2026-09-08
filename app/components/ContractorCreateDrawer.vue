@@ -20,9 +20,9 @@ import { Users, X } from 'lucide-vue-next'
 type ContractorType = 'Daimi' | 'Geçici'; type ContractorStatus = 'active' | 'passive'
 interface ContractorForm { name: string; shortName: string; type: ContractorType; status: ContractorStatus; logo: File | null; logoPreview: string }
 interface ContractorEditData { id: number; name: string; shortName: string; type: ContractorType; status: ContractorStatus; logoPath: string | null }
-const props = withDefaults(defineProps<{ modelValue: boolean; editData?: ContractorEditData | null }>(), { modelValue: false, editData: null })
+const props = withDefaults(defineProps<{ modelValue: boolean; editData?: ContractorEditData | null; defaultType?: ContractorType }>(), { modelValue: false, editData: null, defaultType: 'Daimi' })
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save: [payload: ContractorForm & { id?: number }] }>()
-const form = reactive<ContractorForm>({ name: '', shortName: '', type: 'Daimi', status: 'active', logo: null, logoPreview: '' })
+const form = reactive<ContractorForm>({ name: '', shortName: '', type: props.defaultType, status: 'active', logo: null, logoPreview: '' })
 const logoPreview = computed(() => form.logoPreview)
 const logoPreviewError = ref(false)
 const isEdit = computed(() => props.editData !== null)
@@ -39,7 +39,7 @@ const setLogoPreview = (preview: string) => {
   form.logoPreview = preview
 }
 const reset = () => {
-  Object.assign(form, { name: '', shortName: '', type: 'Daimi' as ContractorType, status: 'active' as ContractorStatus, logo: null, logoPreview: '' })
+  Object.assign(form, { name: '', shortName: '', type: props.defaultType, status: 'active' as ContractorStatus, logo: null, logoPreview: '' })
   logoPreviewError.value = false
 }
 const close = () => emit('update:modelValue', false)
@@ -66,6 +66,8 @@ watch(() => props.modelValue, value => {
   if (value && props.editData) {
     Object.assign(form, { name: props.editData.name, shortName: props.editData.shortName, type: props.editData.type, status: props.editData.status, logo: null })
     setLogoPreview(logoUrl(props.editData.logoPath))
+  } else if (value && !props.editData) {
+    form.type = props.defaultType
   } else if (!value) reset()
 })
 watch(() => props.editData, value => {

@@ -4,7 +4,7 @@ import type { OperationalRegion } from '~/api/location'
 const props=defineProps<{ modelValue:boolean; saving?:boolean; area?:OperationalRegion|null }>()
 const emit=defineEmits<{ 'update:modelValue':[value:boolean]; save:[payload:{name:string;type:string;is_active:boolean}] }>()
 const name=ref(''); const type=ref('facility'); const isActive=ref(true)
-const types=[{value:'facility',label:'Tesis'},{value:'warehouse',label:'Depo'},{value:'business',label:'İşletme'},{value:'depot',label:'Dağıtım Merkezi'},{value:'office',label:'Ofis'},{value:'store',label:'Mağaza'}]
+const types=[{value:'facility',label:'Tesis'},{value:'warehouse',label:'Depo'},{value:'business',label:'İşletme'},{value:'depot',label:'Dağıtım Merkezi'},{value:'office',label:'Ofis'},{value:'store',label:'Mağaza'},{value:'branch',label:'Şube'}]
 watch(()=>[props.modelValue,props.area] as const,([open,area])=>{if(open){name.value=area?.name||'';type.value=area?.type||'facility';isActive.value=area?.is_active??true}})
 const close=()=>{if(!props.saving) emit('update:modelValue',false)}
 const save=()=>{const value=name.value.trim();if(value&&!props.saving)emit('save',{name:value,type:type.value,is_active:isActive.value})}

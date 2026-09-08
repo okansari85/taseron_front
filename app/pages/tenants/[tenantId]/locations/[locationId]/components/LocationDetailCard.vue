@@ -14,6 +14,8 @@ type LocationView = {
 defineProps<{
   location: LocationView;
 }>();
+
+const emit = defineEmits<{ edit: [] }>();
 </script>
 
 <template>
@@ -42,6 +44,7 @@ defineProps<{
         >
           <button
             class="inline-flex h-9 items-center gap-2 rounded-[7px] bg-brand-500 px-4 text-[11px] font-semibold text-white"
+            @click="emit('edit')"
           >
             <Pencil :size="13" />
             Düzenle

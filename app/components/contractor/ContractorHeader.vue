@@ -3,7 +3,8 @@
     <div class="flex w-full items-center justify-between px-4 py-3 lg:px-6 lg:py-3.5">
       <div class="flex min-w-0 items-center gap-3">
         <button class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 lg:h-11 lg:w-11" @click="handleSidebar"><Menu :size="20" /></button>
-        <div class="hidden min-w-0 sm:block"><p class="truncate text-sm font-semibold text-gray-800 dark:text-white/90">Alt Yüklenici Portalı</p><p class="truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">Taseron Management</p></div>
+        <img v-if="featuredBrand?.logo_url" :src="featuredBrand.logo_url" :alt="featuredBrand.name" class="h-9 w-9 shrink-0 rounded-lg border border-gray-100 object-contain dark:border-gray-800" />
+        <div class="hidden min-w-0 sm:block"><p class="truncate text-sm font-semibold text-gray-800 dark:text-white/90">{{ featuredBrand?.name || 'Alt Yüklenici Portalı' }}</p><p class="truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">Taseron Management</p></div>
       </div>
       <div class="flex items-center gap-2">
         <button class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5" title="Tema" @click="toggleTheme"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
@@ -14,8 +15,18 @@
 </template>
 <script setup lang="ts">
 import { Menu, Moon, Sun } from '@lucide/vue'
+import { tenantBrandingApi, type TenantBranding } from '~/api/tenant-branding'
 const router = useRouter(); const auth = useAuth(); const { toggle, toggleMobile } = useContractorSidebar(); const { isDark, toggle: toggleTheme } = useTailAdminTheme(); const profileOpen = ref(false)
 const initials = computed(() => { const name = auth.user.value?.name?.trim() || 'K'; return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR') })
+const featuredBrand = ref<TenantBranding['featured_brand']>(null)
+onMounted(async () => {
+  try {
+    const response = await tenantBrandingApi.get()
+    featuredBrand.value = response.data.featured_brand
+  } catch (e) {
+    console.error(e)
+  }
+})
 const handleSidebar = () => { if (import.meta.client && window.innerWidth < 1024) toggleMobile(); else toggle() }
 const handleLogout = async () => { profileOpen.value = false; await auth.logout(); await router.push('/login') }
 </script>

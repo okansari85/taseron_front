@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-vue-next";
 import { useOrganizationStore } from "~/stores/organization";
+import { brandApi } from "~/api/brand";
 import { formatCreatedAt } from "~/utils/formatCreatedAt";
 import ConfirmationModal from "~/components/ConfirmationModal.vue";
 
@@ -50,11 +51,19 @@ const editForm = reactive({
   is_active: true,
   parent_id: null as number | null,
   color: "#465FFF",
+  default_brand_id: null as number | null,
 });
+const brandOptions = ref<Array<{ id: number; name: string; logo_url?: string | null }>>([]);
 const deleteTarget = ref<Group | null>(null);
 const confirmationOpen = ref(false);
 onMounted(async () => {
   await organizationStore.fetchOrganizationsForTenant(tenantId.value);
+  try {
+    const response = await brandApi.list();
+    brandOptions.value = response.data;
+  } catch {
+    brandOptions.value = [];
+  }
 });
 const tenantOrganizations = computed(() =>
   organizationStore.organizations.filter(
@@ -153,6 +162,8 @@ const openEdit = (group: Group) => {
   editForm.parent_id =
     group.raw.parent_id == null ? null : Number(group.raw.parent_id);
   editForm.color = group.raw.color || "#465FFF";
+  editForm.default_brand_id =
+    group.raw.default_brand_id == null ? null : Number(group.raw.default_brand_id);
   editOpen.value = true;
 };
 const closeEdit = () => {
@@ -486,6 +497,7 @@ const confirmDelete = async () => {
       v-if="editOpen"
       v-model:open="editOpen"
       :form="editForm"
+      :brand-options="brandOptions"
       :parent-groups="
         organizationStore.groups.filter(
           (item) =>

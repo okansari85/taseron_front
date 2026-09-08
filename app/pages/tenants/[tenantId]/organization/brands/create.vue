@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import BrandCompanyMultiSelect from '~/components/brands/BrandCompanyMultiSelect.vue'
 import { useBrandStore } from '~/stores/brand'
 import { useCompanyStore } from '~/stores/company'
+import { slugify } from '~/utils/slugify'
 
 definePageMeta({ layout: 'default' })
 
@@ -15,6 +16,7 @@ const { saving } = storeToRefs(brandStore)
 const { companies } = storeToRefs(companyStore)
 const brandName = ref('')
 const shortName = ref('')
+const shortNameManuallyEdited = ref(false)
 const companyIds = ref<number[]>([])
 const description = ref('')
 const status = ref<'active' | 'passive'>('active')
@@ -22,6 +24,7 @@ const logoFile = ref<File | null>(null)
 const logoPreview = ref('')
 const errorMessage = ref('')
 
+watch(brandName, (value) => { if (!shortNameManuallyEdited.value) shortName.value = slugify(value) })
 const selectedCompanies = computed(() => companies.value.filter(company => companyIds.value.includes(company.id)))
 const group = computed(() => selectedCompanies.value[0]?.group ?? '')
 
@@ -61,7 +64,7 @@ onMounted(async () => {
       <div class="mb-5 border-b border-gray-100 pb-3 dark:border-gray-800"><h2 class="text-sm font-semibold text-gray-800 dark:text-white/90">Genel Bilgiler</h2></div>
       <div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
         <label class="block"><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Marka Adı <span class="text-error-500">*</span></span><input v-model="brandName" type="text" placeholder="Marka adını giriniz" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" /><span class="mt-1.5 block text-xs text-gray-500">Markanın tam adını giriniz.</span></label>
-        <label class="block"><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Kısa Ad <span class="text-error-500">*</span></span><input v-model="shortName" type="text" placeholder="Kısa ad giriniz (örn. beko)" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" /><span class="mt-1.5 block text-xs text-gray-500">Raporlarda ve sistemde kısa ad kullanılacaktır.</span></label>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Kısa Ad <span class="text-error-500">*</span></span><input v-model="shortName" type="text" placeholder="Kısa ad giriniz (örn. beko)" class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" @input="shortNameManuallyEdited = true" /><span class="mt-1.5 block text-xs text-gray-500">Raporlarda ve sistemde kısa ad kullanılacaktır.</span></label>
         <label class="block"><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Şirket <span class="text-error-500">*</span></span><BrandCompanyMultiSelect v-model="companyIds" :companies="companies" /><span class="mt-1.5 block text-xs text-gray-500">Aynı grup içindeki birden fazla şirket seçilebilir.</span></label>
         <div><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Grup</span><div class="flex h-11 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800/60"><span>{{ group || 'Grup bilgisi, seçilen şirketlerden otomatik alınır.' }}</span><LockKeyhole :size="16" /></div><span class="mt-1.5 block text-xs text-gray-500">Seçilen şirketler aynı grup içinde olmalıdır.</span></div>
         <label class="block"><span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Açıklama</span><textarea v-model="description" maxlength="500" rows="4" placeholder="Marka ile ilgili açıklama giriniz (isteğe bağlı)" class="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" /><div class="mt-1 text-right text-xs text-gray-400">{{ description.length }} / 500</div></label>

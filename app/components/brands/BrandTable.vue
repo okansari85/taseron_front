@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { EllipsisVertical, Eye, Pencil, Trash2 } from 'lucide-vue-next'
+import { EllipsisVertical, Pencil, Trash2 } from 'lucide-vue-next'
 import type { Brand } from '~/types/brand'
+import { formatCreatedAt } from '~/utils/formatCreatedAt'
 
 defineProps<{ brands: Brand[]; loading: boolean; error: string | null }>()
 const emit = defineEmits<{ view: [id: number]; edit: [id: number]; delete: [id: number] }>()
@@ -55,13 +56,13 @@ const deleteBrand = (id: number) => {
           <tr v-else-if="brands.length === 0"><td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500">Kayıt bulunamadı.</td></tr>
           <tr v-for="brand in brands" v-else :key="brand.id" class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
             <td class="px-4 py-4">
-              <button type="button" class="flex items-center gap-3 text-left" @click="emit('view', brand.id)">
-                <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-brand-500 text-[10px] font-bold text-white">
+              <div class="flex items-center gap-3">
+                <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md text-[10px] font-bold" :class="brand.logoUrl ? 'bg-white border border-gray-200' : 'bg-brand-500 text-white'">
                   <img v-if="brand.logoUrl" :src="brand.logoUrl" :alt="`${brand.name} logosu`" class="h-full w-full object-contain" />
                   <template v-else>{{ initials(brand.name) }}</template>
                 </span>
                 <span class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ brand.name }}</span>
-              </button>
+              </div>
             </td>
             <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ brand.shortName }}</td>
             <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ brand.companies.length }}</td>
@@ -71,10 +72,9 @@ const deleteBrand = (id: number) => {
                 <span class="h-1.5 w-1.5 rounded-full" :class="brand.status === 'active' ? 'bg-success-500' : 'bg-gray-400'" />{{ brand.status === 'active' ? 'Aktif' : 'Pasif' }}
               </span>
             </td>
-            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-500">{{ brand.createdAt }}</td>
+            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-500">{{ formatCreatedAt(brand.createdAt) }}</td>
             <td class="px-4 py-4">
               <div class="flex items-center justify-end gap-2">
-                <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" title="Görüntüle" aria-label="Görüntüle" @click.stop="emit('view', brand.id)"><Eye :size="17" /></button>
                 <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" title="Düzenle" aria-label="Düzenle" @click.stop="emit('edit', brand.id)"><Pencil :size="17" /></button>
                 <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-brand-200 hover:text-brand-500 dark:border-gray-700" aria-label="Diğer işlemler" :aria-expanded="openActionId === brand.id" @click.stop="toggleActions(brand.id, $event)"><EllipsisVertical :size="17" /></button>
               </div>

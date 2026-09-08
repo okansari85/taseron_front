@@ -25,6 +25,34 @@ export type ContractorPayload = {
 
 export type ContractorCreateResponse = ContractorApiRecord
 
+export type ContractorLocationBrandRef = { id: number; name: string }
+export type ContractorLocationCityRef = { id: number; name: string }
+export type ContractorLocationRef = {
+  id: number
+  name: string
+  address: string | null
+  city_id: number | null
+  district_id: number | null
+  is_active: boolean
+  city?: ContractorLocationCityRef | null
+  district?: ContractorLocationCityRef | null
+}
+export type ContractorOperationalRegionRef = { id: number; name: string; type: string }
+export type ContractorBusinessEntityRef = { id: number; name: string; type: string }
+
+export type ContractorLocationItem = {
+  id: number
+  location_id: number
+  business_entity_id: number
+  operational_region_id: number | null
+  nace_code: string | null
+  hazard_class: string | null
+  location?: ContractorLocationRef | null
+  business_entity?: ContractorBusinessEntityRef | null
+  operational_region?: ContractorOperationalRegionRef | null
+  brands?: ContractorLocationBrandRef[]
+}
+
 const toFormData = (payload: ContractorPayload, method?: 'PUT') => {
   const formData = new FormData()
 
@@ -42,6 +70,12 @@ const toFormData = (payload: ContractorPayload, method?: 'PUT') => {
 export const contractorApi = {
   list: async () =>
     apiClient<ContractorApiRecord[]>('/api/contractors'),
+
+  get: async (id: number) =>
+    apiClient<ContractorApiRecord>(`/api/contractors/${id}`),
+
+  locations: async (id: number) =>
+    apiClient<ContractorLocationItem[]>(`/api/contractors/${id}/locations`),
 
   create: async (payload: ContractorPayload) =>
     apiClient<ContractorCreateResponse>('/api/contractors', {

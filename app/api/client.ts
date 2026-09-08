@@ -32,6 +32,22 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
     }
   }
 
+  // Header'daki aktif çalışma bağlamı (Organizasyon/Marka + Lokasyon) — sadece
+  // seçili bir şey varsa eklenir; backend bunu opsiyonel bir filtre olarak
+  // okur (bkz. ResolveWorkspaceContext), göndermeyen çağrılar etkilenmez.
+  if (!isGlobalApiPath(path)) {
+    const workspaceContext = useWorkspaceContextStore()
+
+    if (!headers.has('X-Organization-Id') && workspaceContext.selectedOrganizationId !== null) {
+      headers.set('X-Organization-Id', String(workspaceContext.selectedOrganizationId))
+      headers.set('X-Organization-Kind', workspaceContext.selectedOrganizationKind)
+    }
+
+    if (!headers.has('X-Location-Id') && workspaceContext.selectedLocationId !== null) {
+      headers.set('X-Location-Id', String(workspaceContext.selectedLocationId))
+    }
+  }
+
   headers.set('Accept', 'application/json')
 
   // Let the browser set the multipart boundary for FormData requests.

@@ -20,6 +20,12 @@ export type CompanyOrganization = {
   type?: string | null
 }
 
+export type CompanyBrand = {
+  id: number
+  name: string
+  logo_url?: string | null
+}
+
 export type CompanyApiRecord = {
   id: number
   name: string
@@ -33,4 +39,5 @@ export type CompanyApiRecord = {
   brands_count?: number
   business_entity?: { id: number; tenant_id: number; type: string } | null
   organizations?: CompanyOrganization[]
+  brands?: CompanyBrand[]
 }

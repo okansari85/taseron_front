@@ -12,6 +12,7 @@ export type Organization = {
   display_order?: number | null
   is_active?: boolean | number | null
   color?: string | null
+  default_brand_id?: number | null
   created_at?: string
   updated_at?: string
   parent?: Organization | null
@@ -27,4 +28,5 @@ export type OrganizationPayload = {
   is_active?: boolean
   parent_id?: number | null
   color?: string | null
+  default_brand_id?: number | null
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowLeft, Check, LoaderCircle, LogIn, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
-import { userAuthorizationApi, type AuthorizedUser, type AuthorizationPermission, type AuthorizationRole, type AuthorizationScope } from '~/api/user-authorization'
+import { ArrowLeft, Check, LoaderCircle, LogIn, MapPin, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
+import { userAuthorizationApi, type AuthorizedUser, type AuthorizationPermission, type AuthorizationRole, type AuthorizationScope, type AuthorizationLocationExpert } from '~/api/user-authorization'
 import { organizationApi } from '~/api/organization'
 import { locationApi } from '~/api/location'
 
@@ -16,7 +16,8 @@ const { loading: impersonationLoading, start: startImpersonation, workspaceForRo
 type ScopeType = 'tenant' | 'organization' | 'location'
 type ScopeOption = { id: number; name: string }
 type ScopeChoice = { value: ScopeType; title: string; description: string }
-type UserDetailTab = 'profile' | 'roles' | 'permissions' | 'scopes'
+type UserDetailTab = 'profile' | 'roles' | 'permissions' | 'scopes' | 'expert-entities'
+type ExpertEntityOption = { id: number; locationName: string; companyName: string; naceCode: string; sgkNumber: string; hazardClass: string }
 
 const scopeOptions: ScopeChoice[] = [
   { value: 'tenant', title: 'Tüm Tenant', description: 'Tenant içindeki tüm organizasyon ve lokasyonlar.' },
@@ -38,6 +39,7 @@ const selectedOrganizationIds = ref<number[]>([])
 const selectedLocationIds = ref<number[]>([])
 const organizations = ref<ScopeOption[]>([])
 const locations = ref<ScopeOption[]>([])
+const assignedExpertEntities = ref<ExpertEntityOption[]>([])
 const activeTab = ref<UserDetailTab>('roles')
 const loading = ref(true)
 const savingProfile = ref(false)
@@ -47,6 +49,9 @@ const savingScope = ref(false)
 const deletingUser = ref(false)
 
 const isSuperAdmin = computed(() => user.value?.roles?.some(role => role.name === 'super-admin') ?? false)
+const currentRoleName = computed(() => user.value?.roles?.[0]?.name ?? '')
+const isContractorRole = computed(() => currentRoleName.value === 'contractor')
+const isIsgRole = computed(() => currentRoleName.value === 'isg')
 const currentUserIsSuperAdmin = computed(() => auth.user.value?.roles?.some(role => role === 'super-admin') ?? false)
 const canImpersonate = computed(() => currentUserIsSuperAdmin.value && Boolean(user.value) && !isSuperAdmin.value && auth.user.value?.id !== user.value?.id)
 const canDeleteUser = computed(() => Boolean(user.value) && !isSuperAdmin.value && auth.user.value?.id !== user.value?.id)
@@ -128,13 +133,14 @@ const syncScopeState = (items: AuthorizationScope[]) => {
 const load = async () => {
   loading.value = true
   try {
-    const [freshUser, roleList, permissionList, scopeList, organizationList, locationList] = await Promise.all([
+    const [freshUser, roleList, permissionList, scopeList, organizationList, locationList, expertList] = await Promise.all([
       userAuthorizationApi.getUser(userId),
       userAuthorizationApi.listRoles(),
       userAuthorizationApi.listPermissions(),
       userAuthorizationApi.listScopes(userId),
       organizationApi.listForTenant(tenantId),
       locationApi.list(tenantId),
+      userAuthorizationApi.listLocationExperts(userId),
     ])
     user.value = freshUser
     roles.value = roleList
@@ -145,6 +151,17 @@ const load = async () => {
     syncScopeState(scopeList)
     organizations.value = organizationList.map(item => ({ id: item.id, name: item.name }))
     locations.value = locationList.map(item => ({ id: item.id, name: item.name }))
+    assignedExpertEntities.value = expertList.map((item: AuthorizationLocationExpert) => ({
+      id: item.location_business_entity_id,
+      locationName: item.location_business_entity?.location?.name ?? '—',
+      companyName: item.location_business_entity?.business_entity?.name ?? '—',
+      naceCode: item.location_business_entity?.nace_code ?? '—',
+      sgkNumber: item.location_business_entity?.sgk_workplace_number ?? '—',
+      hazardClass: item.location_business_entity?.hazard_class ?? '',
+    }))
+    const nextRole = freshUser.roles?.[0]?.name
+    if (nextRole === 'contractor' && (activeTab.value === 'scopes' || activeTab.value === 'expert-entities')) activeTab.value = 'profile'
+    else if (nextRole !== 'isg' && activeTab.value === 'expert-entities') activeTab.value = 'profile'
   } catch (error) {
     console.error(error)
     $toast.error('Kullanıcı profili alınamadı.')
@@ -214,6 +231,8 @@ const loginAsUser = async () => {
     const workspace = workspaceForRoles(response.user.roles)
     if (workspace === 'contractor') await router.push('/contractor-portal/dashboard')
     else if (workspace === 'security') await router.push('/security')
+    else if (workspace === 'isg') await router.push('/isg-portal/documents')
+    else if (workspace === 'operation') await router.push('/operation-portal/work-requests')
     else await router.push(`/tenants/${tenantId}`)
   } catch (error) {
     console.error(error)
@@ -265,7 +284,8 @@ onMounted(load)
             <button @click="activeTab = 'profile'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'profile' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><UserRound :size="16" :class="activeTab === 'profile' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Profil</p><p class="mt-0.5 text-[10px] text-gray-400">Kullanıcı bilgileri</p></div></button>
             <button @click="activeTab = 'roles'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'roles' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'roles' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Roller</p><p class="mt-0.5 text-[10px] text-gray-400">Kullanıcı rolü</p></div></button>
             <button @click="activeTab = 'permissions'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'permissions' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'permissions' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Yetkiler</p><p class="mt-0.5 text-[10px] text-gray-400">Rol ve ek yetkiler</p></div></button>
-            <button @click="activeTab = 'scopes'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'scopes' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'scopes' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Kapsamlar</p><p class="mt-0.5 text-[10px] text-gray-400">Erişim alanları</p></div></button>
+            <button v-if="!isContractorRole" @click="activeTab = 'scopes'" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors" :class="activeTab === 'scopes' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><ShieldCheck :size="16" :class="activeTab === 'scopes' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Kapsamlar</p><p class="mt-0.5 text-[10px] text-gray-400">Erişim alanları</p></div></button>
+            <button v-if="isIsgRole" @click="activeTab = 'expert-entities'" class="flex w-full items-center gap-3 rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors" :class="activeTab === 'expert-entities' ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'"><MapPin :size="15" :class="activeTab === 'expert-entities' ? 'text-brand-600' : 'text-gray-400'" /><div><p class="text-xs font-semibold">Atanmış Lokasyonlar</p><p class="mt-0.5 text-[10px] text-gray-400">Sorumlu olunan kayıtlar</p></div></button>
           </div>
 
           <button v-if="canDeleteUser" type="button" :disabled="deletingUser" @click="deleteUser" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"><LoaderCircle v-if="deletingUser" :size="14" class="animate-spin" /><Trash2 v-else :size="14" />{{ deletingUser ? 'Siliniyor...' : 'Kullanıcıyı Sil' }}</button>
@@ -289,7 +309,7 @@ onMounted(load)
             </div>
           </div>
 
-          <div v-else>
+          <div v-else-if="activeTab === 'scopes'">
             <div v-if="isSuperAdmin" class="rounded-xl border border-brand-100 bg-brand-50/50 p-5"><div class="flex items-center gap-2"><ShieldCheck :size="16" class="text-brand-600" /><h2 class="text-sm font-semibold text-gray-900">Erişim Alanı</h2></div><p class="mt-3 text-xs leading-5 text-gray-600">Super Admin için scope seçimi yapılmaz. Platform genelinde tüm tenant, organizasyon ve lokasyonlara tam erişim kabul edilir.</p></div>
             <div v-else class="rounded-xl border border-gray-200 bg-white p-5">
               <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-sm font-semibold text-gray-900">Erişim Alanı</h2><p class="mt-1 text-xs text-gray-500">Scope, kullanıcının nerelerde işlem yapabileceğini belirler. Lokasyon seçimi erişimi en dar seviyeye indirir.</p></div><span class="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-600">{{ selectedScopeCount }} seçili</span></div>
@@ -298,6 +318,11 @@ onMounted(load)
               <div v-else-if="scopeType==='location'" class="mt-5"><div class="mb-2 flex items-center justify-between"><h3 class="text-xs font-semibold text-gray-700">Lokasyon Seçimi</h3><span class="text-[10px] text-gray-400">{{ selectedLocationIds.length }} seçili</span></div><div class="max-h-[320px] space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-2"><label v-for="item in locations" :key="item.id" class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50"><input :checked="selectedLocationIds.includes(item.id)" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-600" @change="toggleLocation(item.id)" /><span class="text-xs text-gray-700">{{ item.name }}</span></label><div v-if="!locations.length" class="px-3 py-5 text-center text-xs text-gray-400">Lokasyon bulunamadı.</div></div><div class="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5"><p class="text-[10px] leading-4 text-amber-700"><strong>Erişim daraltıldı:</strong> Yalnızca seçtiğiniz lokasyonlarda işlem yapılabilir. Lokasyonun bağlı olduğu organizasyon otomatik olarak çalışma bağlamına dahil edilir; ayrıca organizasyon seçmeniz gerekmez.</p></div></div>
               <div class="mt-5 flex justify-end gap-2"><button @click="router.push(`/tenants/${tenantId}/users`)" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"><X :size="14" /> Vazgeç</button><button :disabled="savingScope" @click="saveScope" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"><LoaderCircle v-if="savingScope" :size="14" class="animate-spin" /><Check v-else :size="14" />{{ savingScope ? 'Kaydediliyor...' : 'Kapsamı Kaydet' }}</button></div>
             </div>
+          </div>
+
+          <div v-else-if="activeTab === 'expert-entities'" class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div class="flex flex-wrap items-center justify-between gap-3 p-5 pb-4"><div><h2 class="text-sm font-semibold text-gray-900">Atanmış Lokasyonlar</h2><p class="mt-1 text-xs text-gray-500">Bu İSG uzmanının evrak onayı gibi işlemlerden sorumlu olduğu firma/lokasyon kayıtları. Atama, ilgili lokasyonun Firmalar sekmesinden yapılır — burası yalnızca listeler.</p></div><span class="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-600">{{ assignedExpertEntities.length }} kayıt</span></div>
+            <div class="overflow-x-auto border-t border-gray-100"><table class="w-full min-w-[640px] text-left"><thead class="border-b border-gray-100 bg-gray-50/70"><tr><th class="px-4 py-3 text-xs font-medium text-gray-500">Şirket</th><th class="px-4 py-3 text-xs font-medium text-gray-500">Lokasyon</th><th class="px-4 py-3 text-xs font-medium text-gray-500">SGK Sicil No</th><th class="px-4 py-3 text-xs font-medium text-gray-500">Tehlike Sınıfı</th></tr></thead><tbody class="divide-y divide-gray-100"><tr v-for="item in assignedExpertEntities" :key="item.id"><td class="px-4 py-3 text-sm font-semibold text-gray-800">{{ item.companyName }}</td><td class="px-4 py-3 text-sm text-gray-600">{{ item.locationName }}</td><td class="px-4 py-3 text-sm text-gray-600">{{ item.sgkNumber }}</td><td class="px-4 py-3"><DangerClassBadge v-if="item.hazardClass" :danger-class="item.hazardClass" /><span v-else class="text-xs text-gray-400">—</span></td></tr><tr v-if="!assignedExpertEntities.length"><td colspan="4" class="px-4 py-12 text-center text-sm text-gray-500">Kayıt bulunamadı.</td></tr></tbody></table></div>
           </div>
         </div>
       </div>
