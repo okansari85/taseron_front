@@ -64,8 +64,8 @@ const handleLogout = async () => {
 
     <div class="flex min-h-0 flex-1">
       <aside class="relative hidden w-[340px] shrink-0 overflow-hidden bg-gradient-to-b from-white via-white to-brand-50 lg:block xl:w-[380px]">
-        <div class="flex h-full flex-col">
-          <div class="p-8 pb-0">
+        <div class="relative flex h-full flex-col">
+          <div class="relative z-10 p-8 pb-0">
             <span class="mb-5 inline-block h-px w-10 bg-brand-300" />
             <p class="mb-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-500">DAHA GÜVENLİ YARINLAR İÇİN</p>
             <h1 class="text-3xl font-bold leading-[1.15] tracking-tight text-brand-950">{{ headline }}</h1>
@@ -84,9 +84,9 @@ const handleLogout = async () => {
             <p class="mt-8 text-base font-semibold italic text-brand-950">{{ footerNote }}</p>
           </div>
 
-          <div class="relative mt-6 min-h-[180px] flex-1">
-            <img :src="props.imageSrc" alt="" class="absolute inset-0 h-full w-full object-cover object-center" />
-            <div class="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-white to-transparent" />
+          <div class="absolute inset-0 z-0">
+            <img :src="props.imageSrc" alt="" class="h-full w-full object-cover object-center" />
+            <div class="absolute inset-0 bg-gradient-to-b from-white/80 via-white/10 to-transparent" />
           </div>
         </div>
       </aside>
@@ -135,20 +135,19 @@ const handleLogout = async () => {
 }
 
 .isg-context-shell--location > .flex > aside > div > div:last-child {
-  margin-top: 28px;
-  min-height: 340px;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .isg-context-shell--location > .flex > aside > div > div:last-child img {
-  object-position: center bottom;
+  object-position: center center;
 }
 
 .isg-context-shell--location > .flex > aside > div > div:last-child::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(247, 251, 255, 0.9) 0%, rgba(247, 251, 255, 0) 18%, rgba(8, 20, 70, 0.03) 100%);
-  pointer-events: none;
+  display: none;
 }
 
 @media (max-width: 1279px) {
