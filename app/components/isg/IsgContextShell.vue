@@ -69,7 +69,7 @@ const handleLogout = async () => {
       </aside>
       <main class="min-w-0 flex-1 overflow-y-auto"><slot /></main>
     </div>
-    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div><span>Daha güvenli yarınlar için.</span></div>
+    <footer class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center gap-2"><Flame :size="13" class="text-error-500" /><span>İSG / Yangın Güvenlik — Denetim Uygulaması</span></div><span>Daha güvenli yarınlar için.</span></footer>
   </div>
 </template>
 
