@@ -88,6 +88,7 @@ const features = [
 <template>
   <IsgContextShell
     variant="location"
+    image-src="/images/abc.png"
     headline="Güvenli İşletmeler Güçlü Gelecek"
     description="Yangın güvenliği ve taşeron yönetimi süreçlerinizi tek platformda yönetin. Daha güvenli, daha sürdürülebilir işletmeler için birlikte."
     :features="features"
