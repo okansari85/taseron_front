@@ -79,7 +79,7 @@ const handleLogout = async () => {
 <style scoped>
 .isg-context-shell--location { --location-sidebar-width: 340px; background: #f7fbff; }
 .isg-context-shell--location > header { min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
-.isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: cover !important; background-position: center 60% !important; background-color: transparent !important; }
+.isg-context-shell--location > .flex > aside { width: var(--location-sidebar-width); background-image: url('/images/abc.png') !important; background-repeat: no-repeat !important; background-size: auto 115% !important; background-position: center -60% !important; background-color: transparent !important; }
 .isg-context-shell--location > .flex > aside > div > div:first-child { padding: 58px 48px 0; }
 .isg-context-shell--location > .flex > aside h1 { max-width: 205px; margin-top: 0; font-size: 30px; line-height: 1.04; letter-spacing: -0.025em; color: #101d5c; }
 .isg-context-shell--location > .flex > aside > div > div:first-child > span { display: none; }
