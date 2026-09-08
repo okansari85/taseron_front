@@ -230,6 +230,7 @@ const features = [
   z-index: 2;
   flex: 1 1 auto;
   min-height: 100%;
+  padding-top: 38px;
 }
 
 .isg-location-page :deep(.isg-context-shell--location > .flex > aside > div > div:last-child) {
