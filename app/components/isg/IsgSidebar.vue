@@ -89,6 +89,7 @@ const desktopSections = [
     items: [
       { title: 'YSC', path: '/isg-portal/desktop/ysc', icon: ShieldCheck },
       { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
+      { title: 'Yangın Denetimi (Mobil)', path: '/isg-portal/fire-inspection', icon: Flame },
     ],
   },
   {
