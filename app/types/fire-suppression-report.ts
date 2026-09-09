@@ -54,3 +54,17 @@ export type FireSuppressionReportPayload = {
   findings?: FireSuppressionReportFindingInput[]
   covered_inventory_item_ids?: number[]
 }
+
+// AI (NVIDIA NIM) ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi,
+// kullanıcı gözden geçirip düzenledikten sonra normal create() akışına gider.
+export type FireSuppressionReportAnalysisDraft = {
+  control_date?: string | null
+  next_control_date?: string | null
+  overall_result?: FireSuppressionComplianceStatus | null
+  covered_categories?: FireSuppressionCategory[]
+  equipment?: { code?: string | null; category?: FireSuppressionCategory | null; location_note?: string | null; result?: FireSuppressionComplianceStatus | null }[]
+  findings?: { category?: FireSuppressionCategory | null; control_item?: string | null; description: string; scope: FireSuppressionFindingScope; area_note?: string | null; equipment_codes?: string[] }[]
+  matched_inventory_items: FireSuppressionInventoryItem[]
+  unmatched_codes: string[]
+  raw_text_excerpt?: string
+}

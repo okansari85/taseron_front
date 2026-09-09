@@ -1,9 +1,10 @@
 import { apiClient } from './client'
-import type { FireSuppressionReport, FireSuppressionReportPayload } from '~/types/fire-suppression-report'
+import type { FireSuppressionReport, FireSuppressionReportAnalysisDraft, FireSuppressionReportPayload } from '~/types/fire-suppression-report'
 
 type ListResponse = { data: FireSuppressionReport[] }
 type ItemResponse = { data: FireSuppressionReport }
 type MessageResponse = { message: string }
+type AnalysisResponse = { data: FireSuppressionReportAnalysisDraft }
 
 export const fireSuppressionReportApi = {
   list: (locationBusinessEntityId: number) =>
@@ -39,4 +40,13 @@ export const fireSuppressionReportApi = {
     apiClient<MessageResponse>(`/api/fire-suppression-reports/${reportId}`, {
       method: 'DELETE',
     }),
+
+  analyze: (locationBusinessEntityId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
+      method: 'POST',
+      body: form,
+    })
+  },
 }

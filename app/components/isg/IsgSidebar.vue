@@ -23,8 +23,8 @@
         </NuxtLink>
       </div>
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
-        <template v-for="(section, sectionIndex) in menuSections" :key="section.title">
-          <p v-if="isExpanded" :class="['text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
+        <template v-for="(section, sectionIndex) in menuSections" :key="sectionIndex">
+          <p v-if="isExpanded && section.title" :class="['text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
           <div class="flex flex-col gap-2">
             <NuxtLink
               v-for="item in section.items"
@@ -57,7 +57,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { FileCheck2, Flame, FlameKindling, SearchCheck, ShieldCheck, Users } from '@lucide/vue'
+import { FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -79,18 +79,30 @@ const defaultSections = [
 
 const desktopSections = [
   {
-    title: 'Ana Menü',
+    title: '',
     items: [
-      { title: 'Ekipman Denetimi', path: '/isg-portal/desktop', icon: ShieldCheck },
-      { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
-      { title: 'Yangın Yönetimi', path: '/isg-portal/fire-inspection', icon: Flame },
-      { title: 'Yangın Söndürme Sistemleri', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
+      { title: 'Şube Ana Sayfa', path: '/isg-portal/desktop', icon: Home },
     ],
   },
   {
-    title: 'Taşeron Yönetimi',
+    title: 'Yangın Yönetimi',
     items: [
-      { title: 'Taşeron Listesi', path: '/isg-portal/desktop', icon: Users },
+      { title: 'YSC', path: '/isg-portal/desktop/ysc', icon: ShieldCheck },
+      { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
+    ],
+  },
+  {
+    title: 'Raporlar',
+    items: [
+      { title: 'Yangın Söndürme Sistemleri', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
+      { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection', icon: Radio },
+    ],
+  },
+  {
+    title: '',
+    items: [
+      { title: 'Ayarlar', path: '/isg-portal/desktop/settings', icon: Settings },
+      { title: 'Destek', path: '/isg-portal/desktop/support', icon: HelpCircle },
     ],
   },
 ]

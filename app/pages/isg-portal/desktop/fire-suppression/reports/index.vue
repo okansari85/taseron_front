@@ -5,6 +5,7 @@ import {
   FileText,
   LoaderCircle,
   Plus,
+  Sparkles,
   Trash2,
   Upload,
   X,
@@ -92,6 +93,7 @@ const form = ref({
 
 const openUpload = () => {
   selectedFile.value = null
+  analysisSummary.value = null
   form.value = {
     report_date: new Date().toISOString().slice(0, 10),
     next_control_date: '',
@@ -108,6 +110,55 @@ const closeDrawer = () => { drawerOpen.value = false }
 
 const onFileChange = (e: Event) => {
   selectedFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
+  analysisSummary.value = null
+}
+
+// --- AI ile Analiz Et (NVIDIA NIM) — section 12: taslağı doldurur, hiçbir
+// şey kaydetmez; kullanıcı "Raporu Kaydet"e basana kadar mevcut manuel akış
+// aynen çalışır.
+const analyzing = ref(false)
+const analysisSummary = ref<{ matchedCount: number; unmatchedCodes: string[] } | null>(null)
+
+const analyzeFile = async () => {
+  if (!context.branchId || !selectedFile.value || analyzing.value) return
+  analyzing.value = true
+  try {
+    const { data: draft } = await fireSuppressionReportApi.analyze(context.branchId, selectedFile.value)
+
+    if (draft.control_date) form.value.report_date = draft.control_date
+    if (draft.next_control_date) form.value.next_control_date = draft.next_control_date
+    if (draft.overall_result) form.value.overall_result = draft.overall_result
+    if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
+
+    const matchedByCode = new Map(draft.matched_inventory_items.map(item => [item.code, item.id]))
+    form.value.covered_inventory_item_ids = draft.matched_inventory_items.map(item => item.id)
+
+    if (draft.findings?.length) {
+      form.value.findings = draft.findings.map((f) => {
+        const affectedIds = (f.equipment_codes ?? [])
+          .map(code => matchedByCode.get(code))
+          .filter((id): id is number => id !== undefined)
+        return {
+          category: f.category ?? null,
+          control_item: f.control_item ?? '',
+          description: f.description,
+          scope: affectedIds.length ? 'specific' : f.scope,
+          area_note: f.area_note ?? '',
+          affected_item_ids: affectedIds,
+        }
+      })
+    }
+
+    analysisSummary.value = {
+      matchedCount: draft.matched_inventory_items.length,
+      unmatchedCodes: draft.unmatched_codes,
+    }
+    $toast.success('PDF analiz edildi, alanlar dolduruldu — kaydetmeden önce kontrol edin.')
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'PDF analiz edilemedi, bilgileri elle girebilirsiniz.')
+  } finally {
+    analyzing.value = false
+  }
 }
 
 const addFinding = () => { form.value.findings.push(emptyFinding()) }
@@ -320,6 +371,26 @@ const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
               <Upload :size="17" class="text-[#d71920]" />
               {{ selectedFile ? selectedFile.name : 'PDF Seç' }}
             </button>
+
+            <button
+              v-if="selectedFile"
+              type="button"
+              class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-gray-50 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:bg-white/5 dark:text-gray-300"
+              :disabled="analyzing"
+              @click="analyzeFile"
+            >
+              <LoaderCircle v-if="analyzing" :size="14" class="animate-spin" />
+              <Sparkles v-else :size="14" class="text-[#d71920]" />
+              {{ analyzing ? 'PDF analiz ediliyor...' : 'AI ile Analiz Et (alanları otomatik doldur)' }}
+            </button>
+
+            <div v-if="analysisSummary" class="mt-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+              <p>{{ analysisSummary.matchedCount }} ekipman envanterle eşleşti ve otomatik işaretlendi.</p>
+              <p v-if="analysisSummary.unmatchedCodes.length" class="mt-1 text-amber-700 dark:text-amber-400">
+                Raporda geçen ama envanterde bulunamayan kodlar: {{ analysisSummary.unmatchedCodes.join(', ') }} — yeni ekipman adayı olabilir, Envanter'den elle ekleyebilirsiniz.
+              </p>
+              <p class="mt-1 text-gray-500 dark:text-gray-400">Kaydetmeden önce tüm alanları kontrol edin.</p>
+            </div>
           </div>
 
           <!-- 3. Uygunsuzluklar -->
