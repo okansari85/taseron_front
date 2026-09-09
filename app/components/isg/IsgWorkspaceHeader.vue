@@ -86,7 +86,11 @@ const selectLocation = async (location: LocationApiItem) => {
     return
   }
 
-  await navigateTo('/isg-portal/desktop/select-branch')
+  // Lokasyon/Şube seçim sihirbazı (select-location/select-branch) sadece ilk
+  // girişte kullanılır — burada bağlam değiştirirken kullanıcıyı oradan
+  // çıkarıp sihirbaza geri atmıyoruz, Marka combobox'ı açıp içeride kalıyoruz.
+  branchMenuOpen.value = true
+  await loadBranches()
 }
 
 const selectBranch = (b: LocationBusinessEntity) => {

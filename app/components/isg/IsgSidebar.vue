@@ -14,7 +14,7 @@
       ]"
     >
       <div :class="['flex', desktop ? 'px-5 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
-        <NuxtLink to="/isg-portal/documents" class="flex items-center gap-3">
+        <NuxtLink :to="desktop ? '/isg-portal/desktop' : '/isg-portal/documents'" class="flex items-center gap-3">
           <template v-if="desktop && context.branchLogo">
             <img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl bg-white p-1 object-contain" />
           </template>
@@ -57,7 +57,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { FileCheck2, Flame, SearchCheck, ShieldCheck, Users } from '@lucide/vue'
+import { FileCheck2, Flame, FlameKindling, SearchCheck, ShieldCheck, Users } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -84,6 +84,7 @@ const desktopSections = [
       { title: 'Ekipman Denetimi', path: '/isg-portal/desktop', icon: ShieldCheck },
       { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
       { title: 'Yangın Yönetimi', path: '/isg-portal/fire-inspection', icon: Flame },
+      { title: 'Yangın Söndürme Sistemleri', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
     ],
   },
   {

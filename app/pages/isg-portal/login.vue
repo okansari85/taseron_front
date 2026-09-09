@@ -32,7 +32,7 @@ const login = async () => {
     }
 
     tenantContext.setTenantId(response.user.tenant_id)
-    await navigateTo('/isg-portal/documents')
+    await navigateTo('/isg-portal/desktop/select-location')
   } catch (error: any) {
     const status = error?.response?.status || error?.statusCode
 

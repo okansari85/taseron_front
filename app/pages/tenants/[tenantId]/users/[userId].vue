@@ -231,7 +231,7 @@ const loginAsUser = async () => {
     const workspace = workspaceForRoles(response.user.roles)
     if (workspace === 'contractor') await router.push('/contractor-portal/dashboard')
     else if (workspace === 'security') await router.push('/security')
-    else if (workspace === 'isg') await router.push('/isg-portal/documents')
+    else if (workspace === 'isg') await router.push('/isg-portal/desktop/select-location')
     else if (workspace === 'operation') await router.push('/operation-portal/work-requests')
     else await router.push(`/tenants/${tenantId}`)
   } catch (error) {
