@@ -64,6 +64,7 @@ export const useAuth = () => {
     try {
       const response = await apiClient<LoginResponse>('/api/login', {
         method: 'POST',
+        timeout: 30000,
         body: { email, password },
       })
 
