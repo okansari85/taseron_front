@@ -26,11 +26,12 @@ export type FireSuppressionAnalysisProgress = {
 }
 type ProgressResponse = { data: FireSuppressionAnalysisProgress }
 
+// UI debug/telemetry için son analiz kimliği. Mevcut sayfa akışını değiştirmez.
+export const activeFireSuppressionAnalysisId = ref<string | null>(null)
+
 export const fireSuppressionReportApi = {
-  list: (locationBusinessEntityId: number) =>
-    apiClient<ListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`),
-  get: (reportId: number) =>
-    apiClient<ItemResponse>(`/api/fire-suppression-reports/${reportId}`),
+  list: (locationBusinessEntityId: number) => apiClient<ListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`),
+  get: (reportId: number) => apiClient<ItemResponse>(`/api/fire-suppression-reports/${reportId}`),
   create: (locationBusinessEntityId: number, payload: FireSuppressionReportPayload) => {
     const form = new FormData()
     form.append('report_date', payload.report_date)
@@ -52,15 +53,16 @@ export const fireSuppressionReportApi = {
     return apiClient<ItemResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`, { method: 'POST', body: form, timeout: 30000 })
   },
   remove: (reportId: number) => apiClient<MessageResponse>(`/api/fire-suppression-reports/${reportId}`, { method: 'DELETE' }),
-  analyze: (locationBusinessEntityId: number, file: File, analysisId: string) => {
+  analyze: (locationBusinessEntityId: number, file: File) => {
     const form = new FormData()
     form.append('file', file)
+    const analysisId = crypto.randomUUID()
+    activeFireSuppressionAnalysisId.value = analysisId
     return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
       method: 'POST', body: form, timeout: undefined, headers: { 'X-Analysis-Id': analysisId },
     })
   },
-  analysisProgress: (analysisId: string) =>
-    apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 }),
+  analysisProgress: (analysisId: string) => apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 }),
   controlItemTemplates: (categories?: FireSuppressionCategory[]) => {
     const query = categories?.length ? `?${categories.map((c, i) => `categories[${i}]=${encodeURIComponent(c)}`).join('&')}` : ''
     return apiClient<ControlItemTemplatesResponse>(`/api/fire-suppression-control-item-templates${query}`)
