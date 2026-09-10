@@ -5,16 +5,32 @@ import type { FireSuppressionControlItemTemplate, FireSuppressionReport, FireSup
 type ListResponse = { data: FireSuppressionReport[] }
 type ItemResponse = { data: FireSuppressionReport }
 type MessageResponse = { message: string }
-type AnalysisResponse = { data: FireSuppressionReportAnalysisDraft }
+type AnalysisResponse = { data: FireSuppressionReportAnalysisDraft; analysis_id: string }
 type ControlItemTemplatesResponse = { data: FireSuppressionControlItemTemplate[] }
+export type FireSuppressionAnalysisProgress = {
+  status: 'running' | 'completed' | 'failed'
+  current_stage: string
+  current_label: string
+  current_page: number | null
+  total_pages?: number
+  started_at?: string
+  finished_at?: string | null
+  error?: string
+  events: Array<{
+    stage: string
+    label: string
+    status: 'running' | 'done' | 'error'
+    at: string
+    [key: string]: unknown
+  }>
+}
+type ProgressResponse = { data: FireSuppressionAnalysisProgress }
 
 export const fireSuppressionReportApi = {
   list: (locationBusinessEntityId: number) =>
     apiClient<ListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`),
-
   get: (reportId: number) =>
     apiClient<ItemResponse>(`/api/fire-suppression-reports/${reportId}`),
-
   create: (locationBusinessEntityId: number, payload: FireSuppressionReportPayload) => {
     const form = new FormData()
     form.append('report_date', payload.report_date)
@@ -26,12 +42,6 @@ export const fireSuppressionReportApi = {
     form.append('file', payload.file)
     payload.covered_categories?.forEach((c, i) => form.append(`covered_categories[${i}]`, c))
     payload.covered_inventory_item_ids?.forEach((id, i) => form.append(`covered_inventory_item_ids[${i}]`, String(id)))
-    // findings/control_items TEK bir JSON alanı olarak gönderiliyor —
-    // çok sayfalı raporlarda (örn. 20 ekipman x ~14 madde = 280 satır)
-    // her alanı ayrı bir form key'i (`control_items[123][title]` gibi)
-    // yapmak PHP'nin max_input_vars (varsayılan 1000) limitini kolayca
-    // aşıp sessizce veri kaybına/422'ye yol açıyordu. Backend
-    // prepareForValidation()'da bu alanları JSON.decode ediyor.
     if (payload.findings?.length) form.append('findings', JSON.stringify(payload.findings))
     if (payload.control_items?.length) form.append('control_items', JSON.stringify(payload.control_items))
     payload.additional_files?.forEach((entry, i) => {
@@ -39,30 +49,18 @@ export const fireSuppressionReportApi = {
       form.append(`additional_files[${i}][type]`, entry.type)
       if (entry.description) form.append(`additional_files[${i}][description]`, entry.description)
     })
-    return apiClient<ItemResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`, {
-      method: 'POST',
-      body: form,
-      timeout: 30000,
-    })
+    return apiClient<ItemResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`, { method: 'POST', body: form, timeout: 30000 })
   },
-
-  remove: (reportId: number) =>
-    apiClient<MessageResponse>(`/api/fire-suppression-reports/${reportId}`, {
-      method: 'DELETE',
-    }),
-
-  analyze: (locationBusinessEntityId: number, file: File) => {
+  remove: (reportId: number) => apiClient<MessageResponse>(`/api/fire-suppression-reports/${reportId}`, { method: 'DELETE' }),
+  analyze: (locationBusinessEntityId: number, file: File, analysisId: string) => {
     const form = new FormData()
     form.append('file', file)
-    // PDF metin çıkarma + AI (NVIDIA NIM) çağrısının süresi öngörülemiyor —
-    // timeout verilmezse ofetch/tarayıcı isteği süresiz bekler.
     return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
-      method: 'POST',
-      body: form,
-      timeout: undefined,
+      method: 'POST', body: form, timeout: undefined, headers: { 'X-Analysis-Id': analysisId },
     })
   },
-
+  analysisProgress: (analysisId: string) =>
+    apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 }),
   controlItemTemplates: (categories?: FireSuppressionCategory[]) => {
     const query = categories?.length ? `?${categories.map((c, i) => `categories[${i}]=${encodeURIComponent(c)}`).join('&')}` : ''
     return apiClient<ControlItemTemplatesResponse>(`/api/fire-suppression-control-item-templates${query}`)
