@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import {
   AlertTriangle,
-  ArrowLeft,
   Building2,
   CheckCircle2,
-  ChevronRight,
   Droplets,
   Flame,
   Gauge,
+  LayoutGrid,
+  List,
   LoaderCircle,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Waves,
   X,
@@ -37,6 +38,10 @@ const items = ref<FireSuppressionInventoryItem[]>([])
 const summary = ref<FireSuppressionInventorySummary | null>(null)
 const loading = ref(false)
 const selectedCategory = ref<FireSuppressionCategory | null>(null)
+const viewMode = ref<'card' | 'list'>('list')
+const searchQuery = ref('')
+const statusFilter = ref<'' | 'kontrolu_gecerli' | 'kontrol_yaklasiyor' | 'kontrol_gecikmis'>('')
+const locationFilter = ref('')
 
 const categoryIcons: Record<FireSuppressionCategory, any> = {
   yangin_dolabi: Building2,
@@ -73,6 +78,9 @@ onMounted(() => {
 
 watch(() => context.branchId, () => {
   selectedCategory.value = null
+  searchQuery.value = ''
+  statusFilter.value = ''
+  locationFilter.value = ''
   load()
 })
 
@@ -82,9 +90,34 @@ const categoryCounts = computed(() => {
   return map
 })
 
-const categoryItems = computed(() => {
-  if (!selectedCategory.value) return []
-  return items.value.filter(item => item.category === selectedCategory.value)
+const distinctLocations = computed(() =>
+  [...new Set(items.value.map(i => i.location_note).filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'tr')),
+)
+
+const activeCount = computed(() => items.value.filter(i => i.is_active).length)
+const passiveCount = computed(() => items.value.length - activeCount.value)
+
+const clearFilters = () => {
+  selectedCategory.value = null
+  searchQuery.value = ''
+  statusFilter.value = ''
+  locationFilter.value = ''
+}
+
+const hasActiveFilters = computed(() => !!(selectedCategory.value || searchQuery.value || statusFilter.value || locationFilter.value))
+
+const filteredItems = computed(() => {
+  const q = searchQuery.value.trim().toLocaleLowerCase('tr-TR')
+  return items.value.filter((item) => {
+    if (selectedCategory.value && item.category !== selectedCategory.value) return false
+    if (statusFilter.value && item.periodic_control_status !== statusFilter.value) return false
+    if (locationFilter.value && item.location_note !== locationFilter.value) return false
+    if (q) {
+      const haystack = `${item.code ?? ''} ${FIRE_SUPPRESSION_CATEGORY_LABELS[item.category]} ${item.location_note ?? ''}`.toLocaleLowerCase('tr-TR')
+      if (!haystack.includes(q)) return false
+    }
+    return true
+  })
 })
 
 const formatDate = (value?: string | null) => {
@@ -206,8 +239,6 @@ const removeItem = async (item: FireSuppressionInventoryItem) => {
 
       <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
         <div class="mx-auto max-w-[1500px]">
-          <FireSuppressionTabs active="inventory" />
-
           <section class="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d71920]">Yangın Söndürme Sistemleri</div>
@@ -226,26 +257,30 @@ const removeItem = async (item: FireSuppressionInventoryItem) => {
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div class="relative overflow-hidden rounded-xl border border-[#e7e9ed] bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex items-center gap-3">
-                  <span
-                    class="flex h-11 w-11 items-center justify-center rounded-xl"
-                    :class="summary?.overall_status === 'uygun' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-red-50 text-[#d71920] dark:bg-red-500/10'"
-                  >
-                    <CheckCircle2 v-if="summary?.overall_status === 'uygun'" :size="22" />
-                    <XCircle v-else :size="22" />
-                  </span>
+                  <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-[#d71920] dark:bg-red-500/10"><Flame :size="22" /></span>
+                  <div><p class="text-sm font-medium text-[#64748b]">Toplam Sistem</p><p class="mt-1 text-[29px] font-bold leading-none text-[#172033] dark:text-white">{{ items.length }}</p></div>
+                </div>
+              </div>
+
+              <div class="relative overflow-hidden rounded-xl border border-[#e7e9ed] bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center gap-3">
+                  <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><CheckCircle2 :size="22" /></span>
                   <div>
-                    <p class="text-sm font-medium text-[#64748b]">Yangın Tesisatı Genel Durumu</p>
-                    <p class="mt-1 text-xl font-bold leading-none" :class="summary?.overall_status === 'uygun' ? 'text-emerald-600' : 'text-[#d71920]'">
-                      {{ summary?.overall_status === 'uygun' ? 'Uygun' : 'Uygun Değil' }}
-                    </p>
+                    <p class="text-sm font-medium text-[#64748b]">Aktif</p>
+                    <p class="mt-1 text-[29px] font-bold leading-none text-[#172033] dark:text-white">{{ activeCount }}</p>
+                    <p class="mt-0.5 text-xs text-gray-400">%{{ items.length ? Math.round((activeCount / items.length) * 100) : 0 }}</p>
                   </div>
                 </div>
               </div>
 
               <div class="relative overflow-hidden rounded-xl border border-[#e7e9ed] bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex items-center gap-3">
-                  <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-[#d71920] dark:bg-red-500/10"><Flame :size="22" /></span>
-                  <div><p class="text-sm font-medium text-[#64748b]">Toplam Ekipman</p><p class="mt-1 text-[29px] font-bold leading-none text-[#172033] dark:text-white">{{ summary?.total_equipment ?? 0 }}</p></div>
+                  <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10"><XCircle :size="22" /></span>
+                  <div>
+                    <p class="text-sm font-medium text-[#64748b]">Pasif</p>
+                    <p class="mt-1 text-[29px] font-bold leading-none text-[#172033] dark:text-white">{{ passiveCount }}</p>
+                    <p class="mt-0.5 text-xs text-gray-400">%{{ items.length ? Math.round((passiveCount / items.length) * 100) : 0 }}</p>
+                  </div>
                 </div>
               </div>
 
@@ -255,60 +290,71 @@ const removeItem = async (item: FireSuppressionInventoryItem) => {
                   <div><p class="text-sm font-medium text-[#64748b]">Toplam Uygunsuzluk</p><p class="mt-1 text-[29px] font-bold leading-none text-[#172033] dark:text-white">{{ summary?.total_nonconformity ?? 0 }}</p></div>
                 </div>
               </div>
-
-              <div class="relative overflow-hidden rounded-xl border border-[#e7e9ed] bg-white px-5 py-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center gap-3">
-                  <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/5"><Gauge :size="22" /></span>
-                  <div><p class="text-sm font-medium text-[#64748b]">Son Kontrol</p><p class="mt-1 text-xl font-bold leading-none text-[#172033] dark:text-white">{{ formatDate(summary?.last_control_date) }}</p></div>
-                </div>
-              </div>
             </section>
 
-            <section v-if="!selectedCategory" class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <section class="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
+                :class="!selectedCategory ? 'bg-[#d71920] text-white' : 'bg-white text-gray-600 border border-[#e7e9ed] hover:border-[#d71920]/30 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'"
+                @click="selectedCategory = null"
+              >
+                Tümü ({{ items.length }})
+              </button>
               <button
                 v-for="category in FIRE_SUPPRESSION_CATEGORIES"
                 :key="category"
                 type="button"
-                class="flex flex-col items-start gap-3 rounded-xl border border-[#e7e9ed] bg-white p-5 text-left shadow-[0_4px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#d71920]/30 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
+                :class="selectedCategory === category ? 'bg-[#d71920] text-white' : 'bg-white text-gray-600 border border-[#e7e9ed] hover:border-[#d71920]/30 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'"
                 @click="selectedCategory = category"
               >
-                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-[#d71920] dark:bg-red-500/10">
-                  <component :is="categoryIcons[category]" :size="20" />
-                </span>
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
-                  <p class="mt-1 text-xs text-gray-400">{{ categoryCounts.get(category)?.total ?? 0 }} ekipman</p>
-                  <p v-if="(categoryCounts.get(category)?.nonconformity_count ?? 0) > 0" class="mt-0.5 text-xs font-semibold text-[#d71920]">{{ categoryCounts.get(category)?.nonconformity_count }} uygunsuzluk</p>
-                </div>
-                <ChevronRight :size="16" class="self-end text-gray-300" />
+                <component :is="categoryIcons[category]" :size="13" />
+                {{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }} ({{ categoryCounts.get(category)?.total ?? 0 }})
+                <span v-if="(categoryCounts.get(category)?.nonconformity_count ?? 0) > 0" class="rounded-full px-1.5 text-[10px]" :class="selectedCategory === category ? 'bg-white/20' : 'bg-red-50 text-[#d71920] dark:bg-red-500/10'">{{ categoryCounts.get(category)?.nonconformity_count }}</span>
               </button>
             </section>
 
-            <section v-else class="mt-5">
-              <div class="mb-4 flex items-center justify-between">
-                <button type="button" class="inline-flex items-center gap-2 text-sm font-semibold text-[#64748b] hover:text-[#111827] dark:hover:text-white" @click="selectedCategory = null">
-                  <ArrowLeft :size="16" />
-                  Kategorilere Dön
+            <section class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="relative flex-1 sm:max-w-xs">
+                  <Search :size="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input v-model="searchQuery" type="text" placeholder="Sistem adı, kodu veya konum ara..." class="h-10 w-full rounded-lg border border-[#dfe3e8] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                </div>
+                <select v-model="statusFilter" class="h-10 rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  <option value="">Durum: Tümü</option>
+                  <option value="kontrolu_gecerli">Kontrolü Geçerli</option>
+                  <option value="kontrol_yaklasiyor">Kontrol Yaklaşıyor</option>
+                  <option value="kontrol_gecikmis">Kontrol Gecikmiş</option>
+                </select>
+                <select v-model="locationFilter" class="h-10 rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  <option value="">Konum: Tümü</option>
+                  <option v-for="loc in distinctLocations" :key="loc" :value="loc">{{ loc }}</option>
+                </select>
+                <button v-if="hasActiveFilters" type="button" class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#dfe3e8] px-3 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5" @click="clearFilters">
+                  <X :size="13" />Filtreleri Temizle
                 </button>
-                <p class="text-sm font-semibold text-[#172033] dark:text-white">
-                  {{ FIRE_SUPPRESSION_CATEGORY_LABELS[selectedCategory] }} ({{ categoryItems.length }})
-                  <span v-if="categoryCounts.get(selectedCategory)?.nonconformity_count" class="ml-2 text-[#d71920]">{{ categoryCounts.get(selectedCategory)?.nonconformity_count }} Uygunsuzluk</span>
-                </p>
               </div>
+              <div class="inline-flex shrink-0 rounded-lg border border-[#e7e9ed] bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+                <button type="button" class="flex h-8 w-8 items-center justify-center rounded-md" :class="viewMode === 'card' ? 'bg-[#d71920] text-white' : 'text-gray-400'" @click="viewMode = 'card'"><LayoutGrid :size="15" /></button>
+                <button type="button" class="flex h-8 w-8 items-center justify-center rounded-md" :class="viewMode === 'list' ? 'bg-[#d71920] text-white' : 'text-gray-400'" @click="viewMode = 'list'"><List :size="15" /></button>
+              </div>
+            </section>
 
-              <div v-if="!categoryItems.length" class="rounded-xl border border-dashed border-[#dfe3e8] bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-900">
-                <p class="text-sm font-semibold text-gray-500">Bu kategoride kayıt yok.</p>
+            <section class="mt-4">
+              <div v-if="!filteredItems.length" class="rounded-xl border border-dashed border-[#dfe3e8] bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-900">
+                <p class="text-sm font-semibold text-gray-500">{{ hasActiveFilters ? 'Filtrelere uyan kayıt yok.' : 'Henüz kayıt yok.' }}</p>
                 <button type="button" class="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#d71920] px-4 py-2 text-xs font-semibold text-white" @click="openCreate">
                   <Plus :size="14" />Kayıt Ekle
                 </button>
               </div>
 
-              <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div v-for="item in categoryItems" :key="item.id" class="rounded-xl border border-[#e7e9ed] bg-white p-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
+              <div v-else-if="viewMode === 'card'" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div v-for="item in filteredItems" :key="item.id" class="rounded-xl border border-[#e7e9ed] bg-white p-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                       <p class="truncate text-sm font-bold text-[#172033] dark:text-white">{{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }}</p>
-                      <p class="truncate text-xs text-gray-400">{{ item.location_note || '—' }}</p>
+                      <p class="truncate text-xs text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }} · {{ item.location_note || '—' }}</p>
                     </div>
                     <div class="flex shrink-0 items-center gap-1">
                       <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5" @click="openEdit(item)"><Pencil :size="13" /></button>
@@ -330,6 +376,46 @@ const removeItem = async (item: FireSuppressionInventoryItem) => {
                     <div class="flex justify-between"><dt class="text-gray-400">Sonraki Kontrol</dt><dd class="font-medium text-gray-600 dark:text-gray-300">{{ formatDate(item.next_control_date) }}</dd></div>
                   </dl>
                 </div>
+              </div>
+
+              <div v-else class="overflow-x-auto rounded-xl border border-[#e7e9ed] bg-white dark:border-gray-800 dark:bg-gray-900">
+                <table class="w-full min-w-[900px] text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                      <th class="px-4 py-3">Ekipman Kodu</th>
+                      <th class="px-4 py-3">Tür</th>
+                      <th class="px-4 py-3">Marka / Model</th>
+                      <th class="px-4 py-3">Konum</th>
+                      <th class="px-4 py-3">Son Kontrol</th>
+                      <th class="px-4 py-3">Kontrol Durumu</th>
+                      <th class="px-4 py-3">Uygunsuzluk</th>
+                      <th class="px-4 py-3 text-right">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in filteredItems" :key="item.id" class="border-b border-[#f1f2f4] last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/5">
+                      <td class="px-4 py-3 font-semibold text-[#172033] dark:text-white">{{ item.code || '—' }}</td>
+                      <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }}</td>
+                      <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ [item.brand, item.model].filter(Boolean).join(' / ') || '—' }}</td>
+                      <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ item.location_note || '—' }}</td>
+                      <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ formatDate(item.last_control_date) }}</td>
+                      <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="periodicStatusMeta(item.periodic_control_status).cls">{{ periodicStatusMeta(item.periodic_control_status).label }}</span></td>
+                      <td class="px-4 py-3">
+                        <span v-if="item.open_nonconformity_count > 0" class="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10 dark:text-red-400">{{ item.open_nonconformity_count }}</span>
+                        <span v-else class="text-xs text-gray-400">0</span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center justify-end gap-1.5">
+                          <NuxtLink :to="`/isg-portal/desktop/fire-suppression/inventory/${item.id}`" class="rounded-lg border border-[#dfe3e8] px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">Detay</NuxtLink>
+                          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-[#d71920] dark:hover:bg-red-500/10" :disabled="deletingId === item.id" @click="removeItem(item)">
+                            <LoaderCircle v-if="deletingId === item.id" :size="13" class="animate-spin" />
+                            <Trash2 v-else :size="13" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
           </template>

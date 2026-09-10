@@ -26,21 +26,54 @@
         <template v-for="(section, sectionIndex) in menuSections" :key="sectionIndex">
           <p v-if="isExpanded && section.title" :class="['text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
           <div class="flex flex-col gap-2">
-            <NuxtLink
-              v-for="item in section.items"
-              :key="item.title"
-              :to="item.path"
-              :class="[
-                'menu-item group',
-                isActive(item.path)
-                  ? (desktop ? 'bg-[#d71920] text-white shadow-[0_8px_24px_rgba(215,25,32,0.22)]' : 'menu-item-active')
-                  : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'),
-                isExpanded ? 'justify-start' : 'justify-center',
-              ]"
-              @click="closeMobile"
-            >
-              <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
-            </NuxtLink>
+            <template v-for="item in section.items" :key="item.title">
+              <button
+                v-if="'children' in item && item.children"
+                type="button"
+                :class="[
+                  'menu-item group w-full',
+                  hasActiveChild(item)
+                    ? (desktop ? 'bg-[#d71920] text-white shadow-[0_8px_24px_rgba(215,25,32,0.22)]' : 'menu-item-active')
+                    : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'),
+                  isExpanded ? 'justify-start' : 'justify-center',
+                ]"
+                @click="isExpanded ? toggleGroup(item.title) : navigateTo(item.path)"
+              >
+                <component :is="item.icon" :size="18" />
+                <span v-if="isExpanded" class="flex-1 truncate text-left">{{ item.title }}</span>
+                <ChevronDown v-if="isExpanded" :size="14" class="shrink-0 transition-transform" :class="{ 'rotate-180': expandedGroups.has(item.title) }" />
+              </button>
+              <div v-if="'children' in item && item.children && isExpanded && expandedGroups.has(item.title)" class="ml-4 flex flex-col gap-1 border-l border-white/10 pl-3">
+                <NuxtLink
+                  v-for="child in item.children"
+                  :key="child.path"
+                  :to="child.path"
+                  :class="[
+                    'rounded-lg px-3 py-2 text-sm transition',
+                    isActive(child.path)
+                      ? (desktop ? 'bg-[#d71920] text-white' : 'menu-item-active')
+                      : (desktop ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5'),
+                  ]"
+                  @click="closeMobile"
+                >
+                  {{ child.title }}
+                </NuxtLink>
+              </div>
+              <NuxtLink
+                v-else-if="!('children' in item)"
+                :to="item.path"
+                :class="[
+                  'menu-item group',
+                  isActive(item.path)
+                    ? (desktop ? 'bg-[#d71920] text-white shadow-[0_8px_24px_rgba(215,25,32,0.22)]' : 'menu-item-active')
+                    : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'),
+                  isExpanded ? 'justify-start' : 'justify-center',
+                ]"
+                @click="closeMobile"
+              >
+                <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
+              </NuxtLink>
+            </template>
           </div>
         </template>
         <div :class="['mt-auto pt-4', desktop ? 'border-t border-white/10' : 'border-t border-gray-100 dark:border-gray-800']">
@@ -57,7 +90,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
+import { ChevronDown, FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -95,7 +128,15 @@ const desktopSections = [
   {
     title: 'Raporlar',
     items: [
-      { title: 'Yangın Söndürme Sistemleri', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
+      {
+        title: 'Yangın Söndürme Sistemleri',
+        path: '/isg-portal/desktop/fire-suppression/inventory',
+        icon: FlameKindling,
+        children: [
+          { title: 'Envanter', path: '/isg-portal/desktop/fire-suppression/inventory' },
+          { title: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports' },
+        ],
+      },
       { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection', icon: Radio },
     ],
   },
@@ -110,6 +151,20 @@ const desktopSections = [
 
 const menuSections = computed(() => props.desktop ? desktopSections : defaultSections)
 const isActive = (path: string) => path === '/isg-portal/desktop' ? route.path === path : route.path === path || route.path.startsWith(`${path}/`)
+const hasActiveChild = (item: { children?: { path: string }[] }) => item.children?.some(c => isActive(c.path)) ?? false
+
+const expandedGroups = ref<Set<string>>(new Set())
+watch(() => route.path, () => {
+  for (const section of desktopSections) {
+    for (const item of section.items) {
+      if ('children' in item && hasActiveChild(item)) expandedGroups.value.add(item.title)
+    }
+  }
+}, { immediate: true })
+const toggleGroup = (title: string) => {
+  if (expandedGroups.value.has(title)) expandedGroups.value.delete(title)
+  else expandedGroups.value.add(title)
+}
 const initials = computed(() => {
   const name = auth.user.value?.name?.trim() || 'K'
   return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')

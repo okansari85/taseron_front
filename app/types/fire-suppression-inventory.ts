@@ -36,6 +36,9 @@ export type FireSuppressionInventoryItem = {
   category: FireSuppressionCategory
   code?: string | null
   location_note?: string | null
+  brand?: string | null
+  model?: string | null
+  serial_no?: string | null
   is_active: boolean
   last_control_date?: string | null
   next_control_date?: string | null
