@@ -3,7 +3,6 @@ import {
   Calendar,
   Check,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
@@ -11,7 +10,6 @@ import {
   LoaderCircle,
   Paperclip,
   Plus,
-  Sparkles,
   Trash2,
   Upload,
   X,
@@ -101,23 +99,44 @@ const resultMeta = (status?: string | null) => status === 'uygun'
     ? { label: 'Uygun Değil', cls: 'bg-red-50 text-[#d71920] dark:bg-red-500/10 dark:text-red-400' }
     : { label: 'Belirtilmedi', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
 
-// --- Yükleme sihirbazı (1: Rapor Bilgileri, 2: Dosya Yükleme, 3: Kontrol ve
-// Onay, 4: Tamamlandı) ---
+const deletingId = ref<number | null>(null)
+const removeReport = async (report: FireSuppressionReport) => {
+  if (!window.confirm(`${formatDate(report.report_date)} tarihli raporu silmek istediğinize emin misiniz? (Envanter kayıtları etkilenmez)`)) return
+  deletingId.value = report.id
+  try {
+    await fireSuppressionReportApi.remove(report.id)
+    $toast.success('Rapor silindi.')
+    await load()
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'Rapor silinemedi.')
+  } finally {
+    deletingId.value = null
+  }
+}
+
+// =====================================================================
+// Rapor Yükleme Sihirbazı — nihai akış: Dosya Yükle → AI Analizi →
+// Eşleştirme (sonuç listesi ↔ tekil belirsiz inceleme) → Onayla → Tamamlandı.
+// =====================================================================
+type WizardStage = 'upload' | 'analyzing' | 'matching' | 'confirm' | 'done'
+const wizardStage = ref<WizardStage>('upload')
+const wizardStageOrder: WizardStage[] = ['upload', 'analyzing', 'matching', 'confirm', 'done']
+const wizardStepLabels = [
+  { key: 'upload', number: 1, label: 'Dosya Yükle' },
+  { key: 'analyzing', number: 2, label: 'AI Analizi' },
+  { key: 'matching', number: 3, label: 'Eşleştirme' },
+  { key: 'confirm', number: 4, label: 'Onayla' },
+] as const
+const currentStepNumber = computed(() => wizardStageOrder.indexOf(wizardStage.value) >= 3 ? 4 : wizardStageOrder.indexOf(wizardStage.value) + 1)
+
 const drawerOpen = ref(false)
 const saving = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
-const wizardStep = ref<1 | 2 | 3 | 4>(1)
-const wizardSteps = [
-  { step: 1, label: 'Rapor Bilgileri' },
-  { step: 2, label: 'Dosya Yükleme' },
-  { step: 3, label: 'Kontrol ve Onay' },
-  { step: 4, label: 'Tamamlandı' },
-] as const
+const isDraggingFile = ref(false)
 const savedReport = ref<FireSuppressionReport | null>(null)
 
 type FindingForm = FireSuppressionReportFindingInput
-
 const emptyFinding = (): FindingForm => ({ category: null, control_item: '', description: '', scope: 'unknown', area_note: '', affected_item_ids: [] })
 
 const form = ref({
@@ -132,17 +151,24 @@ const form = ref({
   findings: [] as FindingForm[],
 })
 
-const openUpload = () => {
+const additionalFiles = ref<FireSuppressionReportFileInput[]>([])
+const controlItemsForm = ref<FireSuppressionReportControlItemInput[]>([])
+const loadingControlItems = ref(false)
+
+const resetWizard = () => {
   selectedFile.value = null
-  analysisSummary.value = null
-  ambiguousMatches.value = []
-  ambiguousResolutions.value = {}
   additionalFiles.value = []
   controlItemsForm.value = []
   savedReport.value = null
-  wizardStep.value = 1
+  matchRows.value = []
+  ambiguousMatches.value = []
+  ambiguousResolutions.value = {}
+  matchStatFilter.value = 'belirsiz'
+  matchingView.value = 'results'
+  activeDetailIndex.value = null
+  wizardStage.value = 'upload'
   form.value = {
-    report_date: new Date().toISOString().slice(0, 10),
+    report_date: '',
     report_no: '',
     next_control_date: '',
     covered_categories: [],
@@ -152,27 +178,72 @@ const openUpload = () => {
     covered_inventory_item_ids: [],
     findings: [],
   }
+}
+
+const openUpload = () => {
+  resetWizard()
   drawerOpen.value = true
 }
-
 const closeDrawer = () => { drawerOpen.value = false }
 
-const goToStep = async (step: 1 | 2 | 3 | 4) => {
-  if (step === 3) await syncControlItems()
-  wizardStep.value = step
+// --- Adım 1: Dosya Yükle ---
+const isPdf = (file: File) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+
+const selectFile = (file: File) => {
+  if (!isPdf(file)) {
+    $toast.error('Sadece PDF formatında rapor dosyası yüklenebilir.')
+    return
+  }
+  selectedFile.value = file
+  runAnalyzing()
 }
-const nextStep = () => goToStep((Math.min(wizardStep.value + 1, 4)) as 1 | 2 | 3 | 4)
-const prevStep = () => goToStep((Math.max(wizardStep.value - 1, 1)) as 1 | 2 | 3 | 4)
+const onFilePicked = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) selectFile(file)
+  ;(e.target as HTMLInputElement).value = ''
+}
+const onFileDropped = (e: DragEvent) => {
+  isDraggingFile.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (file) selectFile(file)
+}
 
-// --- AI ile Analiz Et (NVIDIA NIM) — section 12: taslağı doldurur, hiçbir
-// şey kaydetmez; kullanıcı "Raporu Kaydet"e basana kadar mevcut manuel akış
-// aynen çalışır.
-const analyzing = ref(false)
-const analysisSummary = ref<{ matchedCount: number; unmatchedCodes: string[] } | null>(null)
+// --- Adım 2: AI Analizi (görsel ilerleme + gerçek analyze() çağrısı) ---
+// NVIDIA NIM'in ücretsiz katmanında yanıt süresi öngörülemediği (birkaç
+// saniyeden birkaç dakikaya) için gerçek bir yüzde yok — sadece hangi
+// aşamada olduğumuzu ve geçen süreyi gösteriyoruz, "donmuş" hissi vermesin.
+const analyzingSteps = ref([
+  { label: 'PDF dosyası yüklendi', done: false },
+  { label: 'Metin çıkarılıyor...', done: false },
+  { label: 'AI ile analiz ediliyor (biraz sürebilir)', done: false },
+  { label: 'Envanter ile eşleştiriliyor', done: false },
+])
+const elapsedSeconds = ref(0)
+let elapsedTimer: ReturnType<typeof setInterval> | null = null
+const startElapsedTimer = () => {
+  elapsedSeconds.value = 0
+  elapsedTimer = setInterval(() => { elapsedSeconds.value += 1 }, 1000)
+}
+const stopElapsedTimer = () => {
+  if (elapsedTimer) clearInterval(elapsedTimer)
+  elapsedTimer = null
+}
+const elapsedLabel = computed(() => {
+  const m = Math.floor(elapsedSeconds.value / 60)
+  const s = elapsedSeconds.value % 60
+  return m > 0 ? `${m} dk ${s} sn` : `${s} sn`
+})
 
-// --- Belirsiz Eşleşmeler (Matching Engine: candidate_multiple) — sadece
-// UI/onay katmanı. Eşleştirme mantığının kendisi backend'de kalır, burada
-// sadece kullanıcının onayı `covered_inventory_item_ids`'e yansıtılır.
+type MatchBucket = 'kesin' | 'belirsiz' | 'yeni'
+type MatchRow = {
+  equipmentIndex: number
+  code: string | null
+  categoryLabel: string | null
+  locationNote: string | null
+  bucket: MatchBucket
+}
+const matchRows = ref<MatchRow[]>([])
+
 type AmbiguousEntry = {
   equipmentIndex: number
   code: string | null
@@ -184,27 +255,19 @@ type AmbiguousEntry = {
   result: string | null
   candidates: FireSuppressionInventoryItem[]
 }
-
 const ambiguousMatches = ref<AmbiguousEntry[]>([])
 const ambiguousResolutions = ref<Record<number, AmbiguousMatchResolution>>({})
 
-const resolveAmbiguous = (entry: AmbiguousEntry, decision: AmbiguousMatchResolution) => {
-  const previous = ambiguousResolutions.value[entry.equipmentIndex]
-  if (previous?.action === 'match' && previous.candidateId) {
-    const idx = form.value.covered_inventory_item_ids.indexOf(previous.candidateId)
-    if (idx !== -1) form.value.covered_inventory_item_ids.splice(idx, 1)
-  }
+const runAnalyzing = async () => {
+  if (!context.branchId || !selectedFile.value) return
+  wizardStage.value = 'analyzing'
+  analyzingSteps.value = analyzingSteps.value.map((s, i) => ({ ...s, done: i === 0 }))
+  startElapsedTimer()
+  // Sadece ilk iki adım (dosya yükleme + metin çıkarma) gerçekten hızlı ve
+  // deterministik — otomatik ilerletiliyor. AI çağrısının süresi belirsiz
+  // olduğu için 3. adım gerçek yanıt gelene kadar "devam ediyor" görünür.
+  const step1Timer = window.setTimeout(() => { analyzingSteps.value[1].done = true }, 500)
 
-  ambiguousResolutions.value = { ...ambiguousResolutions.value, [entry.equipmentIndex]: decision }
-
-  if (decision.action === 'match' && decision.candidateId && !form.value.covered_inventory_item_ids.includes(decision.candidateId)) {
-    form.value.covered_inventory_item_ids.push(decision.candidateId)
-  }
-}
-
-const analyzeFile = async () => {
-  if (!context.branchId || !selectedFile.value || analyzing.value) return
-  analyzing.value = true
   try {
     const { data: draft } = await fireSuppressionReportApi.analyze(context.branchId, selectedFile.value)
 
@@ -214,26 +277,52 @@ const analyzeFile = async () => {
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
 
     const matchedByCode = new Map(draft.matched_inventory_items.map(item => [item.code, item.id]))
-    form.value.covered_inventory_item_ids = draft.matched_inventory_items.map(item => item.id)
-
-    ambiguousResolutions.value = {}
     const candidateItemsById = new Map((draft.candidate_inventory_items ?? []).map(item => [item.id, item]))
-    ambiguousMatches.value = (draft.equipment ?? [])
-      .map((item, equipmentIndex) => ({ item, equipmentIndex }))
-      .filter(({ item }) => item.match?.status === 'candidate_multiple')
-      .map(({ item, equipmentIndex }) => ({
+
+    const coveredIds = new Set(draft.matched_inventory_items.map(item => item.id))
+    const rows: MatchRow[] = []
+    const ambiguous: AmbiguousEntry[] = []
+
+    ;(draft.equipment ?? []).forEach((item, equipmentIndex) => {
+      const status = item.match?.status ?? 'new'
+      let bucket: MatchBucket = 'yeni'
+
+      if (status === 'exact') {
+        bucket = 'kesin'
+      } else if (status === 'candidate_single') {
+        bucket = 'kesin'
+        const onlyCandidateId = item.match?.candidate_ids?.[0]
+        if (onlyCandidateId) coveredIds.add(onlyCandidateId)
+      } else if (status === 'candidate_multiple') {
+        bucket = 'belirsiz'
+        ambiguous.push({
+          equipmentIndex,
+          code: item.code ?? null,
+          categoryLabel: item.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] : null,
+          brand: item.brand ?? null,
+          model: item.model ?? null,
+          serialNo: item.serial_no ?? null,
+          locationNote: item.location_note ?? null,
+          result: item.result ?? null,
+          candidates: (item.match?.candidate_ids ?? [])
+            .map(id => candidateItemsById.get(id))
+            .filter((i): i is FireSuppressionInventoryItem => !!i),
+        })
+      }
+
+      rows.push({
         equipmentIndex,
         code: item.code ?? null,
         categoryLabel: item.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] : null,
-        brand: item.brand ?? null,
-        model: item.model ?? null,
-        serialNo: item.serial_no ?? null,
         locationNote: item.location_note ?? null,
-        result: item.result ?? null,
-        candidates: (item.match?.candidate_ids ?? [])
-          .map(id => candidateItemsById.get(id))
-          .filter((i): i is FireSuppressionInventoryItem => !!i),
-      }))
+        bucket,
+      })
+    })
+
+    matchRows.value = rows
+    ambiguousMatches.value = ambiguous
+    ambiguousResolutions.value = {}
+    form.value.covered_inventory_item_ids = [...coveredIds]
 
     if (draft.findings?.length) {
       form.value.findings = draft.findings.map((f) => {
@@ -251,84 +340,83 @@ const analyzeFile = async () => {
       })
     }
 
-    analysisSummary.value = {
-      matchedCount: draft.matched_inventory_items.length,
-      unmatchedCodes: draft.unmatched_codes,
-    }
-    $toast.success(
-      ambiguousMatches.value.length
-        ? `PDF analiz edildi — ${ambiguousMatches.value.length} belirsiz eşleşme onayınızı bekliyor.`
-        : 'PDF analiz edildi, alanlar dolduruldu — kaydetmeden önce kontrol edin.',
-    )
+    analyzingSteps.value = analyzingSteps.value.map(s => ({ ...s, done: true }))
+    await new Promise(resolve => setTimeout(resolve, 250))
+    matchStatFilter.value = ambiguous.length ? 'belirsiz' : 'all'
+    wizardStage.value = 'matching'
   } catch (e: any) {
-    $toast.error(e?.data?.message || e?.message || 'PDF analiz edilemedi, bilgileri elle girebilirsiniz.')
+    $toast.error(e?.data?.message || e?.message || 'PDF analiz edilemedi.')
+    wizardStage.value = 'upload'
   } finally {
-    analyzing.value = false
+    clearTimeout(step1Timer)
+    stopElapsedTimer()
   }
 }
+const cancelAnalyzing = () => { stopElapsedTimer(); wizardStage.value = 'upload'; selectedFile.value = null }
 
-// --- Dosya Yükleme — tek sürükle-bırak alanı: PDF/foto/belge karışık
-// bırakılabilir, uzantıya göre otomatik sınıflanır. İlk PDF ana rapor
-// dokümanı (backend'in zorunlu `file` alanı) olur, geri kalanı ek dosya.
-const additionalFiles = ref<FireSuppressionReportFileInput[]>([])
-const isDraggingFiles = ref(false)
+// --- Adım 3: Eşleştirme (sonuç listesi + tekil belirsiz inceleme) ---
+const matchingView = ref<'results' | 'detail'>('results')
+const activeDetailIndex = ref<number | null>(null)
+const matchStatFilter = ref<'all' | 'kesin' | 'belirsiz' | 'yeni'>('belirsiz')
+const matchSearch = ref('')
 
-const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'zip']
-
-const classifyFile = (file: File): 'main' | FireSuppressionReportFileType => {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'pdf') return selectedFile.value ? 'ek_belge' : 'main'
-  if (IMAGE_EXTENSIONS.includes(ext)) return 'fotograf'
-  if (DOCUMENT_EXTENSIONS.includes(ext)) return 'ek_belge'
-  return 'diger'
-}
-
-const addFiles = (files: FileList | File[]) => {
-  for (const file of Array.from(files)) {
-    const kind = classifyFile(file)
-    if (kind === 'main') {
-      selectedFile.value = file
-      analysisSummary.value = null
-      ambiguousMatches.value = []
-      ambiguousResolutions.value = {}
-    } else {
-      additionalFiles.value.push({ file, type: kind, description: '' })
-    }
+const matchCounts = computed(() => ({
+  all: matchRows.value.length,
+  kesin: matchRows.value.filter(r => r.bucket === 'kesin').length,
+  belirsiz: matchRows.value.filter(r => r.bucket === 'belirsiz').length,
+  yeni: matchRows.value.filter(r => r.bucket === 'yeni').length,
+}))
+const filteredMatchRows = computed(() => matchRows.value.filter((r) => {
+  if (matchStatFilter.value !== 'all' && r.bucket !== matchStatFilter.value) return false
+  if (matchSearch.value.trim()) {
+    const q = matchSearch.value.trim().toLocaleLowerCase('tr-TR')
+    if (!`${r.code ?? ''} ${r.locationNote ?? ''}`.toLocaleLowerCase('tr-TR').includes(q)) return false
   }
-}
-
-const onFilesDropped = (e: DragEvent) => {
-  isDraggingFiles.value = false
-  if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files)
-}
-const onFilesPicked = (e: Event) => {
-  const files = (e.target as HTMLInputElement).files
-  if (files?.length) addFiles(files)
-  ;(e.target as HTMLInputElement).value = ''
-}
-const removeMainFile = () => {
-  selectedFile.value = null
-  analysisSummary.value = null
-  ambiguousMatches.value = []
-  ambiguousResolutions.value = {}
-}
-const removeAdditionalFile = (index: number) => { additionalFiles.value.splice(index, 1) }
-const clearAllFiles = () => { removeMainFile(); additionalFiles.value = [] }
-
-const uploadedFileCounts = computed(() => ({
-  rapor_dokumani: selectedFile.value ? 1 : 0,
-  fotograf: additionalFiles.value.filter(f => f.type === 'fotograf').length,
-  ek_belge: additionalFiles.value.filter(f => f.type === 'ek_belge').length,
-  diger: additionalFiles.value.filter(f => f.type === 'diger').length,
+  return true
 }))
 
-// --- Kontrol Maddeleri (checklist) — seçilen kategorilere göre standart
-// şablondan doldurulur, kullanıcı durumu/açıklamayı düzenleyip onaylar.
-// Önceki düzenlemeler (template_id eşleşen), kategori değişse bile korunur.
-const controlItemsForm = ref<FireSuppressionReportControlItemInput[]>([])
-const loadingControlItems = ref(false)
+const activeAmbiguousEntry = computed(() => ambiguousMatches.value.find(e => e.equipmentIndex === activeDetailIndex.value) ?? null)
 
+const openDetail = (equipmentIndex: number) => {
+  activeDetailIndex.value = equipmentIndex
+  matchingView.value = 'detail'
+}
+const backToResults = () => { matchingView.value = 'results' }
+
+const resolveAmbiguous = (entry: AmbiguousEntry, decision: AmbiguousMatchResolution) => {
+  const previous = ambiguousResolutions.value[entry.equipmentIndex]
+  if (previous?.action === 'match' && previous.candidateId) {
+    const idx = form.value.covered_inventory_item_ids.indexOf(previous.candidateId)
+    if (idx !== -1) form.value.covered_inventory_item_ids.splice(idx, 1)
+  }
+
+  ambiguousResolutions.value = { ...ambiguousResolutions.value, [entry.equipmentIndex]: decision }
+
+  if (decision.action === 'match' && decision.candidateId && !form.value.covered_inventory_item_ids.includes(decision.candidateId)) {
+    form.value.covered_inventory_item_ids.push(decision.candidateId)
+  }
+
+  backToResults()
+}
+
+const rowStatusMeta = (row: MatchRow) => {
+  const resolution = ambiguousResolutions.value[row.equipmentIndex]
+  if (row.bucket === 'kesin') return { label: 'Kesin Eşleşen', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
+  if (row.bucket === 'yeni') return { label: 'Yeni Ekipman', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  if (resolution?.action === 'match') return { label: 'Eşleştirildi', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
+  if (resolution?.action === 'none') return { label: 'Yeni Ekipman Adayı', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  if (resolution?.action === 'ambiguous') return { label: 'Belirsiz Bırakıldı', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  return { label: 'Belirsiz Eşleşme', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' }
+}
+
+const goToConfirm = async () => {
+  await syncControlItems()
+  wizardStage.value = 'confirm'
+}
+const backToMatching = () => { wizardStage.value = 'matching'; matchingView.value = 'results' }
+
+// --- Kontrol Maddeleri (checklist) — AI'ın belirlediği kapsanan kategorilere
+// göre standart şablondan doldurulur, kullanıcı durumu/açıklamayı düzenler.
 const syncControlItems = async () => {
   if (!form.value.covered_categories.length) {
     controlItemsForm.value = []
@@ -353,7 +441,6 @@ const syncControlItems = async () => {
     loadingControlItems.value = false
   }
 }
-
 const controlItemsByCategory = computed(() => {
   const groups = new Map<FireSuppressionCategory, FireSuppressionReportControlItemInput[]>()
   for (const item of controlItemsForm.value) {
@@ -363,34 +450,31 @@ const controlItemsByCategory = computed(() => {
   }
   return groups
 })
-
 const controlItemStatusOptions: FireSuppressionControlItemStatus[] = ['uygun', 'uygun_degil', 'uygulanamiyor']
 
-// --- Adım 3 üst özeti: rapor bilgileri + dosya listesi + basit doğrulama.
-const allUploadFiles = computed(() => [
-  ...(selectedFile.value ? [{ file: selectedFile.value, type: 'rapor_dokumani' as const }] : []),
-  ...additionalFiles.value.map(f => ({ file: f.file, type: f.type })),
-])
-const formatFileSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-const uploadChecklist = computed(() => [
-  { label: 'Rapor bilgileri eksiksiz dolduruldu', done: !!form.value.report_date },
-  { label: 'En az bir dosya yüklendi', done: !!selectedFile.value },
-  { label: 'Dosya boyutları uygun (maks. 20 MB)', done: allUploadFiles.value.every(f => f.file.size <= 20 * 1024 * 1024) },
-  { label: 'Tüm belirsiz eşleşmeler gözden geçirildi', done: ambiguousMatches.value.every(entry => !!ambiguousResolutions.value[entry.equipmentIndex]) },
-])
+// --- Ek dosyalar (Onayla adımında, opsiyonel) ---
+const additionalFileInput = ref<HTMLInputElement | null>(null)
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+const addAdditionalFiles = (e: Event) => {
+  const files = Array.from((e.target as HTMLInputElement).files ?? [])
+  additionalFiles.value.push(...files.map((file) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const type: FireSuppressionReportFileType = IMAGE_EXTENSIONS.includes(ext) ? 'fotograf' : 'ek_belge'
+    return { file, type, description: '' }
+  }))
+  ;(e.target as HTMLInputElement).value = ''
+}
+const removeAdditionalFile = (index: number) => { additionalFiles.value.splice(index, 1) }
 
 const addFinding = () => { form.value.findings.push(emptyFinding()) }
 const removeFinding = (index: number) => { form.value.findings.splice(index, 1) }
-
 const itemsForCategory = (category?: FireSuppressionCategory | null) =>
   category ? inventoryItems.value.filter(i => i.category === category) : inventoryItems.value
-
 const toggleCoveredItem = (id: number) => {
   const idx = form.value.covered_inventory_item_ids.indexOf(id)
   if (idx === -1) form.value.covered_inventory_item_ids.push(id)
   else form.value.covered_inventory_item_ids.splice(idx, 1)
 }
-
 const toggleFindingItem = (finding: FindingForm, id: number) => {
   finding.affected_item_ids ??= []
   const idx = finding.affected_item_ids.indexOf(id)
@@ -398,6 +482,14 @@ const toggleFindingItem = (finding: FindingForm, id: number) => {
   else finding.affected_item_ids.splice(idx, 1)
 }
 
+const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
+  { value: 'all', label: 'Tüm Ekipmanlara Uygula' },
+  { value: 'specific', label: 'Ekipman Seç' },
+  { value: 'area', label: 'Alan Belirt' },
+  { value: 'unknown', label: 'Belirsiz Olarak Kaydet' },
+]
+
+// --- Adım 4: Onayla → kaydet ---
 const submit = async () => {
   if (!context.branchId || !selectedFile.value || saving.value) return
   saving.value = true
@@ -427,7 +519,7 @@ const submit = async () => {
     })
     $toast.success('Rapor yüklendi.')
     savedReport.value = report
-    wizardStep.value = 4
+    wizardStage.value = 'done'
     await load()
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'Rapor yüklenemedi.')
@@ -436,27 +528,13 @@ const submit = async () => {
   }
 }
 
-const deletingId = ref<number | null>(null)
-const removeReport = async (report: FireSuppressionReport) => {
-  if (!window.confirm(`${formatDate(report.report_date)} tarihli raporu silmek istediğinize emin misiniz? (Envanter kayıtları etkilenmez)`)) return
-  deletingId.value = report.id
-  try {
-    await fireSuppressionReportApi.remove(report.id)
-    $toast.success('Rapor silindi.')
-    await load()
-  } catch (e: any) {
-    $toast.error(e?.data?.message || e?.message || 'Rapor silinemedi.')
-  } finally {
-    deletingId.value = null
-  }
-}
-
-const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
-  { value: 'all', label: 'Tüm Ekipmanlara Uygula' },
-  { value: 'specific', label: 'Ekipman Seç' },
-  { value: 'area', label: 'Alan Belirt' },
-  { value: 'unknown', label: 'Belirsiz Olarak Kaydet' },
-]
+const doneStats = computed(() => ({
+  total: matchRows.value.length,
+  kesin: matchRows.value.filter(r => r.bucket === 'kesin').length,
+  belirsizBirakilan: Object.values(ambiguousResolutions.value).filter(r => r.action === 'ambiguous').length
+    + ambiguousMatches.value.filter(e => !ambiguousResolutions.value[e.equipmentIndex]).length,
+  yeni: matchRows.value.filter(r => r.bucket === 'yeni').length + Object.values(ambiguousResolutions.value).filter(r => r.action === 'none').length,
+}))
 </script>
 
 <template>
@@ -571,333 +649,356 @@ const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
     </div>
 
     <!-- Rapor yükleme sihirbazı -->
-    <div v-if="drawerOpen" class="fixed inset-0 z-[10000] flex justify-end bg-black/30" @click.self="closeDrawer">
-      <div class="flex h-full w-full max-w-2xl flex-col bg-white dark:bg-gray-900">
+    <div v-if="drawerOpen" class="fixed inset-0 z-[10000] flex justify-end bg-black/30" @click.self="wizardStage === 'upload' && closeDrawer()">
+      <div class="flex h-full w-full max-w-3xl flex-col bg-white dark:bg-gray-900">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-          <p class="text-sm font-bold text-[#172033] dark:text-white">Yeni Rapor Yükle</p>
+          <p class="text-sm font-bold text-[#172033] dark:text-white">Yıllık Periyodik Kontrol Raporu Yükle</p>
           <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5" @click="closeDrawer"><X :size="16" /></button>
         </div>
 
         <!-- Adım göstergesi -->
         <div class="flex items-center justify-center gap-2 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
-          <template v-for="(s, i) in wizardSteps" :key="s.step">
+          <template v-for="(s, i) in wizardStepLabels" :key="s.key">
             <div class="flex items-center gap-2">
               <span
                 class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                :class="wizardStep === s.step ? 'bg-[#d71920] text-white' : wizardStep > s.step ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400 dark:bg-white/10'"
+                :class="currentStepNumber === s.number ? 'bg-[#d71920] text-white' : currentStepNumber > s.number ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400 dark:bg-white/10'"
               >
-                <Check v-if="wizardStep > s.step" :size="13" />
-                <template v-else>{{ s.step }}</template>
+                <Check v-if="currentStepNumber > s.number" :size="13" />
+                <template v-else>{{ s.number }}</template>
               </span>
-              <span class="hidden text-xs font-semibold sm:inline" :class="wizardStep === s.step ? 'text-[#172033] dark:text-white' : 'text-gray-400'">{{ s.label }}</span>
+              <span class="hidden text-xs font-semibold sm:inline" :class="currentStepNumber === s.number ? 'text-[#172033] dark:text-white' : 'text-gray-400'">{{ s.label }}</span>
             </div>
-            <div v-if="i < wizardSteps.length - 1" class="h-px w-6 shrink-0 bg-gray-200 dark:bg-gray-700" />
+            <div v-if="i < wizardStepLabels.length - 1" class="h-px w-6 shrink-0 bg-gray-200 dark:bg-gray-700" />
           </template>
         </div>
 
-        <div class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-          <!-- Adım 1: Rapor Bilgileri -->
-          <template v-if="wizardStep === 1">
-          <div>
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Rapor Bilgileri</p>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rapor No</label>
-                <input v-model="form.report_no" type="text" placeholder="Örn. NT/23/1930-2/002" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              </div>
-              <div>
-                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Akredite Firma</label>
-                <input v-model="form.inspection_company_name" type="text" placeholder="Kontrolü yapan firma" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              </div>
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rapor Tarihi</label>
-                <input v-model="form.report_date" type="date" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              </div>
-              <div>
-                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Sonraki Kontrol</label>
-                <input v-model="form.next_control_date" type="date" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              </div>
-            </div>
-            <div class="mt-3">
-              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kontrol Edilen Sistemler</label>
-              <div class="flex flex-wrap gap-2">
-                <label v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium" :class="form.covered_categories.includes(c) ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
-                  <input v-model="form.covered_categories" type="checkbox" :value="c" class="hidden">
-                  {{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}
-                </label>
-              </div>
-            </div>
-            <div class="mt-3">
-              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Genel Sonuç</label>
-              <select v-model="form.overall_result" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-                <option value="">Belirtilmedi</option>
-                <option value="uygun">Uygun</option>
-                <option value="uygun_degil">Uygun Değil</option>
-              </select>
-            </div>
-          </div>
-          </template>
-
-          <!-- Adım 2: Dosya Yükleme -->
-          <template v-if="wizardStep === 2">
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Dosya Yükleme</p>
-              <button v-if="selectedFile || additionalFiles.length" type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-[#d71920]" @click="clearAllFiles"><Trash2 :size="12" />Tümünü Temizle</button>
-            </div>
-            <input ref="fileInput" type="file" multiple accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.zip" class="hidden" @change="onFilesPicked">
+        <div class="flex-1 overflow-y-auto px-5 py-5">
+          <!-- Adım 1: Dosya Yükle -->
+          <div v-if="wizardStage === 'upload'" class="mx-auto max-w-md py-6">
+            <input ref="fileInput" type="file" accept="application/pdf" class="hidden" @change="onFilePicked">
             <div
-              class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition"
-              :class="isDraggingFiles ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#dfe3e8] dark:border-gray-700'"
-              @dragover.prevent="isDraggingFiles = true"
-              @dragleave.prevent="isDraggingFiles = false"
-              @drop.prevent="onFilesDropped"
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition"
+              :class="isDraggingFile ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#dfe3e8] dark:border-gray-700'"
+              @dragover.prevent="isDraggingFile = true"
+              @dragleave.prevent="isDraggingFile = false"
+              @drop.prevent="onFileDropped"
             >
-              <Upload :size="26" class="text-[#d71920]" />
-              <p class="text-sm font-semibold text-[#172033] dark:text-white">Dosyaları buraya sürükleyin</p>
-              <p class="text-xs text-gray-400">veya</p>
-              <button type="button" class="rounded-lg border border-[#dfe3e8] bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:border-[#d71920]/40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" @click="fileInput?.click()">Dosya Seç</button>
-              <p class="text-[11px] text-gray-400">PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, ZIP (maks. 20 MB)</p>
+              <span class="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-[#d71920] dark:bg-red-500/10"><Upload :size="26" /></span>
+              <p class="text-sm font-semibold text-[#172033] dark:text-white">Rapor dosyasını buraya sürükleyin veya <button type="button" class="text-[#d71920] underline" @click="fileInput?.click()">seçin</button></p>
+              <p class="text-xs text-gray-400">Desteklenen format: PDF (Maks. 20 MB)</p>
             </div>
+            <p class="mt-3 text-center text-xs text-gray-400">Sadece yıllık periyodik kontrol raporları yüklenebilir. Dosya seçildiğinde analiz otomatik başlar.</p>
+          </div>
 
-            <div v-if="selectedFile || additionalFiles.length" class="mt-3 space-y-1.5">
-              <div class="flex items-center gap-2 rounded-lg border border-[#e7e9ed] bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
-                <FileText :size="14" class="shrink-0 text-[#d71920]" />
-                <span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-300">{{ selectedFile ? selectedFile.name : 'Rapor dokümanı (PDF) seçilmedi' }}</span>
-                <span class="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-[#d71920] dark:bg-red-500/10">Rapor Dokümanı</span>
-                <button v-if="selectedFile" type="button" class="shrink-0 text-gray-400 hover:text-[#d71920]" @click="removeMainFile"><X :size="14" /></button>
+          <!-- Adım 2: AI Analizi -->
+          <div v-else-if="wizardStage === 'analyzing'" class="mx-auto max-w-md py-6">
+            <div class="mb-4 flex items-center gap-3 rounded-xl border border-[#e7e9ed] bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-[#d71920] dark:bg-red-500/10"><FileText :size="18" /></span>
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-[#172033] dark:text-white">{{ selectedFile?.name }}</p>
+                <p class="text-xs text-gray-400">{{ selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '' }}</p>
               </div>
-              <div v-for="(entry, index) in additionalFiles" :key="index" class="flex items-center gap-2 rounded-lg border border-[#e7e9ed] px-3 py-2 dark:border-gray-800">
-                <ImageIcon v-if="entry.type === 'fotograf'" :size="14" class="shrink-0 text-gray-400" />
-                <Paperclip v-else :size="14" class="shrink-0 text-gray-400" />
-                <span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-300">{{ entry.file.name }}</span>
-                <select v-model="entry.type" class="h-7 shrink-0 rounded-md border border-[#dfe3e8] bg-white px-1.5 text-[10px] outline-none dark:border-gray-700 dark:bg-gray-800">
-                  <option value="fotograf">Fotoğraf</option>
-                  <option value="ek_belge">Ek Belge</option>
-                  <option value="diger">Diğer</option>
-                </select>
-                <input v-model="entry.description" type="text" placeholder="Açıklama" class="h-7 w-28 shrink-0 rounded-md border border-[#dfe3e8] px-2 text-[11px] outline-none dark:border-gray-700 dark:bg-gray-800">
-                <button type="button" class="shrink-0 text-gray-400 hover:text-[#d71920]" @click="removeAdditionalFile(index)"><X :size="14" /></button>
+            </div>
+            <div class="space-y-2.5 rounded-xl border border-[#e7e9ed] bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+              <div v-for="step in analyzingSteps" :key="step.label" class="flex items-center gap-2.5 text-sm">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full" :class="step.done ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-white/10'">
+                  <Check v-if="step.done" :size="12" />
+                  <LoaderCircle v-else :size="12" class="animate-spin text-gray-400" />
+                </span>
+                <span :class="step.done ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'">{{ step.label }}</span>
               </div>
             </div>
 
-            <button
-              v-if="selectedFile"
-              type="button"
-              class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gray-50 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:bg-white/5 dark:text-gray-300"
-              :disabled="analyzing"
-              @click="analyzeFile"
-            >
-              <LoaderCircle v-if="analyzing" :size="14" class="animate-spin" />
-              <Sparkles v-else :size="14" class="text-[#d71920]" />
-              {{ analyzing ? 'PDF analiz ediliyor...' : 'AI ile Analiz Et (alanları otomatik doldur)' }}
-            </button>
-
-            <div v-if="analysisSummary" class="mt-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-              <p>{{ analysisSummary.matchedCount }} ekipman envanterle eşleşti ve otomatik işaretlendi.</p>
-              <p v-if="analysisSummary.unmatchedCodes.length" class="mt-1 text-amber-700 dark:text-amber-400">
-                Raporda geçen ama envanterde bulunamayan kodlar: {{ analysisSummary.unmatchedCodes.join(', ') }} — yeni ekipman adayı olabilir, Envanter'den elle ekleyebilirsiniz.
-              </p>
-              <p class="mt-1 text-gray-500 dark:text-gray-400">Kaydetmeden önce tüm alanları kontrol edin.</p>
+            <div class="mt-4 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+              <div class="ai-progress-bar h-1.5 w-1/3 rounded-full bg-[#d71920]" />
             </div>
+            <p class="mt-2 text-center text-xs text-gray-400">
+              İşleniyor... {{ elapsedLabel }}
+              <span v-if="elapsedSeconds > 30"> — büyük raporlarda bu birkaç dakika sürebilir, sayfayı kapatmayın.</span>
+            </p>
+
+            <button type="button" class="mt-4 w-full rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="cancelAnalyzing">İptal</button>
           </div>
 
-          <!-- 2.1 Belirsiz Eşleşmeler -->
-          <div v-if="ambiguousMatches.length">
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Belirsiz Eşleşmeler</p>
-            <div class="space-y-3">
-              <AmbiguousMatchCard
-                v-for="entry in ambiguousMatches"
-                :key="entry.equipmentIndex"
-                domain="fire_suppression"
-                :entry-key="entry.equipmentIndex"
-                :report-equipment="{
-                  code: entry.code,
-                  categoryLabel: entry.categoryLabel,
-                  brand: entry.brand,
-                  model: entry.model,
-                  serialNo: entry.serialNo,
-                  locationNote: entry.locationNote,
-                  result: entry.result,
-                }"
-                :candidates="entry.candidates.map(c => ({ id: c.id, code: c.code, categoryLabel: FIRE_SUPPRESSION_CATEGORY_LABELS[c.category], brand: c.brand, model: c.model, serialNo: c.serial_no, locationNote: c.location_note }))"
-                :resolution="ambiguousResolutions[entry.equipmentIndex] ?? null"
-                @resolve="decision => resolveAmbiguous(entry, decision)"
-              />
-            </div>
-          </div>
+          <!-- Adım 3: Eşleştirme -->
+          <template v-else-if="wizardStage === 'matching'">
+            <!-- Sonuç listesi -->
+            <div v-if="matchingView === 'results'">
+              <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'all' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'all'">
+                  <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ matchCounts.all }}</p>
+                  <p class="text-xs text-gray-400">Tümü</p>
+                </button>
+                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'kesin' ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'kesin'">
+                  <p class="text-2xl font-bold text-emerald-600">{{ matchCounts.kesin }}</p>
+                  <p class="text-xs text-gray-400">Kesin Eşleşen</p>
+                </button>
+                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'belirsiz' ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'belirsiz'">
+                  <p class="text-2xl font-bold text-amber-600">{{ matchCounts.belirsiz }}</p>
+                  <p class="text-xs text-gray-400">Belirsiz Eşleşen</p>
+                </button>
+                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'yeni' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'yeni'">
+                  <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ matchCounts.yeni }}</p>
+                  <p class="text-xs text-gray-400">Yeni Ekipman</p>
+                </button>
+              </div>
 
+              <input v-model="matchSearch" type="text" placeholder="Ekipman ara..." class="mb-3 h-10 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+
+              <div class="overflow-hidden rounded-xl border border-[#e7e9ed] dark:border-gray-800">
+                <table class="w-full text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                      <th class="px-3 py-2.5">Rapor Bilgisi</th>
+                      <th class="px-3 py-2.5">Kategori</th>
+                      <th class="px-3 py-2.5">Konum</th>
+                      <th class="px-3 py-2.5">Eşleşme Durumu</th>
+                      <th class="px-3 py-2.5 text-right">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in filteredMatchRows" :key="row.equipmentIndex" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
+                      <td class="px-3 py-2.5 font-semibold text-[#172033] dark:text-white">{{ row.code || '—' }}</td>
+                      <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.categoryLabel || '—' }}</td>
+                      <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.locationNote || '—' }}</td>
+                      <td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span></td>
+                      <td class="px-3 py-2.5 text-right">
+                        <button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="openDetail(row.equipmentIndex)">İncele</button>
+                        <span v-else class="text-xs text-gray-300">—</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="!filteredMatchRows.length" class="py-8 text-center text-xs text-gray-400">Kayıt yok.</p>
+              </div>
+              <p class="mt-2 text-xs text-gray-400">Toplam {{ filteredMatchRows.length }} kayıt</p>
+            </div>
+
+            <!-- Tekil belirsiz eşleşme detayı -->
+            <AmbiguousMatchCard
+              v-else-if="activeAmbiguousEntry"
+              domain="fire_suppression"
+              :entry-key="activeAmbiguousEntry.equipmentIndex"
+              :report-equipment="{
+                code: activeAmbiguousEntry.code,
+                categoryLabel: activeAmbiguousEntry.categoryLabel,
+                brand: activeAmbiguousEntry.brand,
+                model: activeAmbiguousEntry.model,
+                serialNo: activeAmbiguousEntry.serialNo,
+                locationNote: activeAmbiguousEntry.locationNote,
+                result: activeAmbiguousEntry.result,
+              }"
+              :candidates="activeAmbiguousEntry.candidates.map(c => ({ id: c.id, code: c.code, categoryLabel: FIRE_SUPPRESSION_CATEGORY_LABELS[c.category], brand: c.brand, model: c.model, serialNo: c.serial_no, locationNote: c.location_note }))"
+              :resolution="ambiguousResolutions[activeAmbiguousEntry.equipmentIndex] ?? null"
+              @resolve="decision => resolveAmbiguous(activeAmbiguousEntry!, decision)"
+              @back="backToResults"
+            />
           </template>
 
-          <!-- Adım 3: Kontrol ve Onay -->
-          <template v-if="wizardStep === 3">
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Rapor Bilgileri</p>
-              <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="goToStep(1)"><ChevronLeft :size="12" />Düzenle</button>
-            </div>
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-[#e7e9ed] p-4 text-xs dark:border-gray-800">
-              <div class="flex justify-between"><dt class="text-gray-400">Rapor No</dt><dd class="font-medium text-gray-700 dark:text-gray-200">{{ form.report_no || '—' }}</dd></div>
-              <div class="flex justify-between"><dt class="text-gray-400">Akredite Firma</dt><dd class="font-medium text-gray-700 dark:text-gray-200">{{ form.inspection_company_name || '—' }}</dd></div>
-              <div class="flex justify-between"><dt class="text-gray-400">Rapor Tarihi</dt><dd class="font-medium text-gray-700 dark:text-gray-200">{{ formatDate(form.report_date) }}</dd></div>
-              <div class="flex justify-between"><dt class="text-gray-400">Sonraki Kontrol</dt><dd class="font-medium text-gray-700 dark:text-gray-200">{{ formatDate(form.next_control_date) }}</dd></div>
-            </dl>
-          </div>
-
-          <div>
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Yüklenen Dosyalar ({{ allUploadFiles.length }})</p>
-            <div class="overflow-hidden rounded-xl border border-[#e7e9ed] dark:border-gray-800">
-              <div v-for="(entry, index) in allUploadFiles" :key="index" class="flex items-center gap-2 border-b border-[#f1f2f4] px-3 py-2.5 text-xs last:border-0 dark:border-gray-800">
-                <FileText v-if="entry.type === 'rapor_dokumani'" :size="14" class="shrink-0 text-[#d71920]" />
-                <ImageIcon v-else-if="entry.type === 'fotograf'" :size="14" class="shrink-0 text-gray-400" />
-                <Paperclip v-else :size="14" class="shrink-0 text-gray-400" />
-                <span class="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-300">{{ entry.file.name }}</span>
-                <span class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ entry.type === 'rapor_dokumani' ? 'Rapor Dokümanı' : FIRE_SUPPRESSION_REPORT_FILE_TYPE_LABELS[entry.type] }}</span>
-                <span class="shrink-0 text-gray-400">{{ formatFileSize(entry.file.size) }}</span>
+          <!-- Adım 4: Onayla -->
+          <template v-else-if="wizardStage === 'confirm'">
+            <div class="space-y-6">
+              <div>
+                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Rapor Bilgileri</p>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rapor Tarihi</label>
+                    <input v-model="form.report_date" type="date" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Geçerlilik / Sonraki Kontrol Tarihi</label>
+                    <input v-model="form.next_control_date" type="date" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kontrol Edilen Sistemler</label>
+                  <div class="flex flex-wrap gap-2">
+                    <label v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium" :class="form.covered_categories.includes(c) ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
+                      <input v-model="form.covered_categories" type="checkbox" :value="c" class="hidden" @change="syncControlItems">
+                      {{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}
+                    </label>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Genel Sonuç</label>
+                  <select v-model="form.overall_result" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                    <option value="">Belirtilmedi</option>
+                    <option value="uygun">Uygun</option>
+                    <option value="uygun_degil">Uygun Değil</option>
+                  </select>
+                </div>
               </div>
-              <p v-if="!allUploadFiles.length" class="px-3 py-4 text-center text-xs text-gray-400">Dosya yüklenmedi.</p>
-            </div>
-          </div>
 
-          <div>
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Listesi</p>
-            <div class="space-y-1.5 rounded-xl border border-[#e7e9ed] p-3 dark:border-gray-800">
-              <div v-for="check in uploadChecklist" :key="check.label" class="flex items-center gap-2 text-xs">
-                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full" :class="check.done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400 dark:bg-white/10'"><Check :size="10" /></span>
-                <span :class="check.done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'">{{ check.label }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
-            <div v-if="loadingControlItems" class="py-6 text-center text-xs text-gray-400">Yükleniyor...</div>
-            <div v-else-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Kontrol maddesi listesi için "Kontrol Edilen Sistemler" seçin (Adım 1).</div>
-            <div v-else class="space-y-4">
-              <div v-for="[category, categoryItems] in controlItemsByCategory" :key="category">
-                <p class="mb-2 text-xs font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
-                <div class="space-y-2">
-                  <div v-for="ci in categoryItems" :key="ci.template_id" class="rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <p class="text-xs font-medium text-gray-700 dark:text-gray-200"><span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>{{ ci.title }}</p>
-                      <div class="flex shrink-0 gap-1">
-                        <button
-                          v-for="status in controlItemStatusOptions"
-                          :key="status"
-                          type="button"
-                          class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
-                          :class="ci.status === status
-                            ? (status === 'uygun' ? 'bg-emerald-500 text-white' : status === 'uygun_degil' ? 'bg-[#d71920] text-white' : 'bg-gray-500 text-white')
-                            : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'"
-                          @click="ci.status = status"
-                        >
-                          {{ FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[status] }}
-                        </button>
+              <div>
+                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
+                <div v-if="loadingControlItems" class="py-6 text-center text-xs text-gray-400">Yükleniyor...</div>
+                <div v-else-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Kontrol maddesi listesi için yukarıdan "Kontrol Edilen Sistemler" seçin.</div>
+                <div v-else class="space-y-4">
+                  <div v-for="[category, categoryItems] in controlItemsByCategory" :key="category">
+                    <p class="mb-2 text-xs font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
+                    <div class="space-y-2">
+                      <div v-for="ci in categoryItems" :key="ci.template_id" class="rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <p class="text-xs font-medium text-gray-700 dark:text-gray-200"><span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>{{ ci.title }}</p>
+                          <div class="flex shrink-0 gap-1">
+                            <button
+                              v-for="status in controlItemStatusOptions"
+                              :key="status"
+                              type="button"
+                              class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                              :class="ci.status === status
+                                ? (status === 'uygun' ? 'bg-emerald-500 text-white' : status === 'uygun_degil' ? 'bg-[#d71920] text-white' : 'bg-gray-500 text-white')
+                                : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'"
+                              @click="ci.status = status"
+                            >
+                              {{ FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[status] }}
+                            </button>
+                          </div>
+                        </div>
+                        <input v-if="ci.status !== 'uygun'" v-model="ci.description" type="text" placeholder="Tespit / açıklama" class="mt-2 h-9 w-full rounded-lg border border-[#dfe3e8] px-2.5 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
                       </div>
                     </div>
-                    <input v-if="ci.status !== 'uygun'" v-model="ci.description" type="text" placeholder="Tespit / açıklama" class="mt-2 h-9 w-full rounded-lg border border-[#dfe3e8] px-2.5 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Uygunsuzluklar -->
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Uygunsuzluklar (Opsiyonel)</p>
-              <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="addFinding"><Plus :size="13" />Ekle</button>
-            </div>
-            <div v-if="!form.findings.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Uygunsuzluk yoksa boş bırakabilirsiniz.</div>
-            <div v-for="(finding, index) in form.findings" :key="index" class="mb-3 rounded-lg border border-[#e7e9ed] p-3.5 dark:border-gray-800">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs font-semibold text-gray-500">Uygunsuzluk {{ index + 1 }}</span>
-                <button type="button" class="text-gray-400 hover:text-[#d71920]" @click="removeFinding(index)"><X :size="14" /></button>
-              </div>
-              <textarea v-model="finding.description" rows="2" placeholder="Açıklama" class="mb-2 w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
-              <div class="mb-2 grid grid-cols-2 gap-2">
-                <select v-model="finding.category" class="h-9 rounded-lg border border-[#dfe3e8] bg-white px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
-                  <option :value="null">Kategori seç</option>
-                  <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
-                </select>
-                <input v-model="finding.control_item" type="text" placeholder="Kontrol maddesi (örn. D.9)" class="h-9 rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
-              </div>
-              <div class="mb-2">
-                <p class="mb-1.5 text-[11px] font-semibold text-gray-500">Kapsam</p>
-                <div class="flex flex-wrap gap-1.5">
-                  <label v-for="opt in scopeOptions" :key="opt.value" class="flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium" :class="finding.scope === opt.value ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
-                    <input v-model="finding.scope" type="radio" :value="opt.value" class="hidden">
-                    {{ opt.label }}
-                  </label>
+              <div>
+                <div class="mb-3 flex items-center justify-between">
+                  <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Uygunsuzluklar (Opsiyonel)</p>
+                  <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="addFinding"><Plus :size="13" />Ekle</button>
+                </div>
+                <div v-if="!form.findings.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Uygunsuzluk yoksa boş bırakabilirsiniz.</div>
+                <div v-for="(finding, index) in form.findings" :key="index" class="mb-3 rounded-lg border border-[#e7e9ed] p-3.5 dark:border-gray-800">
+                  <div class="mb-2 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-gray-500">Uygunsuzluk {{ index + 1 }}</span>
+                    <button type="button" class="text-gray-400 hover:text-[#d71920]" @click="removeFinding(index)"><X :size="14" /></button>
+                  </div>
+                  <textarea v-model="finding.description" rows="2" placeholder="Açıklama" class="mb-2 w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
+                  <div class="mb-2 grid grid-cols-2 gap-2">
+                    <select v-model="finding.category" class="h-9 rounded-lg border border-[#dfe3e8] bg-white px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                      <option :value="null">Kategori seç</option>
+                      <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
+                    </select>
+                    <input v-model="finding.control_item" type="text" placeholder="Kontrol maddesi (örn. D.9)" class="h-9 rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                  <div class="mb-2">
+                    <p class="mb-1.5 text-[11px] font-semibold text-gray-500">Kapsam</p>
+                    <div class="flex flex-wrap gap-1.5">
+                      <label v-for="opt in scopeOptions" :key="opt.value" class="flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium" :class="finding.scope === opt.value ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
+                        <input v-model="finding.scope" type="radio" :value="opt.value" class="hidden">
+                        {{ opt.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="finding.scope === 'area'">
+                    <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                  <div v-if="finding.scope === 'specific'" class="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#f1f2f4] p-2 dark:border-gray-800">
+                    <label v-for="item in itemsForCategory(finding.category)" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                      <input type="checkbox" :checked="finding.affected_item_ids?.includes(item.id)" @change="toggleFindingItem(finding, item.id)">
+                      {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }}
+                    </label>
+                    <p v-if="!itemsForCategory(finding.category).length" class="text-[11px] text-gray-400">Bu kategoride kayıtlı ekipman yok.</p>
+                  </div>
                 </div>
               </div>
-              <div v-if="finding.scope === 'area'">
-                <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+
+              <div>
+                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Bu Raporda Kontrol Edilen Ekipmanlar</p>
+                <div class="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
+                  <label v-for="item in inventoryItems" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    <input type="checkbox" :checked="form.covered_inventory_item_ids.includes(item.id)" @change="toggleCoveredItem(item.id)">
+                    {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }} <span class="text-gray-400">({{ FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }})</span>
+                  </label>
+                  <p v-if="!inventoryItems.length" class="text-[11px] text-gray-400">Bu şubede envanter kaydı yok.</p>
+                </div>
+                <p class="mt-1.5 text-[11px] text-gray-400">AI eşleştirmesi + belirsiz eşleşme kararlarınız burada otomatik işaretlenmiştir; gerekirse elle düzenleyebilirsiniz.</p>
               </div>
-              <div v-if="finding.scope === 'specific'" class="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#f1f2f4] p-2 dark:border-gray-800">
-                <label v-for="item in itemsForCategory(finding.category)" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                  <input type="checkbox" :checked="finding.affected_item_ids?.includes(item.id)" @change="toggleFindingItem(finding, item.id)">
-                  {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }}
-                </label>
-                <p v-if="!itemsForCategory(finding.category).length" class="text-[11px] text-gray-400">Bu kategoride kayıtlı ekipman yok.</p>
+
+              <div>
+                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Ek Dosyalar (Opsiyonel)</p>
+                <input ref="additionalFileInput" type="file" multiple accept="image/*,.doc,.docx,.xls,.xlsx,.zip,.pdf" class="hidden" @change="addAdditionalFiles">
+                <button type="button" class="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#dfe3e8] py-2.5 text-xs font-semibold text-gray-600 hover:border-[#d71920]/40 dark:border-gray-700 dark:text-gray-300" @click="additionalFileInput?.click()">
+                  <Paperclip :size="14" class="text-[#d71920]" />Fotoğraf / Ek Belge Ekle
+                </button>
+                <div v-if="additionalFiles.length" class="mt-2 space-y-1.5">
+                  <div v-for="(entry, index) in additionalFiles" :key="index" class="flex items-center gap-2 rounded-lg border border-[#e7e9ed] px-3 py-2 dark:border-gray-800">
+                    <ImageIcon v-if="entry.type === 'fotograf'" :size="14" class="shrink-0 text-gray-400" />
+                    <Paperclip v-else :size="14" class="shrink-0 text-gray-400" />
+                    <span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-300">{{ entry.file.name }}</span>
+                    <span class="shrink-0 text-[10px] font-semibold text-gray-400">{{ FIRE_SUPPRESSION_REPORT_FILE_TYPE_LABELS[entry.type] }}</span>
+                    <button type="button" class="shrink-0 text-gray-400 hover:text-[#d71920]" @click="removeAdditionalFile(index)"><X :size="14" /></button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Raporu Yapan Firma</p>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rapor No</label>
+                    <input v-model="form.report_no" type="text" placeholder="Örn. NT/23/1930-2/002" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Akredite Firma</label>
+                    <input v-model="form.inspection_company_name" type="text" placeholder="Kontrolü yapan firma" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Notlar</label>
+                <textarea v-model="form.notes" rows="2" class="w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
               </div>
             </div>
-          </div>
-
-          <!-- 4. Envanter Eşleştirme -->
-          <div>
-            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">4. Bu Raporda Kontrol Edilen Ekipmanlar</p>
-            <div class="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
-              <label v-for="item in inventoryItems" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <input type="checkbox" :checked="form.covered_inventory_item_ids.includes(item.id)" @change="toggleCoveredItem(item.id)">
-                {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }} <span class="text-gray-400">({{ FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }})</span>
-              </label>
-              <p v-if="!inventoryItems.length" class="text-[11px] text-gray-400">Bu şubede envanter kaydı yok.</p>
-            </div>
-            <p class="mt-1.5 text-[11px] text-gray-400">Seçilen ekipmanların son/sonraki kontrol tarihleri bu rapordan güncellenir.</p>
-          </div>
-
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Notlar</label>
-            <textarea v-model="form.notes" rows="2" class="w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
-          </div>
           </template>
 
-          <!-- Adım 4: Tamamlandı -->
-          <template v-if="wizardStep === 4">
-          <div class="flex flex-col items-center py-8 text-center">
+          <!-- Adım 5: Tamamlandı -->
+          <div v-else-if="wizardStage === 'done'" class="mx-auto flex max-w-md flex-col items-center py-10 text-center">
             <span class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><CheckCircle2 :size="32" /></span>
-            <p class="text-lg font-bold text-[#172033] dark:text-white">Rapor başarıyla yüklendi!</p>
-            <p class="mt-1 text-sm text-gray-400">{{ formatDate(savedReport?.report_date) }} tarihli periyodik kontrol raporu sisteme kaydedildi.</p>
+            <p class="text-lg font-bold text-[#172033] dark:text-white">Rapor başarıyla işlendi</p>
+            <p class="mt-1 text-sm text-gray-400">Eşleştirme işlemleri kaydedildi. Envanter güncellendi.</p>
 
-            <div class="mt-6 w-full rounded-xl border border-[#e7e9ed] p-4 text-left dark:border-gray-800">
-              <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Rapor Özeti</p>
-              <dl class="space-y-2 text-sm">
-                <div class="flex justify-between"><dt class="text-gray-500">Rapor Tarihi</dt><dd class="font-medium">{{ formatDate(savedReport?.report_date) }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">Genel Sonuç</dt><dd class="font-medium">{{ resultMeta(savedReport?.overall_result).label }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">Kontrol Maddesi</dt><dd class="font-medium">{{ savedReport?.control_items?.length ?? 0 }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">Ek Dosya</dt><dd class="font-medium">{{ savedReport?.files?.length ?? 0 }}</dd></div>
-              </dl>
+            <div class="mt-6 grid w-full grid-cols-2 gap-3">
+              <div class="rounded-xl border border-[#e7e9ed] p-3 dark:border-gray-800">
+                <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ doneStats.total }}</p>
+                <p class="text-xs text-gray-400">Toplam Kayıt</p>
+              </div>
+              <div class="rounded-xl border border-[#e7e9ed] p-3 dark:border-gray-800">
+                <p class="text-2xl font-bold text-emerald-600">{{ doneStats.kesin }}</p>
+                <p class="text-xs text-gray-400">Kesin Eşleşen</p>
+              </div>
+              <div class="rounded-xl border border-[#e7e9ed] p-3 dark:border-gray-800">
+                <p class="text-2xl font-bold text-amber-600">{{ doneStats.belirsizBirakilan }}</p>
+                <p class="text-xs text-gray-400">Belirsiz Bırakılan</p>
+              </div>
+              <div class="rounded-xl border border-[#e7e9ed] p-3 dark:border-gray-800">
+                <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ doneStats.yeni }}</p>
+                <p class="text-xs text-gray-400">Yeni Ekipman</p>
+              </div>
             </div>
           </div>
-          </template>
         </div>
 
         <div class="flex gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-800">
-          <template v-if="wizardStep === 4">
-            <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="closeDrawer">Raporlar Sayfasına Dön</button>
-            <NuxtLink v-if="savedReport" :to="`/isg-portal/desktop/fire-suppression/reports/${savedReport.id}`" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white">Raporu Görüntüle</NuxtLink>
+          <template v-if="wizardStage === 'upload'">
+            <button type="button" class="w-full rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="closeDrawer">Vazgeç</button>
           </template>
-          <template v-else>
-            <button v-if="wizardStep > 1" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="saving" @click="prevStep"><ChevronLeft :size="15" />Geri</button>
-            <button v-else type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="saving" @click="closeDrawer">Vazgeç</button>
-            <button v-if="wizardStep < 3" type="button" class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="wizardStep === 2 && !selectedFile" @click="nextStep">İleri<ChevronRight :size="15" /></button>
-            <button v-else type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="saving || !selectedFile || !form.report_date" @click="submit">
+          <template v-else-if="wizardStage === 'matching' && matchingView === 'results'">
+            <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="wizardStage = 'upload'; selectedFile = null">Geri</button>
+            <button type="button" class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white" @click="goToConfirm">Onaya Geç<ChevronRight :size="15" /></button>
+          </template>
+          <template v-else-if="wizardStage === 'confirm'">
+            <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="saving" @click="backToMatching">Geri</button>
+            <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="saving || !form.report_date" @click="submit">
               <LoaderCircle v-if="saving" :size="15" class="animate-spin" />
               Raporu Kaydet
             </button>
+          </template>
+          <template v-else-if="wizardStage === 'done'">
+            <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="closeDrawer">Raporlar Sayfasına Dön</button>
+            <button type="button" class="flex-1 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white" @click="resetWizard">Başka Rapor Yükle</button>
           </template>
         </div>
       </div>
@@ -908,3 +1009,15 @@ const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
     Yönlendiriliyor...
   </div>
 </template>
+
+<style scoped>
+.ai-progress-bar {
+  animation: ai-progress-slide 1.3s ease-in-out infinite;
+}
+
+@keyframes ai-progress-slide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(150%); }
+  100% { transform: translateX(-100%); }
+}
+</style>

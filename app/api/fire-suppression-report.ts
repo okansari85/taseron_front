@@ -51,6 +51,7 @@ export const fireSuppressionReportApi = {
     return apiClient<ItemResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`, {
       method: 'POST',
       body: form,
+      timeout: 30000,
     })
   },
 
@@ -62,9 +63,12 @@ export const fireSuppressionReportApi = {
   analyze: (locationBusinessEntityId: number, file: File) => {
     const form = new FormData()
     form.append('file', file)
+    // PDF metin çıkarma + AI (NVIDIA NIM) çağrısının süresi öngörülemiyor —
+    // timeout verilmezse ofetch/tarayıcı isteği süresiz bekler.
     return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
       method: 'POST',
       body: form,
+      timeout: undefined,
     })
   },
 
