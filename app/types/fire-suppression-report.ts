@@ -32,6 +32,8 @@ export type FireSuppressionReportControlItem = {
   id: number
   report_id: number
   template_id?: number | null
+  equipment_code?: string | null
+  inventory_item_id?: number | null
   category?: FireSuppressionCategory | null
   code?: string | null
   section?: string | null
@@ -43,6 +45,8 @@ export type FireSuppressionReportControlItem = {
 
 export type FireSuppressionReportControlItemInput = {
   template_id?: number | null
+  equipment_code?: string | null
+  inventory_item_id?: number | null
   category?: FireSuppressionCategory | null
   code?: string | null
   section?: string | null
@@ -155,6 +159,7 @@ export type FireSuppressionReportAnalysisDraft = {
     serial_no?: string | null
     result?: FireSuppressionComplianceStatus | null
     note?: string | null
+    control_items?: { code?: string | null; title: string; status: FireSuppressionControlItemStatus; description?: string | null }[]
     match?: FireSuppressionEquipmentMatch
   }[]
   findings?: { category?: FireSuppressionCategory | null; control_item?: string | null; description: string; scope: FireSuppressionFindingScope; area_note?: string | null; equipment_codes?: string[] }[]

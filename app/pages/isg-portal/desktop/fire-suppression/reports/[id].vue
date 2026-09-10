@@ -1,5 +1,26 @@
 <script setup lang="ts">
-import { AlertTriangle, ArrowLeft, CheckCircle2, Download, ExternalLink, FileText, Image as ImageIcon, Paperclip, Trash2, XCircle } from '@lucide/vue'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  CalendarCheck2,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  Container,
+  Cylinder,
+  Download,
+  Droplets,
+  ExternalLink,
+  FileText,
+  FireExtinguisher,
+  Gauge,
+  Image as ImageIcon,
+  Paperclip,
+  Trash2,
+  Waves,
+  XCircle,
+} from '@lucide/vue'
 import { fireSuppressionReportApi } from '~/api/fire-suppression-report'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
@@ -45,6 +66,45 @@ const formatDate = (value?: string | null) => {
   return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 }
 
+const formatWeekday = (value?: string | null) => {
+  if (!value) return null
+  return new Intl.DateTimeFormat('tr-TR', { weekday: 'long' }).format(new Date(value))
+}
+
+const daysRemaining = (value?: string | null): number | null => {
+  if (!value) return null
+  const target = new Date(value)
+  target.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+const CATEGORY_ICONS: Record<FireSuppressionCategory, typeof Droplets> = {
+  sprinkler: Droplets,
+  yangin_dolabi: FireExtinguisher,
+  hidrant: Waves,
+  yangin_pompasi: Gauge,
+  su_deposu: Cylinder,
+  gazli_sondurme: Container,
+  diger: FileText,
+}
+
+const CATEGORY_UNIT_NOUN: Record<FireSuppressionCategory, string> = {
+  sprinkler: 'başlık',
+  yangin_dolabi: 'dolap',
+  hidrant: 'hidrant',
+  yangin_pompasi: 'pompa',
+  su_deposu: 'depo',
+  gazli_sondurme: 'sistem',
+  diger: 'ekipman',
+}
+
+const categorySubtitle = (category: FireSuppressionCategory): string | null => {
+  const count = (report.value?.inventory_items ?? []).filter(i => i.category === category).length
+  return count > 0 ? `${count} adet ${CATEGORY_UNIT_NOUN[category]}` : null
+}
+
 const resultMeta = (status?: string | null) => status === 'uygun'
   ? { label: 'Uygun', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
   : status === 'uygun_degil'
@@ -59,17 +119,19 @@ const controlItemStatusMeta = (status: string) => status === 'uygun'
 
 const scopeLabel = (scope: string) => ({ all: 'Tüm Ekipmanlar', specific: 'Belirli Ekipman', area: 'Alan', unknown: 'Belirsiz' }[scope] ?? scope)
 
-// --- Genel Bakış: sistem (kategori) bazlı özet, sadece raporun kapsadığı kategoriler ---
+// --- Genel Bakış: sistem (kategori) bazlı özet — TÜM kategoriler listelenir,
+// raporda hiç geçmeyenler "Raporda Yok" olarak işaretlenir.
 const coveredCategorySummaries = computed(() => {
-  const categories = report.value?.covered_categories?.length ? report.value.covered_categories : []
-  return categories.map((category) => {
+  const covered = new Set(report.value?.covered_categories ?? [])
+  return FIRE_SUPPRESSION_CATEGORIES.map((category) => {
     const items = (report.value?.control_items ?? []).filter(ci => ci.category === category)
     const nonconformCount = items.filter(ci => ci.status === 'uygun_degil').length
+    const isCovered = covered.has(category) || items.length > 0
     return {
       category,
       controlItemCount: items.length,
       nonconformCount,
-      status: items.length ? (nonconformCount > 0 ? 'uygun_degil' : 'uygun') : null,
+      status: !isCovered ? null : (items.length ? (nonconformCount > 0 ? 'uygun_degil' : 'uygun') : 'uygun'),
     }
   })
 })
@@ -107,9 +169,10 @@ const filteredControlItems = computed(() => (report.value?.control_items ?? []).
 const exportControlItemsCsv = () => {
   if (!report.value) return
   const rows = [
-    ['Sistem', 'Kod', 'Kontrol Maddesi', 'Durum', 'Açıklama'],
+    ['Sistem', 'Ekipman', 'Kod', 'Kontrol Maddesi', 'Durum', 'Açıklama'],
     ...filteredControlItems.value.map(ci => [
       ci.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[ci.category] : '',
+      ci.equipment_code ?? '',
       ci.code ?? '',
       ci.title,
       FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[ci.status],
@@ -161,17 +224,17 @@ const removeReport = async () => {
           <template v-else-if="report">
             <section class="mb-5 flex flex-col gap-4 rounded-xl border border-[#e7e9ed] bg-white p-5 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:border-gray-800 dark:bg-gray-900">
               <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div class="flex items-start gap-3">
-                  <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#d71920] dark:bg-red-500/10"><FileText :size="22" /></span>
-                  <div>
-                    <p class="text-lg font-bold text-[#172033] dark:text-white">{{ formatDate(report.report_date) }} Periyodik Kontrol Raporu</p>
-                    <p class="mt-0.5 text-xs text-gray-400">
-                      <span v-if="report.report_no">Rapor No: {{ report.report_no }} · </span>
-                      <span v-if="report.inspection_company_name">{{ report.inspection_company_name }} · </span>
-                      {{ report.file_name }}
-                      <span v-if="report.uploaded_by_user"> · {{ report.uploaded_by_user.name }}</span>
-                    </p>
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-lg font-bold text-[#172033] dark:text-white">Yangın Söndürme Sistemleri Periyodik Kontrol Raporu</p>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10"><CheckCircle2 :size="12" />İşlendi</span>
                   </div>
+                  <p class="mt-0.5 text-xs text-gray-400">
+                    <span v-if="report.report_no">Rapor No: {{ report.report_no }} · </span>
+                    <span v-if="report.inspection_company_name">Akredite Firma: {{ report.inspection_company_name }} · </span>
+                    {{ report.file_name }}
+                    <span v-if="report.uploaded_by_user"> · {{ report.uploaded_by_user.name }}</span>
+                  </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
                   <a :href="report.file_url" target="_blank" rel="noopener" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dfe3e8] px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"><Download :size="13" />Raporu İndir</a>
@@ -180,24 +243,40 @@ const removeReport = async () => {
               </div>
 
               <div class="grid gap-3 sm:grid-cols-4">
-                <div class="rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
-                  <p class="text-[11px] text-gray-400">Rapor Tarihi</p>
-                  <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ formatDate(report.report_date) }}</p>
+                <div class="flex items-start gap-3 rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Calendar :size="16" /></span>
+                  <div>
+                    <p class="text-[11px] text-gray-400">Rapor Tarihi</p>
+                    <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ formatDate(report.report_date) }}</p>
+                    <p v-if="formatWeekday(report.report_date)" class="text-[10px] text-gray-400">{{ formatWeekday(report.report_date) }}</p>
+                  </div>
                 </div>
-                <div class="rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
-                  <p class="text-[11px] text-gray-400">Gelecek Muayene Tarihi</p>
-                  <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ formatDate(report.next_control_date) }}</p>
+                <div class="flex items-start gap-3 rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-500/10"><CalendarClock :size="16" /></span>
+                  <div>
+                    <p class="text-[11px] text-gray-400">Gelecek Muayene Tarihi</p>
+                    <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ formatDate(report.next_control_date) }}</p>
+                    <span v-if="daysRemaining(report.next_control_date) !== null" class="mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold" :class="(daysRemaining(report.next_control_date) ?? 0) < 0 ? 'bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'">
+                      {{ (daysRemaining(report.next_control_date) ?? 0) < 0 ? `${Math.abs(daysRemaining(report.next_control_date) ?? 0)} gün gecikti` : `${daysRemaining(report.next_control_date)} gün kaldı` }}
+                    </span>
+                  </div>
                 </div>
-                <div class="rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
-                  <p class="text-[11px] text-gray-400">Kontrol Edilen Ekipman</p>
-                  <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ report.inventory_items?.length ?? 0 }}</p>
+                <div class="flex items-start gap-3 rounded-lg border border-[#f1f2f4] p-3 dark:border-gray-800">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/5"><CalendarCheck2 :size="16" /></span>
+                  <div>
+                    <p class="text-[11px] text-gray-400">Kontrol Edilen Ekipman</p>
+                    <p class="mt-0.5 text-sm font-bold text-[#172033] dark:text-white">{{ report.inventory_items?.length ?? 0 }}</p>
+                  </div>
                 </div>
-                <div class="flex items-center gap-2 rounded-lg p-3" :class="report.overall_result === 'uygun' ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-red-50 dark:bg-red-500/10'">
-                  <CheckCircle2 v-if="report.overall_result === 'uygun'" :size="18" class="shrink-0 text-emerald-600" />
-                  <XCircle v-else :size="18" class="shrink-0 text-[#d71920]" />
+                <div class="flex items-start gap-3 rounded-lg p-3" :class="report.overall_result === 'uygun' ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-red-50 dark:bg-red-500/10'">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/70 dark:bg-black/10" :class="report.overall_result === 'uygun' ? 'text-emerald-600' : 'text-[#d71920]'">
+                    <CheckCircle2 v-if="report.overall_result === 'uygun'" :size="18" />
+                    <XCircle v-else :size="18" />
+                  </span>
                   <div>
                     <p class="text-[11px]" :class="report.overall_result === 'uygun' ? 'text-emerald-600' : 'text-[#d71920]'">Genel Durum</p>
                     <p class="text-sm font-bold" :class="report.overall_result === 'uygun' ? 'text-emerald-600' : 'text-[#d71920]'">{{ resultMeta(report.overall_result).label }}</p>
+                    <p class="text-[10px]" :class="report.overall_result === 'uygun' ? 'text-emerald-600/80' : 'text-[#d71920]/80'">{{ report.overall_result === 'uygun' ? 'Raporda uygunsuzluk tespit edilmedi.' : 'Raporda uygunsuzluklar tespit edildi.' }}</p>
                   </div>
                 </div>
               </div>
@@ -215,23 +294,39 @@ const removeReport = async () => {
             <section v-if="tab === 'overview'" class="grid gap-4 lg:grid-cols-3">
               <div class="space-y-4 lg:col-span-2">
                 <div class="rounded-xl border border-[#e7e9ed] bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                  <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Sistem Bazlı Durum</p>
-                  <div v-if="!coveredCategorySummaries.length" class="py-6 text-center text-xs text-gray-400">Bu raporda kapsanan sistem belirtilmemiş.</div>
-                  <div v-else class="divide-y divide-[#f1f2f4] dark:divide-gray-800">
+                  <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Sistem Bazlı Durum</p>
+                  <p class="mb-3 text-[11px] text-gray-400">Raporda tespit edilen yangın söndürme sistemleri ve uygunluk durumları</p>
+                  <div class="divide-y divide-[#f1f2f4] dark:divide-gray-800">
                     <button v-for="s in coveredCategorySummaries" :key="s.category" type="button" class="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="tab = 'systems'; selectedSystemCategory = s.category">
-                      <div>
-                        <p class="text-sm font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[s.category] }}</p>
-                        <p class="text-xs text-gray-400">{{ s.controlItemCount }} kontrol maddesi</p>
+                      <div class="flex min-w-0 items-center gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-[#d71920] dark:bg-red-500/10">
+                          <component :is="CATEGORY_ICONS[s.category]" :size="18" />
+                        </span>
+                        <div class="min-w-0">
+                          <p class="truncate text-sm font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[s.category] }}</p>
+                          <p v-if="categorySubtitle(s.category)" class="text-[11px] text-gray-400">{{ categorySubtitle(s.category) }}</p>
+                        </div>
                       </div>
-                      <span v-if="s.status" class="rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="s.status === 'uygun' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-red-50 text-[#d71920] dark:bg-red-500/10'">{{ s.status === 'uygun' ? 'Uygun' : `Uygun Değil (${s.nonconformCount})` }}</span>
-                      <span v-else class="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-400 dark:bg-white/5">Madde Yok</span>
+                      <div class="flex shrink-0 items-center gap-4">
+                        <span v-if="s.status" class="w-[92px] rounded-full px-2.5 py-1 text-center text-[11px] font-semibold" :class="s.status === 'uygun' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-red-50 text-[#d71920] dark:bg-red-500/10'">{{ s.status === 'uygun' ? 'Uygun' : 'Uygun Değil' }}</span>
+                        <span v-else class="w-[92px] rounded-full bg-gray-100 px-2.5 py-1 text-center text-[11px] font-medium text-gray-400 dark:bg-white/5">Raporda Yok</span>
+                        <div class="hidden text-right sm:block">
+                          <p class="text-xs font-semibold text-[#172033] dark:text-white">{{ s.controlItemCount || '—' }}</p>
+                          <p class="text-[10px] text-gray-400">kontrol maddesi</p>
+                        </div>
+                        <div class="hidden text-right sm:block">
+                          <p class="text-xs font-semibold" :class="s.nonconformCount > 0 ? 'text-[#d71920]' : 'text-gray-400'">{{ s.status ? s.nonconformCount : '—' }}</p>
+                          <p class="text-[10px] text-gray-400">uygunsuzluk</p>
+                        </div>
+                        <ChevronRight :size="16" class="text-gray-300" />
+                      </div>
                     </button>
                   </div>
                 </div>
 
                 <div class="rounded-xl border border-[#e7e9ed] bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
                   <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri Özeti</p>
-                  <div class="grid grid-cols-3 gap-3 sm:grid-cols-3">
+                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div class="rounded-lg bg-gray-50 p-3 text-center dark:bg-white/5">
                       <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ controlItemsSummary.total }}</p>
                       <p class="text-[11px] text-gray-400">Toplam Madde</p>
@@ -244,18 +339,25 @@ const removeReport = async () => {
                       <p class="text-2xl font-bold text-[#d71920]">{{ controlItemsSummary.uygunDegil }}</p>
                       <p class="text-[11px] text-[#d71920]">Uygun Değil</p>
                     </div>
+                    <div class="rounded-lg bg-gray-50 p-3 text-center dark:bg-white/5">
+                      <p class="text-2xl font-bold text-gray-500 dark:text-gray-300">{{ controlItemsSummary.uygulanamiyor }}</p>
+                      <p class="text-[11px] text-gray-400">Uygulaması Yok</p>
+                    </div>
                   </div>
                 </div>
 
-                <div v-if="openFindingsCount > 0" class="flex items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
+                <div v-if="openFindingsCount > 0" class="flex items-center justify-between gap-4 rounded-xl border border-red-100 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
                   <div class="flex items-center gap-3">
                     <AlertTriangle :size="20" class="shrink-0 text-[#d71920]" />
                     <div>
                       <p class="text-sm font-bold text-[#d71920]">Açık Uygunsuzluklar</p>
-                      <p class="text-xs text-red-600/80 dark:text-red-400/80">Raporda tespit edilen ve kapatılmamış {{ openFindingsCount }} uygunsuzluk var.</p>
+                      <p class="text-xs text-red-600/80 dark:text-red-400/80">Raporda tespit edilen ve kapatılmamış uygunsuzluklar</p>
                     </div>
                   </div>
-                  <button type="button" class="shrink-0 rounded-lg bg-[#d71920] px-3 py-2 text-xs font-semibold text-white" @click="tab = 'findings'">Uygunsuzlukları Gör</button>
+                  <div class="flex shrink-0 items-center gap-4">
+                    <p class="text-3xl font-bold leading-none text-[#d71920]">{{ openFindingsCount }}</p>
+                    <button type="button" class="inline-flex items-center gap-1 rounded-lg bg-[#d71920] px-3 py-2 text-xs font-semibold text-white" @click="tab = 'findings'">Uygunsuzlukları Gör<ChevronRight :size="13" /></button>
+                  </div>
                 </div>
               </div>
 
@@ -277,6 +379,9 @@ const removeReport = async () => {
                   :class="selectedSystemCategory === category ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] bg-white hover:border-[#d71920]/30 dark:border-gray-800 dark:bg-gray-900'"
                   @click="selectedSystemCategory = category"
                 >
+                  <span class="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-[#d71920] dark:bg-red-500/10">
+                    <component :is="CATEGORY_ICONS[category]" :size="16" />
+                  </span>
                   <p class="text-sm font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
                   <p class="mt-2 text-xs text-gray-400">{{ controlItemsForCategory(category).length }} kontrol maddesi</p>
                   <p class="mt-0.5 text-xs font-semibold" :class="controlItemsForCategory(category).some(c => c.status === 'uygun_degil') ? 'text-[#d71920]' : 'text-emerald-600'">
@@ -291,6 +396,7 @@ const removeReport = async () => {
                 <table v-else class="w-full text-left text-sm">
                   <thead>
                     <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                      <th class="px-4 py-2.5">Ekipman</th>
                       <th class="px-4 py-2.5">Kod</th>
                       <th class="px-4 py-2.5">Kontrol Maddesi</th>
                       <th class="px-4 py-2.5">Durum</th>
@@ -299,6 +405,7 @@ const removeReport = async () => {
                   </thead>
                   <tbody>
                     <tr v-for="ci in controlItemsForCategory(selectedSystemCategory)" :key="ci.id" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
+                      <td class="px-4 py-2.5 text-xs font-semibold text-gray-500">{{ ci.equipment_code || '—' }}</td>
                       <td class="px-4 py-2.5 text-xs font-semibold text-gray-500">{{ ci.code || '—' }}</td>
                       <td class="px-4 py-2.5 text-gray-700 dark:text-gray-200">{{ ci.title }}</td>
                       <td class="px-4 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="controlItemStatusMeta(ci.status).cls">{{ controlItemStatusMeta(ci.status).label }}</span></td>
@@ -330,6 +437,7 @@ const removeReport = async () => {
                   <thead>
                     <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
                       <th class="px-4 py-2.5">Sistem</th>
+                      <th class="px-4 py-2.5">Ekipman</th>
                       <th class="px-4 py-2.5">Kod</th>
                       <th class="px-4 py-2.5">Kontrol Maddesi</th>
                       <th class="px-4 py-2.5">Durum</th>
@@ -339,6 +447,7 @@ const removeReport = async () => {
                   <tbody>
                     <tr v-for="ci in filteredControlItems" :key="ci.id" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
                       <td class="px-4 py-2.5 text-xs text-gray-500">{{ ci.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[ci.category] : '—' }}</td>
+                      <td class="px-4 py-2.5 text-xs text-gray-500">{{ ci.equipment_code || '—' }}</td>
                       <td class="px-4 py-2.5 text-xs font-semibold text-gray-500">{{ ci.code || '—' }}</td>
                       <td class="px-4 py-2.5 text-gray-700 dark:text-gray-200">{{ ci.title }}</td>
                       <td class="px-4 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="controlItemStatusMeta(ci.status).cls">{{ controlItemStatusMeta(ci.status).label }}</span></td>

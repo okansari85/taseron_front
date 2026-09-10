@@ -28,6 +28,7 @@ import {
   type FireSuppressionControlItemStatus,
   type FireSuppressionFindingScope,
   type FireSuppressionReport,
+  type FireSuppressionReportAnalysisDraft,
   type FireSuppressionReportControlItemInput,
   type FireSuppressionReportFileInput,
   type FireSuppressionReportFileType,
@@ -151,7 +152,6 @@ const form = ref({
 
 const additionalFiles = ref<FireSuppressionReportFileInput[]>([])
 const controlItemsForm = ref<FireSuppressionReportControlItemInput[]>([])
-const loadingControlItems = ref(false)
 
 const resetWizard = () => {
   selectedFile.value = null
@@ -163,6 +163,8 @@ const resetWizard = () => {
   ambiguousResolutions.value = {}
   newEquipmentDrafts.value = {}
   newEquipmentAdditions.value = {}
+  equipmentDraftItems.value = []
+  expandedEquipmentCodes.value = new Set()
   matchingView.value = 'results'
   activeDetailIndex.value = null
   wizardStage.value = 'upload'
@@ -228,6 +230,10 @@ type NewEquipmentDraft = {
 const newEquipmentDrafts = ref<Record<number, NewEquipmentDraft>>({})
 const newEquipmentAdditions = ref<Record<number, FireSuppressionInventoryItem>>({})
 
+// AI'ın döndürdüğü ham equipment dizisi (control_items dahil) — "Onayla"
+// adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
+const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
+
 const runAnalyzing = async () => {
   if (!context.branchId || !selectedFile.value) return
   wizardStage.value = 'analyzing'
@@ -245,6 +251,8 @@ const runAnalyzing = async () => {
     if (draft.overall_result) form.value.overall_result = draft.overall_result
     if (draft.company_name) form.value.inspection_company_name = draft.company_name
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
+
+    equipmentDraftItems.value = draft.equipment ?? []
 
     const matchedByCode = new Map(draft.matched_inventory_items.map(item => [item.code, item.id]))
     const candidateItemsById = new Map((draft.candidate_inventory_items ?? []).map(item => [item.id, item]))
@@ -420,48 +428,111 @@ const submitNewItem = async () => {
   }
 }
 
-const goToConfirm = async () => {
-  await syncControlItems()
+const goToConfirm = () => {
+  controlItemsForm.value = buildControlItemsFromDraft()
   wizardStage.value = 'confirm'
 }
 const backToMatching = () => { wizardStage.value = 'matching'; matchingView.value = 'results' }
 
-// --- Kontrol Maddeleri (checklist) — AI'ın belirlediği kapsanan kategorilere
-// göre standart şablondan doldurulur, kullanıcı durumu/açıklamayı düzenler.
-const syncControlItems = async () => {
-  if (!form.value.covered_categories.length) {
-    controlItemsForm.value = []
-    return
+// Eşleştirme adımında verilen kararlara göre bir equipmentIndex'in nihai
+// envanter id'sini çözer (kesin eşleşme / tekil aday / kullanıcının
+// belirsiz eşleşmede seçtiği aday / yeni eklenen kayıt) — "yeni ekipman"
+// henüz "Envantere Ekle" ile onaylanmadıysa null döner.
+const resolvedInventoryItemIdFor = (equipmentIndex: number, item: NonNullable<FireSuppressionReportAnalysisDraft['equipment']>[number]): number | null => {
+  const status = item.match?.status ?? 'new'
+  if (status === 'exact') return item.match?.matched_id ?? null
+  if (status === 'candidate_single') return item.match?.candidate_ids?.[0] ?? null
+  if (status === 'candidate_multiple') {
+    const resolution = ambiguousResolutions.value[equipmentIndex]
+    return resolution?.action === 'match' ? (resolution.candidateId ?? null) : null
   }
-  loadingControlItems.value = true
-  try {
-    const { data: templates } = await fireSuppressionReportApi.controlItemTemplates(form.value.covered_categories)
-    const existingByTemplateId = new Map(controlItemsForm.value.filter(c => c.template_id).map(c => [c.template_id, c]))
-    controlItemsForm.value = templates.map(t => existingByTemplateId.get(t.id) ?? {
-      template_id: t.id,
-      category: t.category,
-      code: t.code,
-      section: t.section,
-      title: t.title,
-      status: 'uygun' as FireSuppressionControlItemStatus,
-      description: '',
-    })
-  } catch {
-    $toast.error('Kontrol maddeleri yüklenemedi.')
-  } finally {
-    loadingControlItems.value = false
-  }
+  return newEquipmentAdditions.value[equipmentIndex]?.id ?? null
 }
-const controlItemsByCategory = computed(() => {
-  const groups = new Map<FireSuppressionCategory, FireSuppressionReportControlItemInput[]>()
+
+// --- Kontrol Maddeleri — statik bir şablondan DEĞİL, AI'ın rapordan
+// ekipman bazında çıkardığı gerçek maddelerden (equipment[].control_items)
+// kurulur. Kullanıcı sadece gözden geçirir/düzeltir, elle baştan işaretlemez.
+const buildControlItemsFromDraft = (): FireSuppressionReportControlItemInput[] => {
+  const items: FireSuppressionReportControlItemInput[] = []
+
+  equipmentDraftItems.value.forEach((item, equipmentIndex) => {
+    if (!item.control_items?.length) return
+
+    const inventoryItemId = resolvedInventoryItemIdFor(equipmentIndex, item)
+
+    for (const ci of item.control_items) {
+      items.push({
+        category: item.category ?? null,
+        equipment_code: item.code ?? null,
+        inventory_item_id: inventoryItemId,
+        code: ci.code ?? null,
+        title: ci.title,
+        status: ci.status,
+        // Bulgu bölümünden (AI'sız, deterministik regex eşleştirmeyle)
+        // otomatik dolduruldu — kullanıcı gerekirse düzenleyebilir.
+        description: ci.description ?? '',
+      })
+    }
+  })
+
+  return items
+}
+// Ekipman başına onlarca madde tek seferde açık listelenince (20 ekipman x
+// ~14 madde) kullanıcıyı yoruyordu — ekipman bazında özet karta geçildi:
+// uygun ekipmanlar varsayılan KAPALI (sadece "Uygun" rozeti), uygunsuz
+// ekipmanlar varsayılan olarak SADECE uygunsuz maddelerini gösterir; "daha
+// fazla göster" ile tüm maddeler (uygun olanlar dahil) görülebilir.
+type ControlItemEquipmentGroup = {
+  equipmentCode: string
+  category: FireSuppressionCategory | null
+  items: FireSuppressionReportControlItemInput[]
+  udItems: FireSuppressionReportControlItemInput[]
+  okCount: number
+}
+const controlItemsByEquipment = computed<ControlItemEquipmentGroup[]>(() => {
+  const groups = new Map<string, ControlItemEquipmentGroup>()
   for (const item of controlItemsForm.value) {
-    if (!item.category) continue
-    if (!groups.has(item.category)) groups.set(item.category, [])
-    groups.get(item.category)!.push(item)
+    const code = item.equipment_code || '—'
+    if (!groups.has(code)) groups.set(code, { equipmentCode: code, category: item.category ?? null, items: [], udItems: [], okCount: 0 })
+    const group = groups.get(code)!
+    group.items.push(item)
+    if (item.status === 'uygun_degil') group.udItems.push(item)
+    else group.okCount++
   }
-  return groups
+  return Array.from(groups.values())
 })
+const expandedEquipmentCodes = ref<Set<string>>(new Set())
+const toggleEquipmentExpanded = (code: string) => {
+  const next = new Set(expandedEquipmentCodes.value)
+  if (next.has(code)) next.delete(code)
+  else next.add(code)
+  expandedEquipmentCodes.value = next
+}
 const controlItemStatusOptions: FireSuppressionControlItemStatus[] = ['uygun', 'uygun_degil', 'uygulanamiyor']
+
+// --- Kontrol Maddeleri özeti (tıpkı "Tamamlandı" adımındaki istatistik
+// kartları gibi) — ekipman kartlarına hiç girmeden genel tabloyu görmek için.
+const controlItemsOverallSummary = computed(() => ({
+  totalNonconformities: controlItemsByEquipment.value.reduce((sum, g) => sum + g.udItems.length, 0),
+  nonconformingEquipmentCount: controlItemsByEquipment.value.filter(g => g.udItems.length > 0).length,
+}))
+type ControlItemCategorySummary = { category: FireSuppressionCategory; total: number; uygunCount: number; uygunsuzCount: number }
+const controlItemsCategorySummary = computed<ControlItemCategorySummary[]>(() => {
+  const byCategory = new Map<FireSuppressionCategory, { total: number; uygunsuz: number }>()
+  for (const group of controlItemsByEquipment.value) {
+    if (!group.category) continue
+    if (!byCategory.has(group.category)) byCategory.set(group.category, { total: 0, uygunsuz: 0 })
+    const entry = byCategory.get(group.category)!
+    entry.total++
+    if (group.udItems.length > 0) entry.uygunsuz++
+  }
+  return Array.from(byCategory.entries()).map(([category, c]) => ({
+    category,
+    total: c.total,
+    uygunsuzCount: c.uygunsuz,
+    uygunCount: c.total - c.uygunsuz,
+  }))
+})
 
 // --- Ek dosyalar (Onayla adımında, opsiyonel) ---
 const additionalFileInput = ref<HTMLInputElement | null>(null)
@@ -737,7 +808,7 @@ const doneStats = computed(() => ({
                   <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kontrol Edilen Sistemler</label>
                   <div class="flex flex-wrap gap-2">
                     <label v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium" :class="form.covered_categories.includes(c) ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
-                      <input v-model="form.covered_categories" type="checkbox" :value="c" class="hidden" @change="syncControlItems">
+                      <input v-model="form.covered_categories" type="checkbox" :value="c" class="hidden">
                       {{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}
                     </label>
                   </div>
@@ -753,16 +824,51 @@ const doneStats = computed(() => ({
               </div>
 
               <div>
-                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
-                <div v-if="loadingControlItems" class="py-6 text-center text-xs text-gray-400">Yükleniyor...</div>
-                <div v-else-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Kontrol maddesi listesi için yukarıdan "Kontrol Edilen Sistemler" seçin.</div>
-                <div v-else class="space-y-4">
-                  <div v-for="[category, categoryItems] in controlItemsByCategory" :key="category">
-                    <p class="mb-2 text-xs font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
-                    <div class="space-y-2">
-                      <div v-for="ci in categoryItems" :key="ci.template_id" class="rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
+                <p class="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
+                <p class="mb-3 text-[11px] text-gray-400">Raporun kendisinden, ekipman bazında otomatik çıkarılmıştır — açıklamalar bulgu metninden alınmıştır. Uygun ekipmanlar özet gösterilir.</p>
+                <div v-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Raporda ekipman bazlı kontrol maddesi tespit edilemedi.</div>
+                <template v-else>
+                  <div class="mb-3 grid grid-cols-2 gap-3">
+                    <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
+                      <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.totalNonconformities }}</p>
+                      <p class="text-[11px] text-[#d71920]">Toplam Uygunsuzluk</p>
+                    </div>
+                    <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
+                      <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.nonconformingEquipmentCount }}</p>
+                      <p class="text-[11px] text-[#d71920]">Uygunsuz Ekipman</p>
+                    </div>
+                  </div>
+                  <div class="mb-3 overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
+                    <div v-for="cs in controlItemsCategorySummary" :key="cs.category" class="flex items-center justify-between gap-2 border-b border-[#f1f2f4] px-3 py-2 text-xs last:border-0 dark:border-gray-800">
+                      <span class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[cs.category] }}</span>
+                      <span class="flex items-center gap-2 text-[11px]">
+                        <span class="text-gray-400">{{ cs.total }} ekipman</span>
+                        <span class="font-semibold text-emerald-600">{{ cs.uygunCount }} uygun</span>
+                        <span class="font-semibold text-[#d71920]">{{ cs.uygunsuzCount }} uygunsuz</span>
+                      </span>
+                    </div>
+                  </div>
+                </template>
+                <div v-if="controlItemsForm.length" class="space-y-2">
+                  <div v-for="group in controlItemsByEquipment" :key="group.equipmentCode" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
+                    <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleEquipmentExpanded(group.equipmentCode)">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.equipmentCode }}</span>
+                        <span v-if="group.category" class="text-[11px] text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] }}</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span v-if="group.udItems.length" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10">Uygun Değil · {{ group.udItems.length }}</span>
+                        <span v-else class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10">Uygun</span>
+                        <ChevronRight :size="14" class="shrink-0 text-gray-400 transition-transform" :class="expandedEquipmentCodes.has(group.equipmentCode) ? 'rotate-90' : ''" />
+                      </div>
+                    </button>
+                    <div v-if="expandedEquipmentCodes.has(group.equipmentCode) || group.udItems.length" class="space-y-2 border-t border-[#f1f2f4] p-3 dark:border-gray-800">
+                      <div v-for="(ci, ciIndex) in (expandedEquipmentCodes.has(group.equipmentCode) ? group.items : group.udItems)" :key="`${group.equipmentCode}-${ci.code}-${ciIndex}`" class="rounded-lg border border-[#f1f2f4] p-2.5 dark:border-gray-800">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                          <p class="text-xs font-medium text-gray-700 dark:text-gray-200"><span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>{{ ci.title }}</p>
+                          <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
+                            <span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>
+                            {{ ci.title }}
+                          </p>
                           <div class="flex shrink-0 gap-1">
                             <button
                               v-for="status in controlItemStatusOptions"
@@ -778,8 +884,9 @@ const doneStats = computed(() => ({
                             </button>
                           </div>
                         </div>
-                        <input v-if="ci.status !== 'uygun'" v-model="ci.description" type="text" placeholder="Tespit / açıklama" class="mt-2 h-9 w-full rounded-lg border border-[#dfe3e8] px-2.5 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                        <textarea v-if="ci.status !== 'uygun'" v-model="ci.description" rows="2" placeholder="Tespit / açıklama" class="mt-2 w-full rounded-lg border border-[#dfe3e8] px-2.5 py-1.5 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
                       </div>
+                      <button v-if="!expandedEquipmentCodes.has(group.equipmentCode) && group.okCount > 0" type="button" class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" @click="toggleEquipmentExpanded(group.equipmentCode)">+{{ group.okCount }} uygun madde daha (göster)</button>
                     </div>
                   </div>
                 </div>

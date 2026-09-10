@@ -26,23 +26,14 @@ export const fireSuppressionReportApi = {
     form.append('file', payload.file)
     payload.covered_categories?.forEach((c, i) => form.append(`covered_categories[${i}]`, c))
     payload.covered_inventory_item_ids?.forEach((id, i) => form.append(`covered_inventory_item_ids[${i}]`, String(id)))
-    payload.findings?.forEach((finding, i) => {
-      if (finding.category) form.append(`findings[${i}][category]`, finding.category)
-      if (finding.control_item) form.append(`findings[${i}][control_item]`, finding.control_item)
-      form.append(`findings[${i}][description]`, finding.description)
-      form.append(`findings[${i}][scope]`, finding.scope)
-      if (finding.area_note) form.append(`findings[${i}][area_note]`, finding.area_note)
-      finding.affected_item_ids?.forEach((id, j) => form.append(`findings[${i}][affected_item_ids][${j}]`, String(id)))
-    })
-    payload.control_items?.forEach((item, i) => {
-      if (item.template_id) form.append(`control_items[${i}][template_id]`, String(item.template_id))
-      if (item.category) form.append(`control_items[${i}][category]`, item.category)
-      if (item.code) form.append(`control_items[${i}][code]`, item.code)
-      if (item.section) form.append(`control_items[${i}][section]`, item.section)
-      form.append(`control_items[${i}][title]`, item.title)
-      form.append(`control_items[${i}][status]`, item.status)
-      if (item.description) form.append(`control_items[${i}][description]`, item.description)
-    })
+    // findings/control_items TEK bir JSON alanı olarak gönderiliyor —
+    // çok sayfalı raporlarda (örn. 20 ekipman x ~14 madde = 280 satır)
+    // her alanı ayrı bir form key'i (`control_items[123][title]` gibi)
+    // yapmak PHP'nin max_input_vars (varsayılan 1000) limitini kolayca
+    // aşıp sessizce veri kaybına/422'ye yol açıyordu. Backend
+    // prepareForValidation()'da bu alanları JSON.decode ediyor.
+    if (payload.findings?.length) form.append('findings', JSON.stringify(payload.findings))
+    if (payload.control_items?.length) form.append('control_items', JSON.stringify(payload.control_items))
     payload.additional_files?.forEach((entry, i) => {
       form.append(`additional_files[${i}][file]`, entry.file)
       form.append(`additional_files[${i}][type]`, entry.type)
