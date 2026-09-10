@@ -1,0 +1,111 @@
+<script setup lang="ts">
+// Rapor yükleme sihirbazının 3. adımı (sonuç listesi görünümü) — Matching
+// Engine'in her ekipman satırı için döndürdüğü durumu (kesin/belirsiz/yeni)
+// özetler. Domain'den bağımsız: satır şekli (MatchRow) hem Yangın Söndürme
+// Sistemleri hem YSC için aynı — üst bileşen kendi draft yanıtından bu şekle
+// çevirir. "İncele" sadece belirsiz satırlar için tıklanabilir, üst bileşen
+// tekil inceleme ekranını (AmbiguousMatchCard) açar.
+export type MatchBucket = 'kesin' | 'belirsiz' | 'yeni'
+export type MatchRow = {
+  equipmentIndex: number
+  code: string | null
+  categoryLabel: string | null
+  locationNote: string | null
+  bucket: MatchBucket
+}
+
+const props = defineProps<{
+  rows: MatchRow[]
+  resolutionLabel?: (equipmentIndex: number) => string | null
+  // "yeni" (envanterde bulunamadı) satırlar için: eklendiyse bir etiket
+  // döner (örn. "Envantere Eklendi"), eklenmediyse null — "Envantere Ekle"
+  // butonu gösterilir. Prop verilmezse "yeni" satırlar için işlem yok.
+  newItemLabel?: (equipmentIndex: number) => string | null
+}>()
+
+const emit = defineEmits<{ inspect: [number]; 'add-new': [number] }>()
+
+const filter = ref<'all' | MatchBucket>(props.rows.some(r => r.bucket === 'belirsiz') ? 'belirsiz' : 'all')
+const search = ref('')
+
+const counts = computed(() => ({
+  all: props.rows.length,
+  kesin: props.rows.filter(r => r.bucket === 'kesin').length,
+  belirsiz: props.rows.filter(r => r.bucket === 'belirsiz').length,
+  yeni: props.rows.filter(r => r.bucket === 'yeni').length,
+}))
+
+const filteredRows = computed(() => props.rows.filter((r) => {
+  if (filter.value !== 'all' && r.bucket !== filter.value) return false
+  if (search.value.trim()) {
+    const q = search.value.trim().toLocaleLowerCase('tr-TR')
+    if (!`${r.code ?? ''} ${r.locationNote ?? ''}`.toLocaleLowerCase('tr-TR').includes(q)) return false
+  }
+  return true
+}))
+
+const rowStatusMeta = (row: MatchRow) => {
+  if (row.bucket === 'kesin') return { label: 'Kesin Eşleşen', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
+  if (row.bucket === 'yeni') return { label: 'Yeni Ekipman', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  const resolved = props.resolutionLabel?.(row.equipmentIndex)
+  if (resolved) return { label: resolved, cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
+  return { label: 'Belirsiz Eşleşme', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' }
+}
+</script>
+
+<template>
+  <div>
+    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <button type="button" class="rounded-xl border p-3 text-left transition" :class="filter === 'all' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="filter = 'all'">
+        <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ counts.all }}</p>
+        <p class="text-xs text-gray-400">Tümü</p>
+      </button>
+      <button type="button" class="rounded-xl border p-3 text-left transition" :class="filter === 'kesin' ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="filter = 'kesin'">
+        <p class="text-2xl font-bold text-emerald-600">{{ counts.kesin }}</p>
+        <p class="text-xs text-gray-400">Kesin Eşleşen</p>
+      </button>
+      <button type="button" class="rounded-xl border p-3 text-left transition" :class="filter === 'belirsiz' ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="filter = 'belirsiz'">
+        <p class="text-2xl font-bold text-amber-600">{{ counts.belirsiz }}</p>
+        <p class="text-xs text-gray-400">Belirsiz Eşleşen</p>
+      </button>
+      <button type="button" class="rounded-xl border p-3 text-left transition" :class="filter === 'yeni' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="filter = 'yeni'">
+        <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ counts.yeni }}</p>
+        <p class="text-xs text-gray-400">Yeni Ekipman</p>
+      </button>
+    </div>
+
+    <input v-model="search" type="text" placeholder="Ekipman ara..." class="mb-3 h-10 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+
+    <div class="overflow-hidden rounded-xl border border-[#e7e9ed] dark:border-gray-800">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
+            <th class="px-3 py-2.5">Rapor Bilgisi</th>
+            <th class="px-3 py-2.5">Kategori</th>
+            <th class="px-3 py-2.5">Konum</th>
+            <th class="px-3 py-2.5">Eşleşme Durumu</th>
+            <th class="px-3 py-2.5 text-right">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in filteredRows" :key="row.equipmentIndex" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
+            <td class="px-3 py-2.5 font-semibold text-[#172033] dark:text-white">{{ row.code || '—' }}</td>
+            <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.categoryLabel || '—' }}</td>
+            <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.locationNote || '—' }}</td>
+            <td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span></td>
+            <td class="px-3 py-2.5 text-right">
+              <button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="emit('inspect', row.equipmentIndex)">İncele</button>
+              <template v-else-if="row.bucket === 'yeni' && newItemLabel">
+                <span v-if="newItemLabel(row.equipmentIndex)" class="text-xs font-semibold text-emerald-600">{{ newItemLabel(row.equipmentIndex) }}</span>
+                <button v-else type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="emit('add-new', row.equipmentIndex)">Envantere Ekle</button>
+              </template>
+              <span v-else class="text-xs text-gray-300">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="!filteredRows.length" class="py-8 text-center text-xs text-gray-400">Kayıt yok.</p>
+    </div>
+    <p class="mt-2 text-xs text-gray-400">Toplam {{ filteredRows.length }} kayıt</p>
+  </div>
+</template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   Calendar,
-  Check,
   CheckCircle2,
   ChevronRight,
   Clock,
@@ -35,6 +34,7 @@ import {
   type FireSuppressionReportFindingInput,
 } from '~/types/fire-suppression-report'
 import type { AmbiguousMatchResolution } from '~/components/isg/AmbiguousMatchCard.vue'
+import type { MatchBucket, MatchRow } from '~/components/isg/IsgMatchResultsTable.vue'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 
@@ -131,9 +131,7 @@ const currentStepNumber = computed(() => wizardStageOrder.indexOf(wizardStage.va
 
 const drawerOpen = ref(false)
 const saving = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
-const isDraggingFile = ref(false)
 const savedReport = ref<FireSuppressionReport | null>(null)
 
 type FindingForm = FireSuppressionReportFindingInput
@@ -163,7 +161,8 @@ const resetWizard = () => {
   matchRows.value = []
   ambiguousMatches.value = []
   ambiguousResolutions.value = {}
-  matchStatFilter.value = 'belirsiz'
+  newEquipmentDrafts.value = {}
+  newEquipmentAdditions.value = {}
   matchingView.value = 'results'
   activeDetailIndex.value = null
   wizardStage.value = 'upload'
@@ -187,61 +186,19 @@ const openUpload = () => {
 const closeDrawer = () => { drawerOpen.value = false }
 
 // --- Adım 1: Dosya Yükle ---
-const isPdf = (file: File) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-
 const selectFile = (file: File) => {
-  if (!isPdf(file)) {
-    $toast.error('Sadece PDF formatında rapor dosyası yüklenebilir.')
-    return
-  }
   selectedFile.value = file
   runAnalyzing()
 }
-const onFilePicked = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) selectFile(file)
-  ;(e.target as HTMLInputElement).value = ''
-}
-const onFileDropped = (e: DragEvent) => {
-  isDraggingFile.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (file) selectFile(file)
-}
 
 // --- Adım 2: AI Analizi (görsel ilerleme + gerçek analyze() çağrısı) ---
-// NVIDIA NIM'in ücretsiz katmanında yanıt süresi öngörülemediği (birkaç
-// saniyeden birkaç dakikaya) için gerçek bir yüzde yok — sadece hangi
-// aşamada olduğumuzu ve geçen süreyi gösteriyoruz, "donmuş" hissi vermesin.
 const analyzingSteps = ref([
   { label: 'PDF dosyası yüklendi', done: false },
   { label: 'Metin çıkarılıyor...', done: false },
   { label: 'AI ile analiz ediliyor (biraz sürebilir)', done: false },
   { label: 'Envanter ile eşleştiriliyor', done: false },
 ])
-const elapsedSeconds = ref(0)
-let elapsedTimer: ReturnType<typeof setInterval> | null = null
-const startElapsedTimer = () => {
-  elapsedSeconds.value = 0
-  elapsedTimer = setInterval(() => { elapsedSeconds.value += 1 }, 1000)
-}
-const stopElapsedTimer = () => {
-  if (elapsedTimer) clearInterval(elapsedTimer)
-  elapsedTimer = null
-}
-const elapsedLabel = computed(() => {
-  const m = Math.floor(elapsedSeconds.value / 60)
-  const s = elapsedSeconds.value % 60
-  return m > 0 ? `${m} dk ${s} sn` : `${s} sn`
-})
 
-type MatchBucket = 'kesin' | 'belirsiz' | 'yeni'
-type MatchRow = {
-  equipmentIndex: number
-  code: string | null
-  categoryLabel: string | null
-  locationNote: string | null
-  bucket: MatchBucket
-}
 const matchRows = ref<MatchRow[]>([])
 
 type AmbiguousEntry = {
@@ -258,11 +215,23 @@ type AmbiguousEntry = {
 const ambiguousMatches = ref<AmbiguousEntry[]>([])
 const ambiguousResolutions = ref<Record<number, AmbiguousMatchResolution>>({})
 
+// --- Yeni Ekipman (envanterde bulunamadı) — sessizce eklenmez, "Envantere
+// Ekle" ile kullanıcı onayı alınır (bkz. IsgMatchResultsTable "yeni" bucket).
+type NewEquipmentDraft = {
+  category: FireSuppressionCategory | null
+  code: string | null
+  brand: string | null
+  model: string | null
+  serialNo: string | null
+  locationNote: string | null
+}
+const newEquipmentDrafts = ref<Record<number, NewEquipmentDraft>>({})
+const newEquipmentAdditions = ref<Record<number, FireSuppressionInventoryItem>>({})
+
 const runAnalyzing = async () => {
   if (!context.branchId || !selectedFile.value) return
   wizardStage.value = 'analyzing'
   analyzingSteps.value = analyzingSteps.value.map((s, i) => ({ ...s, done: i === 0 }))
-  startElapsedTimer()
   // Sadece ilk iki adım (dosya yükleme + metin çıkarma) gerçekten hızlı ve
   // deterministik — otomatik ilerletiliyor. AI çağrısının süresi belirsiz
   // olduğu için 3. adım gerçek yanıt gelene kadar "devam ediyor" görünür.
@@ -274,6 +243,7 @@ const runAnalyzing = async () => {
     if (draft.control_date) form.value.report_date = draft.control_date
     if (draft.next_control_date) form.value.next_control_date = draft.next_control_date
     if (draft.overall_result) form.value.overall_result = draft.overall_result
+    if (draft.company_name) form.value.inspection_company_name = draft.company_name
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
 
     const matchedByCode = new Map(draft.matched_inventory_items.map(item => [item.code, item.id]))
@@ -282,6 +252,7 @@ const runAnalyzing = async () => {
     const coveredIds = new Set(draft.matched_inventory_items.map(item => item.id))
     const rows: MatchRow[] = []
     const ambiguous: AmbiguousEntry[] = []
+    const newDrafts: Record<number, NewEquipmentDraft> = {}
 
     ;(draft.equipment ?? []).forEach((item, equipmentIndex) => {
       const status = item.match?.status ?? 'new'
@@ -308,6 +279,16 @@ const runAnalyzing = async () => {
             .map(id => candidateItemsById.get(id))
             .filter((i): i is FireSuppressionInventoryItem => !!i),
         })
+      } else {
+        bucket = 'yeni'
+        newDrafts[equipmentIndex] = {
+          category: item.category ?? null,
+          code: item.code ?? null,
+          brand: item.brand ?? null,
+          model: item.model ?? null,
+          serialNo: item.serial_no ?? null,
+          locationNote: item.location_note ?? null,
+        }
       }
 
       rows.push({
@@ -322,6 +303,8 @@ const runAnalyzing = async () => {
     matchRows.value = rows
     ambiguousMatches.value = ambiguous
     ambiguousResolutions.value = {}
+    newEquipmentDrafts.value = newDrafts
+    newEquipmentAdditions.value = {}
     form.value.covered_inventory_item_ids = [...coveredIds]
 
     if (draft.findings?.length) {
@@ -342,38 +325,19 @@ const runAnalyzing = async () => {
 
     analyzingSteps.value = analyzingSteps.value.map(s => ({ ...s, done: true }))
     await new Promise(resolve => setTimeout(resolve, 250))
-    matchStatFilter.value = ambiguous.length ? 'belirsiz' : 'all'
     wizardStage.value = 'matching'
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'PDF analiz edilemedi.')
     wizardStage.value = 'upload'
   } finally {
     clearTimeout(step1Timer)
-    stopElapsedTimer()
   }
 }
-const cancelAnalyzing = () => { stopElapsedTimer(); wizardStage.value = 'upload'; selectedFile.value = null }
+const cancelAnalyzing = () => { wizardStage.value = 'upload'; selectedFile.value = null }
 
 // --- Adım 3: Eşleştirme (sonuç listesi + tekil belirsiz inceleme) ---
 const matchingView = ref<'results' | 'detail'>('results')
 const activeDetailIndex = ref<number | null>(null)
-const matchStatFilter = ref<'all' | 'kesin' | 'belirsiz' | 'yeni'>('belirsiz')
-const matchSearch = ref('')
-
-const matchCounts = computed(() => ({
-  all: matchRows.value.length,
-  kesin: matchRows.value.filter(r => r.bucket === 'kesin').length,
-  belirsiz: matchRows.value.filter(r => r.bucket === 'belirsiz').length,
-  yeni: matchRows.value.filter(r => r.bucket === 'yeni').length,
-}))
-const filteredMatchRows = computed(() => matchRows.value.filter((r) => {
-  if (matchStatFilter.value !== 'all' && r.bucket !== matchStatFilter.value) return false
-  if (matchSearch.value.trim()) {
-    const q = matchSearch.value.trim().toLocaleLowerCase('tr-TR')
-    if (!`${r.code ?? ''} ${r.locationNote ?? ''}`.toLocaleLowerCase('tr-TR').includes(q)) return false
-  }
-  return true
-}))
 
 const activeAmbiguousEntry = computed(() => ambiguousMatches.value.find(e => e.equipmentIndex === activeDetailIndex.value) ?? null)
 
@@ -399,14 +363,61 @@ const resolveAmbiguous = (entry: AmbiguousEntry, decision: AmbiguousMatchResolut
   backToResults()
 }
 
-const rowStatusMeta = (row: MatchRow) => {
-  const resolution = ambiguousResolutions.value[row.equipmentIndex]
-  if (row.bucket === 'kesin') return { label: 'Kesin Eşleşen', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
-  if (row.bucket === 'yeni') return { label: 'Yeni Ekipman', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
-  if (resolution?.action === 'match') return { label: 'Eşleştirildi', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
-  if (resolution?.action === 'none') return { label: 'Yeni Ekipman Adayı', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
-  if (resolution?.action === 'ambiguous') return { label: 'Belirsiz Bırakıldı', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
-  return { label: 'Belirsiz Eşleşme', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' }
+const resolutionLabel = (equipmentIndex: number): string | null => {
+  const r = ambiguousResolutions.value[equipmentIndex]
+  if (r?.action === 'match') return 'Eşleştirildi'
+  if (r?.action === 'none') return 'Yeni Ekipman Adayı'
+  return null
+}
+
+// --- "Yeni Ekipman" onayı — envanterde bulunamayan ekipmanlar sessizce
+// eklenmez, kullanıcı "Envantere Ekle" ile açıkça onaylar (kritik envanter
+// değişikliği onaysız yapılmaz).
+const newItemModalIndex = ref<number | null>(null)
+const newItemForm = ref({ category: 'yangin_dolabi' as FireSuppressionCategory, code: '', brand: '', model: '', serial_no: '', location_note: '' })
+const newItemSaving = ref(false)
+
+const openNewItemModal = (equipmentIndex: number) => {
+  const draft = newEquipmentDrafts.value[equipmentIndex]
+  if (!draft) return
+  newItemForm.value = {
+    category: draft.category ?? 'yangin_dolabi',
+    code: draft.code ?? '',
+    brand: draft.brand ?? '',
+    model: draft.model ?? '',
+    serial_no: draft.serialNo ?? '',
+    location_note: draft.locationNote ?? '',
+  }
+  newItemModalIndex.value = equipmentIndex
+}
+const closeNewItemModal = () => { newItemModalIndex.value = null }
+
+const newItemLabel = (equipmentIndex: number): string | null => {
+  const added = newEquipmentAdditions.value[equipmentIndex]
+  return added ? `Envantere Eklendi: ${added.code || FIRE_SUPPRESSION_CATEGORY_LABELS[added.category]}` : null
+}
+
+const submitNewItem = async () => {
+  if (!context.branchId || newItemModalIndex.value === null || newItemSaving.value) return
+  newItemSaving.value = true
+  try {
+    const { data: item } = await fireSuppressionInventoryApi.create(context.branchId, {
+      category: newItemForm.value.category,
+      code: newItemForm.value.code || null,
+      brand: newItemForm.value.brand || null,
+      model: newItemForm.value.model || null,
+      serial_no: newItemForm.value.serial_no || null,
+      location_note: newItemForm.value.location_note || null,
+    })
+    newEquipmentAdditions.value = { ...newEquipmentAdditions.value, [newItemModalIndex.value]: item }
+    if (!form.value.covered_inventory_item_ids.includes(item.id)) form.value.covered_inventory_item_ids.push(item.id)
+    $toast.success('Envanter kaydı eklendi.')
+    newItemModalIndex.value = null
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'Envanter kaydı eklenemedi.')
+  } finally {
+    newItemSaving.value = false
+  }
 }
 
 const goToConfirm = async () => {
@@ -656,124 +667,35 @@ const doneStats = computed(() => ({
           <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5" @click="closeDrawer"><X :size="16" /></button>
         </div>
 
-        <!-- Adım göstergesi -->
-        <div class="flex items-center justify-center gap-2 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
-          <template v-for="(s, i) in wizardStepLabels" :key="s.key">
-            <div class="flex items-center gap-2">
-              <span
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                :class="currentStepNumber === s.number ? 'bg-[#d71920] text-white' : currentStepNumber > s.number ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400 dark:bg-white/10'"
-              >
-                <Check v-if="currentStepNumber > s.number" :size="13" />
-                <template v-else>{{ s.number }}</template>
-              </span>
-              <span class="hidden text-xs font-semibold sm:inline" :class="currentStepNumber === s.number ? 'text-[#172033] dark:text-white' : 'text-gray-400'">{{ s.label }}</span>
-            </div>
-            <div v-if="i < wizardStepLabels.length - 1" class="h-px w-6 shrink-0 bg-gray-200 dark:bg-gray-700" />
-          </template>
-        </div>
+        <IsgReportUploadStepper :steps="wizardStepLabels" :current-step="currentStepNumber" />
 
         <div class="flex-1 overflow-y-auto px-5 py-5">
           <!-- Adım 1: Dosya Yükle -->
-          <div v-if="wizardStage === 'upload'" class="mx-auto max-w-md py-6">
-            <input ref="fileInput" type="file" accept="application/pdf" class="hidden" @change="onFilePicked">
-            <div
-              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition"
-              :class="isDraggingFile ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#dfe3e8] dark:border-gray-700'"
-              @dragover.prevent="isDraggingFile = true"
-              @dragleave.prevent="isDraggingFile = false"
-              @drop.prevent="onFileDropped"
-            >
-              <span class="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-[#d71920] dark:bg-red-500/10"><Upload :size="26" /></span>
-              <p class="text-sm font-semibold text-[#172033] dark:text-white">Rapor dosyasını buraya sürükleyin veya <button type="button" class="text-[#d71920] underline" @click="fileInput?.click()">seçin</button></p>
-              <p class="text-xs text-gray-400">Desteklenen format: PDF (Maks. 20 MB)</p>
-            </div>
-            <p class="mt-3 text-center text-xs text-gray-400">Sadece yıllık periyodik kontrol raporları yüklenebilir. Dosya seçildiğinde analiz otomatik başlar.</p>
-          </div>
+          <IsgReportFileDropzone
+            v-if="wizardStage === 'upload'"
+            hint="Sadece yıllık periyodik kontrol raporları yüklenebilir. Dosya seçildiğinde analiz otomatik başlar."
+            @select="selectFile"
+          />
 
           <!-- Adım 2: AI Analizi -->
-          <div v-else-if="wizardStage === 'analyzing'" class="mx-auto max-w-md py-6">
-            <div class="mb-4 flex items-center gap-3 rounded-xl border border-[#e7e9ed] bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-[#d71920] dark:bg-red-500/10"><FileText :size="18" /></span>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-semibold text-[#172033] dark:text-white">{{ selectedFile?.name }}</p>
-                <p class="text-xs text-gray-400">{{ selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '' }}</p>
-              </div>
-            </div>
-            <div class="space-y-2.5 rounded-xl border border-[#e7e9ed] bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-              <div v-for="step in analyzingSteps" :key="step.label" class="flex items-center gap-2.5 text-sm">
-                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full" :class="step.done ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-white/10'">
-                  <Check v-if="step.done" :size="12" />
-                  <LoaderCircle v-else :size="12" class="animate-spin text-gray-400" />
-                </span>
-                <span :class="step.done ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'">{{ step.label }}</span>
-              </div>
-            </div>
-
-            <div class="mt-4 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-              <div class="ai-progress-bar h-1.5 w-1/3 rounded-full bg-[#d71920]" />
-            </div>
-            <p class="mt-2 text-center text-xs text-gray-400">
-              İşleniyor... {{ elapsedLabel }}
-              <span v-if="elapsedSeconds > 30"> — büyük raporlarda bu birkaç dakika sürebilir, sayfayı kapatmayın.</span>
-            </p>
-
-            <button type="button" class="mt-4 w-full rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="cancelAnalyzing">İptal</button>
-          </div>
+          <IsgReportAnalyzingProgress
+            v-else-if="wizardStage === 'analyzing'"
+            :file="selectedFile"
+            :steps="analyzingSteps"
+            @cancel="cancelAnalyzing"
+          />
 
           <!-- Adım 3: Eşleştirme -->
           <template v-else-if="wizardStage === 'matching'">
             <!-- Sonuç listesi -->
-            <div v-if="matchingView === 'results'">
-              <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'all' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'all'">
-                  <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ matchCounts.all }}</p>
-                  <p class="text-xs text-gray-400">Tümü</p>
-                </button>
-                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'kesin' ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'kesin'">
-                  <p class="text-2xl font-bold text-emerald-600">{{ matchCounts.kesin }}</p>
-                  <p class="text-xs text-gray-400">Kesin Eşleşen</p>
-                </button>
-                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'belirsiz' ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'belirsiz'">
-                  <p class="text-2xl font-bold text-amber-600">{{ matchCounts.belirsiz }}</p>
-                  <p class="text-xs text-gray-400">Belirsiz Eşleşen</p>
-                </button>
-                <button type="button" class="rounded-xl border p-3 text-left transition" :class="matchStatFilter === 'yeni' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="matchStatFilter = 'yeni'">
-                  <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ matchCounts.yeni }}</p>
-                  <p class="text-xs text-gray-400">Yeni Ekipman</p>
-                </button>
-              </div>
-
-              <input v-model="matchSearch" type="text" placeholder="Ekipman ara..." class="mb-3 h-10 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-
-              <div class="overflow-hidden rounded-xl border border-[#e7e9ed] dark:border-gray-800">
-                <table class="w-full text-left text-sm">
-                  <thead>
-                    <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
-                      <th class="px-3 py-2.5">Rapor Bilgisi</th>
-                      <th class="px-3 py-2.5">Kategori</th>
-                      <th class="px-3 py-2.5">Konum</th>
-                      <th class="px-3 py-2.5">Eşleşme Durumu</th>
-                      <th class="px-3 py-2.5 text-right">İşlemler</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in filteredMatchRows" :key="row.equipmentIndex" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
-                      <td class="px-3 py-2.5 font-semibold text-[#172033] dark:text-white">{{ row.code || '—' }}</td>
-                      <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.categoryLabel || '—' }}</td>
-                      <td class="px-3 py-2.5 text-gray-600 dark:text-gray-300">{{ row.locationNote || '—' }}</td>
-                      <td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span></td>
-                      <td class="px-3 py-2.5 text-right">
-                        <button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="openDetail(row.equipmentIndex)">İncele</button>
-                        <span v-else class="text-xs text-gray-300">—</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p v-if="!filteredMatchRows.length" class="py-8 text-center text-xs text-gray-400">Kayıt yok.</p>
-              </div>
-              <p class="mt-2 text-xs text-gray-400">Toplam {{ filteredMatchRows.length }} kayıt</p>
-            </div>
+            <IsgMatchResultsTable
+              v-if="matchingView === 'results'"
+              :rows="matchRows"
+              :resolution-label="resolutionLabel"
+              :new-item-label="newItemLabel"
+              @inspect="openDetail"
+              @add-new="openNewItemModal"
+            />
 
             <!-- Tekil belirsiz eşleşme detayı -->
             <AmbiguousMatchCard
@@ -1003,21 +925,57 @@ const doneStats = computed(() => ({
         </div>
       </div>
     </div>
+
+    <!-- Yeni Ekipman → Envantere Ekle onayı -->
+    <div v-if="newItemModalIndex !== null" class="fixed inset-0 z-[10001] flex items-center justify-center bg-black/30 p-4" @click.self="closeNewItemModal">
+      <div class="w-full max-w-md rounded-xl bg-white p-5 dark:bg-gray-900">
+        <div class="mb-4 flex items-center justify-between">
+          <p class="text-sm font-bold text-[#172033] dark:text-white">Envantere Ekle</p>
+          <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5" @click="closeNewItemModal"><X :size="16" /></button>
+        </div>
+        <p class="mb-4 text-xs text-gray-400">Bu ekipman envanterinizde bulunamadı. Bilgileri kontrol edip onaylayın — onaylamadan envanter değişmez.</p>
+        <div class="space-y-3">
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kategori</label>
+            <select v-model="newItemForm.category" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+              <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Ekipman Kodu</label>
+            <input v-model="newItemForm.code" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Marka</label>
+              <input v-model="newItemForm.brand" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+            </div>
+            <div>
+              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Model</label>
+              <input v-model="newItemForm.model" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+            </div>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Seri No</label>
+            <input v-model="newItemForm.serial_no" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+          </div>
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Konum Notu</label>
+            <input v-model="newItemForm.location_note" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+          </div>
+        </div>
+        <div class="mt-5 flex gap-2">
+          <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="newItemSaving" @click="closeNewItemModal">Vazgeç</button>
+          <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="newItemSaving" @click="submitNewItem">
+            <LoaderCircle v-if="newItemSaving" :size="15" class="animate-spin" />
+            Envantere Ekle
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-else class="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-400 dark:bg-gray-950">
     Yönlendiriliyor...
   </div>
 </template>
-
-<style scoped>
-.ai-progress-bar {
-  animation: ai-progress-slide 1.3s ease-in-out infinite;
-}
-
-@keyframes ai-progress-slide {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(150%); }
-  100% { transform: translateX(-100%); }
-}
-</style>

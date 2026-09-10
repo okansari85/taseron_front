@@ -38,3 +38,33 @@ export type YscAnnualControlPayload = {
   file: File
   equipment?: YscAnnualControlEquipmentInput[]
 }
+
+// Matching Engine'in her ekipman satırı için döndürdüğü eşleşme durumu —
+// Fire Suppression ile aynı şekil (bkz. FireSuppressionEquipmentMatch),
+// MatchingEngine domain'den bağımsız olduğu için.
+export type YscEquipmentMatch = {
+  status: 'exact' | 'candidate_single' | 'candidate_multiple' | 'new'
+  matched_id: number | null
+  candidate_ids: number[]
+}
+
+// AI (NVIDIA NIM) ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi.
+export type YscAnnualControlAnalysisDraft = {
+  control_date?: string | null
+  next_control_date?: string | null
+  result?: YscAnnualControlResult | null
+  company_name?: string | null
+  equipment?: {
+    code?: string | null
+    equipment_type?: string | null
+    capacity?: string | null
+    serial_no?: string | null
+    location_note?: string | null
+    result?: YscAnnualControlResult | null
+    note?: string | null
+    match?: YscEquipmentMatch
+  }[]
+  matched_inventory_items: LocationEmergencyEquipmentItem[]
+  candidate_inventory_items?: LocationEmergencyEquipmentItem[]
+  unmatched_codes: string[]
+}

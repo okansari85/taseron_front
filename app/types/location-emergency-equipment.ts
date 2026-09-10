@@ -42,6 +42,11 @@ export type EmergencyEquipmentInspectionRecord = {
   photos?: EmergencyEquipmentInspectionPhoto[]
 }
 
+// gecikmis | yaklasiyor | guncel | null — backend'de LocationEmergencyEquipment
+// accessor'larından türetilir (next_annual_maintenance_date / next_fill_date
+// ile şimdiki zaman karşılaştırması, 30 günlük "yaklaşıyor" penceresi).
+export type LocationEmergencyEquipmentPeriodicStatus = 'gecikmis' | 'yaklasiyor' | 'guncel'
+
 export type LocationEmergencyEquipmentItem = {
   id: number
   location_business_entity_id: number
@@ -52,9 +57,12 @@ export type LocationEmergencyEquipmentItem = {
   status: LocationEmergencyEquipmentStatus
   is_active: boolean
   last_fill_date?: string | null
+  next_fill_date?: string | null
   last_annual_maintenance_date?: string | null
   next_annual_maintenance_date?: string | null
   service_company?: string | null
+  annual_control_status?: LocationEmergencyEquipmentPeriodicStatus | null
+  fill_status?: LocationEmergencyEquipmentPeriodicStatus | null
   equipment_type?: EmergencyEquipmentTypeRef | null
   latest_inspection?: EmergencyEquipmentInspectionRecord | null
 }
@@ -67,6 +75,7 @@ export type LocationEmergencyEquipmentPayload = {
   status?: LocationEmergencyEquipmentStatus
   is_active?: boolean
   last_fill_date?: string | null
+  next_fill_date?: string | null
   last_annual_maintenance_date?: string | null
   next_annual_maintenance_date?: string | null
   service_company?: string | null

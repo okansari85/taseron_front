@@ -144,6 +144,7 @@ export type FireSuppressionReportAnalysisDraft = {
   control_date?: string | null
   next_control_date?: string | null
   overall_result?: FireSuppressionComplianceStatus | null
+  company_name?: string | null
   covered_categories?: FireSuppressionCategory[]
   equipment?: {
     code?: string | null
@@ -153,6 +154,7 @@ export type FireSuppressionReportAnalysisDraft = {
     model?: string | null
     serial_no?: string | null
     result?: FireSuppressionComplianceStatus | null
+    note?: string | null
     match?: FireSuppressionEquipmentMatch
   }[]
   findings?: { category?: FireSuppressionCategory | null; control_item?: string | null; description: string; scope: FireSuppressionFindingScope; area_note?: string | null; equipment_codes?: string[] }[]
