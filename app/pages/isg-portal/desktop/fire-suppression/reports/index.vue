@@ -14,7 +14,7 @@ import {
   X,
   XCircle,
 } from '@lucide/vue'
-import { fireSuppressionReportApi } from '~/api/fire-suppression-report'
+import { fireSuppressionReportApi, type FireSuppressionAnalysisProgress } from '~/api/fire-suppression-report'
 import { fireSuppressionInventoryApi } from '~/api/fire-suppression-inventory'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
@@ -234,18 +234,41 @@ const newEquipmentAdditions = ref<Record<number, FireSuppressionInventoryItem>>(
 // adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
 const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
 
+// analyze() artık taslağı senkron döndürmüyor — sadece işi kuyruğa atıp
+// hemen dönüyor (bkz. backend Job). Gerçek sonuç, IsgReportAnalyzingProgress
+// bileşeninin polling'i tamamlandığını bildirdiğinde (@completed) gelir.
 const runAnalyzing = async () => {
   if (!context.branchId || !selectedFile.value) return
   wizardStage.value = 'analyzing'
   analyzingSteps.value = analyzingSteps.value.map((s, i) => ({ ...s, done: i === 0 }))
-  // Sadece ilk iki adım (dosya yükleme + metin çıkarma) gerçekten hızlı ve
-  // deterministik — otomatik ilerletiliyor. AI çağrısının süresi belirsiz
-  // olduğu için 3. adım gerçek yanıt gelene kadar "devam ediyor" görünür.
   const step1Timer = window.setTimeout(() => { analyzingSteps.value[1].done = true }, 500)
 
   try {
-    const { data: draft } = await fireSuppressionReportApi.analyze(context.branchId, selectedFile.value)
+    await fireSuppressionReportApi.analyze(context.branchId, selectedFile.value)
+    // Adım 2 (analiz) burada BİTMİYOR — IsgReportAnalyzingProgress kendi
+    // polling'iyle ilerlemeyi gösterip tamamlanınca onAnalysisCompleted'ı
+    // tetikleyecek. wizardStage 'analyzing' olarak kalır.
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'PDF analiz başlatılamadı.')
+    wizardStage.value = 'upload'
+  } finally {
+    clearTimeout(step1Timer)
+  }
+}
 
+const onAnalysisFailed = (message: string) => {
+  $toast.error(message || 'PDF analiz edilemedi.')
+  wizardStage.value = 'upload'
+}
+
+const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => {
+  const draft = progressState.result
+  if (!draft) {
+    onAnalysisFailed('Analiz sonucu alınamadı.')
+    return
+  }
+
+  try {
     if (draft.control_date) form.value.report_date = draft.control_date
     if (draft.next_control_date) form.value.next_control_date = draft.next_control_date
     if (draft.overall_result) form.value.overall_result = draft.overall_result
@@ -332,13 +355,10 @@ const runAnalyzing = async () => {
     }
 
     analyzingSteps.value = analyzingSteps.value.map(s => ({ ...s, done: true }))
-    await new Promise(resolve => setTimeout(resolve, 250))
     wizardStage.value = 'matching'
   } catch (e: any) {
-    $toast.error(e?.data?.message || e?.message || 'PDF analiz edilemedi.')
+    $toast.error(e?.message || 'Analiz sonucu işlenemedi.')
     wizardStage.value = 'upload'
-  } finally {
-    clearTimeout(step1Timer)
   }
 }
 const cancelAnalyzing = () => { wizardStage.value = 'upload'; selectedFile.value = null }
@@ -754,6 +774,8 @@ const doneStats = computed(() => ({
             :file="selectedFile"
             :steps="analyzingSteps"
             @cancel="cancelAnalyzing"
+            @completed="onAnalysisCompleted"
+            @failed="onAnalysisFailed"
           />
 
           <!-- Adım 3: Eşleştirme -->

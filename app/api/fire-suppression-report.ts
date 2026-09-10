@@ -5,7 +5,10 @@ import type { FireSuppressionControlItemTemplate, FireSuppressionReport, FireSup
 type ListResponse = { data: FireSuppressionReport[] }
 type ItemResponse = { data: FireSuppressionReport }
 type MessageResponse = { message: string }
-type AnalysisResponse = { data: FireSuppressionReportAnalysisDraft; analysis_id: string }
+// analyze() artık taslağı SENKRON döndürmüyor — sadece kuyruğa atıldığını
+// onaylıyor (202 Accepted). Gerçek taslak, analiz tamamlandığında
+// FireSuppressionAnalysisProgress.result içinde (polling üzerinden) gelir.
+type AnalysisResponse = { analysis_id: string }
 type ControlItemTemplatesResponse = { data: FireSuppressionControlItemTemplate[] }
 export type FireSuppressionAnalysisProgress = {
   status: 'running' | 'completed' | 'failed'
@@ -16,6 +19,7 @@ export type FireSuppressionAnalysisProgress = {
   started_at?: string
   finished_at?: string | null
   error?: string
+  result?: FireSuppressionReportAnalysisDraft
   events: Array<{
     stage: string
     label: string
@@ -58,8 +62,11 @@ export const fireSuppressionReportApi = {
     form.append('file', file)
     const analysisId = crypto.randomUUID()
     activeFireSuppressionAnalysisId.value = analysisId
+    // Bu istek artık sadece dosyayı saklayıp işi kuyruğa atıyor (202
+    // Accepted) — NVIDIA çağrısı beklenmiyor, o yüzden sınırsız timeout'a
+    // gerek yok, tıpkı create() gibi kısa bir süre yeterli.
     return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
-      method: 'POST', body: form, timeout: undefined, headers: { 'X-Analysis-Id': analysisId },
+      method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId },
     })
   },
   analysisProgress: (analysisId: string) => apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 }),

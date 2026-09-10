@@ -7,23 +7,35 @@ const props = defineProps<{
   steps: { label: string; done: boolean }[]
 }>()
 
-const emit = defineEmits<{ cancel: [] }>()
+const emit = defineEmits<{ cancel: []; completed: [FireSuppressionAnalysisProgress]; failed: [string] }>()
 
 const elapsedSeconds = ref(0)
 const progress = ref<FireSuppressionAnalysisProgress | null>(null)
 const copied = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
+// Job artık gerçekten arka planda (queue worker) çalıştığı için polling
+// gerçek anlamda ilerliyor — status 'running' olmaktan çıkınca (tamamlandı
+// ya da başarısız oldu) üst bileşene TEK SEFER haber veriyoruz, sonsuz
+// döngü/istek yığılması olmasın diye.
+let resolved = false
 
 const poll = async () => {
   const id = activeFireSuppressionAnalysisId.value
-  if (!id) return
+  if (!id || resolved) return
   try {
     const response = await fireSuppressionReportApi.analysisProgress(id)
     progress.value = response.data
-    if (response.data.status !== 'running' && pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
+
+    if (response.data.status !== 'running') {
+      resolved = true
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+
+      if (response.data.status === 'completed' && response.data.result) {
+        emit('completed', response.data)
+      } else if (response.data.status === 'failed') {
+        emit('failed', response.data.error || 'Analiz başarısız oldu.')
+      }
     }
   } catch {
     // Analiz isteği hâlâ başlıyor olabilir; sonraki polling denemesi devam eder.
