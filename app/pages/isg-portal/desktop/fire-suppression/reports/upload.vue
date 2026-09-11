@@ -200,6 +200,10 @@ const toggleNewCategoryApproval = (category: FireSuppressionCategory) => {
 // adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
 const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
 
+// Geçici debug: analiz tamamlandığında frontend'e gelen JSON'u görmek için.
+const aiRawResult = ref<unknown | null>(null)
+const showAiRawResult = ref(false)
+
 // analyze() artık taslağı senkron döndürmüyor — sadece işi kuyruğa atıp
 // hemen dönüyor (bkz. backend Job). Gerçek sonuç, IsgReportAnalyzingProgress
 // bileşeninin polling'i tamamlandığını bildirdiğinde (@completed) gelir.
@@ -229,6 +233,8 @@ const onAnalysisFailed = (message: string) => {
 
 const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => {
   const draft = progressState.result
+  aiRawResult.value = progressState.result
+  showAiRawResult.value = false
   if (!draft) {
     onAnalysisFailed('Analiz sonucu alınamadı.')
     return
@@ -643,6 +649,28 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                   </div>
                 </div>
 
+                <!-- Geçici AI JSON görüntüleme — sadece analiz sonucunu incelemek için. -->
+                <div v-if="matchingView === 'results'" class="mb-4 overflow-hidden rounded-xl border border-[#e7e9ed] bg-white dark:border-gray-800 dark:bg-gray-900">
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-between px-4 py-3 text-left"
+                    @click="showAiRawResult = !showAiRawResult"
+                  >
+                    <div>
+                      <p class="text-xs font-bold uppercase tracking-wide text-gray-400">AI Analiz JSON</p>
+                      <p class="mt-0.5 text-[11px] text-gray-400">Frontend'e ulaşan normalize edilmiş analiz sonucu</p>
+                    </div>
+                    <span class="text-xs font-semibold text-[#d71920]">
+                      {{ showAiRawResult ? 'Gizle' : 'JSON’u Göster' }}
+                    </span>
+                  </button>
+
+                  <pre
+                    v-if="showAiRawResult"
+                    class="max-h-[600px] overflow-auto border-t border-[#e7e9ed] bg-gray-50 p-4 text-[11px] leading-relaxed text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300"
+                  >{{ JSON.stringify(aiRawResult, null, 2) }}</pre>
+                </div>
+
                 <!-- Sonuç listesi -->
                 <IsgMatchResultsTable
                   v-if="matchingView === 'results'"
@@ -806,7 +834,7 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                         </div>
                       </div>
                       <div v-if="finding.scope === 'area'">
-                        <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                        <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
                       </div>
                       <div v-if="finding.scope === 'specific'" class="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#f1f2f4] p-2 dark:border-gray-800">
                         <label v-for="item in itemsForCategory(finding.category)" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
