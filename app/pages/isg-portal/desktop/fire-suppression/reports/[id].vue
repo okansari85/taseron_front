@@ -86,6 +86,7 @@ const CATEGORY_ICONS: Record<FireSuppressionCategory, typeof Droplets> = {
   hidrant: Waves,
   yangin_pompasi: Gauge,
   su_deposu: Cylinder,
+  sabit_boru: Waves,
   gazli_sondurme: Container,
   diger: FileText,
 }
@@ -96,6 +97,7 @@ const CATEGORY_UNIT_NOUN: Record<FireSuppressionCategory, string> = {
   hidrant: 'hidrant',
   yangin_pompasi: 'pompa',
   su_deposu: 'depo',
+  sabit_boru: 'hat',
   gazli_sondurme: 'sistem',
   diger: 'ekipman',
 }

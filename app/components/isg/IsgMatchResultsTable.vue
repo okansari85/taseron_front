@@ -17,13 +17,16 @@ export type MatchRow = {
 const props = defineProps<{
   rows: MatchRow[]
   resolutionLabel?: (equipmentIndex: number) => string | null
-  // "yeni" (envanterde bulunamadı) satırlar için: eklendiyse bir etiket
-  // döner (örn. "Envantere Eklendi"), eklenmediyse null — "Envantere Ekle"
-  // butonu gösterilir. Prop verilmezse "yeni" satırlar için işlem yok.
-  newItemLabel?: (equipmentIndex: number) => string | null
+  // "yeni" (envanterde bulunamadı) satırlar için: bu ekipmanın envantere
+  // YENİ bir Sistem Bileşeni olarak eklenip eklenmeyeceği — rapor tek
+  // başına envanter için kaynak olamaz, kullanıcının onayı gerekir.
+  // Varsayılan onaylı (checkbox işaretli) gelir, kullanıcı isterse
+  // işareti kaldırıp o ekipmanı envanterden hariç tutabilir. Prop
+  // verilmezse "yeni" satırlar için onay kontrolü gösterilmez.
+  newItemApproved?: (equipmentIndex: number) => boolean
 }>()
 
-const emit = defineEmits<{ inspect: [number]; 'add-new': [number] }>()
+const emit = defineEmits<{ inspect: [number]; 'toggle-new': [number] }>()
 
 const filter = ref<'all' | MatchBucket>(props.rows.some(r => r.bucket === 'belirsiz') ? 'belirsiz' : 'all')
 const search = ref('')
@@ -46,7 +49,12 @@ const filteredRows = computed(() => props.rows.filter((r) => {
 
 const rowStatusMeta = (row: MatchRow) => {
   if (row.bucket === 'kesin') return { label: 'Kesin Eşleşen', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
-  if (row.bucket === 'yeni') return { label: 'Yeni Ekipman', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  if (row.bucket === 'yeni') {
+    const approved = props.newItemApproved?.(row.equipmentIndex) ?? true
+    return approved
+      ? { label: 'Yeni Ekipman — Eklenecek', cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
+      : { label: 'Yeni Ekipman — Eklenmeyecek', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }
+  }
   const resolved = props.resolutionLabel?.(row.equipmentIndex)
   if (resolved) return { label: resolved, cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' }
   return { label: 'Belirsiz Eşleşme', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' }
@@ -95,10 +103,15 @@ const rowStatusMeta = (row: MatchRow) => {
             <td class="px-3 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span></td>
             <td class="px-3 py-2.5 text-right">
               <button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="emit('inspect', row.equipmentIndex)">İncele</button>
-              <template v-else-if="row.bucket === 'yeni' && newItemLabel">
-                <span v-if="newItemLabel(row.equipmentIndex)" class="text-xs font-semibold text-emerald-600">{{ newItemLabel(row.equipmentIndex) }}</span>
-                <button v-else type="button" class="rounded-lg border border-[#dfe3e8] px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300" @click="emit('add-new', row.equipmentIndex)">Envantere Ekle</button>
-              </template>
+              <label v-else-if="row.bucket === 'yeni' && newItemApproved" class="inline-flex cursor-pointer select-none items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  class="h-3.5 w-3.5 rounded border-gray-300 text-[#d71920] focus:ring-[#d71920]"
+                  :checked="newItemApproved(row.equipmentIndex)"
+                  @change="emit('toggle-new', row.equipmentIndex)"
+                >
+                Envantere ekle
+              </label>
               <span v-else class="text-xs text-gray-300">—</span>
             </td>
           </tr>

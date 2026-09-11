@@ -41,6 +41,7 @@ const CATEGORY_ICONS: Record<FireSuppressionCategory, typeof Droplets> = {
   hidrant: Waves,
   yangin_pompasi: Gauge,
   su_deposu: Cylinder,
+  sabit_boru: Waves,
   gazli_sondurme: Container,
   diger: FileText,
 }
@@ -82,7 +83,27 @@ const scopeLabel = (scope: string) => ({ all: 'Tüm Bileşenler', specific: 'Bel
 const componentDisplayName = (item: { code?: string | null; display_name?: string | null }) =>
   item.display_name || item.code || '—'
 
-const nonconformCount = computed(() => (detail.value?.control_items ?? []).filter(ci => ci.status === 'uygun_degil').length)
+// "Kontrol maddesi" ve "uygunsuzluk" sayıları, ham control_item SATIRLARI
+// değil, o kategorideki BENZERSİZ madde KODLARI üzerinden hesaplanır (aynı
+// madde birden çok bileşen/dolap için tekrarlanabilir — satır sayısı değil,
+// madde sayısı gösterilir). Bkz. anasayfadaki aynı hesap (systemSummaries).
+const maddeCodes = computed(() => {
+  const items = detail.value?.control_items ?? []
+  return [...new Set(items.map(ci => ci.code).filter((v): v is string => !!v))]
+})
+
+const controlItemCount = computed(() => {
+  const items = detail.value?.control_items ?? []
+  return maddeCodes.value.length || items.length
+})
+
+const nonconformCount = computed(() => {
+  const items = detail.value?.control_items ?? []
+  if (maddeCodes.value.length) {
+    return maddeCodes.value.filter(code => items.some(ci => ci.code === code && ci.status === 'uygun_degil')).length
+  }
+  return items.filter(ci => ci.status === 'uygun_degil').length
+})
 
 // Bazı ana bileşenler (Yangın Pompa Dairesi gibi) TEK bir kapsayıcı kayıt
 // (code=null) + onun altında ayrı kayıtlı ekipman (Pompa 1, Pompa 2...)
@@ -120,7 +141,7 @@ const visibleComponents = computed(() => (detail.value?.components ?? []).filter
 
             <div class="mb-5 inline-flex flex-wrap rounded-lg border border-[#e7e9ed] bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
               <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold transition" :class="tab === 'components' ? 'bg-[#d71920] text-white' : 'text-gray-500'" @click="tab = 'components'">Bileşenler ({{ visibleComponents.length }})</button>
-              <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold transition" :class="tab === 'controls' ? 'bg-[#d71920] text-white' : 'text-gray-500'" @click="tab = 'controls'">Kontroller ({{ detail.control_items.length }})</button>
+              <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold transition" :class="tab === 'controls' ? 'bg-[#d71920] text-white' : 'text-gray-500'" @click="tab = 'controls'">Kontroller ({{ controlItemCount }})</button>
               <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold transition" :class="tab === 'nonconformities' ? 'bg-[#d71920] text-white' : 'text-gray-500'" @click="tab = 'nonconformities'">Uygunsuzluklar ({{ detail.findings.length }})</button>
             </div>
 

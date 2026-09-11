@@ -92,6 +92,7 @@ const CATEGORY_ICONS: Partial<Record<string, typeof Droplets>> = {
   hidrant: Waves,
   yangin_pompasi: Gauge,
   su_deposu: Cylinder,
+  sabit_boru: Waves,
   gazli_sondurme: Container,
   diger: FileText,
 }
@@ -140,11 +141,13 @@ type SystemSummary = {
   pumpBreakdown: { main: number; jokey: number } | null
 }
 
-// Sistem listesi RAPORDAN DEĞİL, iki kaynağın BİRLEŞİMİNDEN çıkar: kalıcı
-// kayıtlı bileşenler (müşterinin kendi eklediği/geçmiş raporlardan gelen) VE
-// varsa son raporun control_items'ı. Bir kategori sadece bileşen kaydına
-// sahipse (hiç rapor yoksa) satır YİNE DE gösterilir — sadece kontrol/
-// uygunsuzluk sütunları boş, durum nötr kalır.
+// Sistem listesi SADECE kalıcı kayıtlı bileşenlerden (müşterinin kendi
+// eklediği veya önceden ONAYLADIĞI bileşenlerden) çıkar — rapor bunun için
+// asla tek başına kaynak olamaz ("raporda geçiyor" ≠ "tesisatta var").
+// Bir kategori bileşen kaydına sahipse (hiç rapor yoksa bile) satır YİNE DE
+// gösterilir — sadece kontrol/uygunsuzluk sütunları boş, durum nötr kalır.
+// Bir kategoride HİÇ kayıtlı bileşen yoksa (kullanıcı hiç eklemediyse) o
+// kategori burada HİÇ gösterilmez — "belki bende hidrant yok" durumu budur.
 const systemSummaries = computed<SystemSummary[]>(() => {
   const byCategory = new Map<string, FireSuppressionReportControlItem[]>()
   for (const ci of report.value?.control_items ?? []) {
@@ -169,7 +172,12 @@ const systemSummaries = computed<SystemSummary[]>(() => {
     registeredChildrenByCategory.get(c.category)!.push(c)
   }
 
-  const categories = new Set<string>([...byCategory.keys(), ...registeredByCategory.keys()])
+  // Sadece GERÇEKTEN KAYITLI bileşeni olan kategoriler listelenir — sabit
+  // bir "olası kategoriler" listesi tutulmaz, rapor da tek başına bir
+  // kategoriyi var etmez (bkz. yukarıdaki not). Kayıtlı bileşeni olan bir
+  // kategoride henüz rapor verisi yoksa (byCategory'de yoksa) aşağıdaki
+  // items.length===0 dalı status:null ("Rapor Yok") üretir.
+  const categories = new Set<string>([...registeredByCategory.keys()])
 
   return Array.from(categories).map((category) => {
     const items = byCategory.get(category) ?? []
@@ -230,6 +238,7 @@ const CATEGORY_UNIT_NOUN: Partial<Record<string, string>> = {
   hidrant: 'hidrant',
   yangin_pompasi: 'pompa',
   su_deposu: 'depo',
+  sabit_boru: 'hat',
   gazli_sondurme: 'sistem',
 }
 
@@ -245,7 +254,11 @@ const overallSummary = computed(() => {
   const uygunDegil = systemSummaries.value.reduce((sum, s) => sum + s.nonconformCount, 0)
   const totalUnits = systemSummaries.value.reduce((sum, s) => sum + s.unitCount, 0)
   return {
-    systemCount: systemSummaries.value.length,
+    // "Tespit Edilen Sistem" — sadece GERÇEKTEN veri (kayıt ve/veya rapor)
+    // bulunan sistemler sayılır; status:null ("Rapor Yok") olan, sadece
+    // tam liste için gösterilen placeholder kategoriler bu sayıya dahil
+    // edilmez (bkz. referans tasarım: 7 kart ama "Toplam Sistem: 6").
+    systemCount: systemSummaries.value.filter(s => s.status !== null || s.registeredCount > 0).length,
     totalUnits,
     controlItemCount: systemSummaries.value.reduce((sum, s) => sum + s.controlItemCount, 0),
     uygun,

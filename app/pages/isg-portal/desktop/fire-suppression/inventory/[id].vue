@@ -47,6 +47,7 @@ const categoryIcons: Record<FireSuppressionCategory, any> = {
   hidrant: Waves,
   yangin_pompasi: Gauge,
   su_deposu: Waves,
+  sabit_boru: Waves,
   gazli_sondurme: Flame,
   diger: Building2,
 }

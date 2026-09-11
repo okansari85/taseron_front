@@ -4,6 +4,7 @@ export type FireSuppressionCategory =
   | 'hidrant'
   | 'yangin_pompasi'
   | 'su_deposu'
+  | 'sabit_boru'
   | 'gazli_sondurme'
   | 'diger'
 
@@ -16,6 +17,7 @@ export const FIRE_SUPPRESSION_CATEGORIES: FireSuppressionCategory[] = [
   'hidrant',
   'yangin_pompasi',
   'su_deposu',
+  'sabit_boru',
   'gazli_sondurme',
   'diger',
 ]
@@ -26,6 +28,7 @@ export const FIRE_SUPPRESSION_CATEGORY_LABELS: Record<FireSuppressionCategory, s
   hidrant: 'Hidrantlar',
   yangin_pompasi: 'Yangın Pompaları',
   su_deposu: 'Su Depoları',
+  sabit_boru: 'Sabit Boru Tesisatları, Kolektörler ve Vanalar',
   gazli_sondurme: 'Gazlı Söndürme',
   diger: 'Diğer',
 }
@@ -35,7 +38,6 @@ export type FireSuppressionUnitScope = 'per_unit' | 'whole_unit'
 export type FireSuppressionInventoryItem = {
   id: number
   location_business_entity_id: number
-  parent_component_id?: number | null
   category: FireSuppressionCategory
   unit_scope?: FireSuppressionUnitScope
   code?: string | null
@@ -71,13 +73,19 @@ export type FireSuppressionInventoryPayload = {
 export type FireSuppressionCategorySummary = {
   category: FireSuppressionCategory
   total: number
-  nonconformity_count: number
+  // Kaç bileşen/dolap uygunsuz — TEKİL kalem sayısı ("147 dolap var, 30'u
+  // uygunsuz" buradaki 30). total: 0 olabilir (kategoride hiç kayıt/rapor
+  // yoksa) — bu durumda arayüzde "Raporda Yok" gösterilir, kategori ASLA
+  // listeden düşürülmez.
+  nonconforming_component_count: number
+  // Kaç kontrol maddesi uygunsuz — TEKİL madde kodu sayısı.
+  nonconforming_control_item_count: number
 }
 
 export type FireSuppressionInventorySummary = {
   overall_status: FireSuppressionComplianceStatus
   total_equipment: number
-  total_nonconformity: number
+  total_nonconforming_components: number
   last_control_date?: string | null
   categories: FireSuppressionCategorySummary[]
 }
