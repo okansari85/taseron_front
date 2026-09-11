@@ -133,7 +133,7 @@ const desktopSections = [
         path: '/isg-portal/desktop/fire-suppression/inventory',
         icon: FlameKindling,
         children: [
-          { title: 'Envanter', path: '/isg-portal/desktop/fire-suppression/inventory' },
+          { title: 'Tesisat Durumu', path: '/isg-portal/desktop/fire-suppression/inventory' },
           { title: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports' },
         ],
       },

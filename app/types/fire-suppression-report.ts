@@ -101,12 +101,25 @@ export type FireSuppressionReport = {
   file_url: string
   notes?: string | null
   is_current?: boolean
+  created_at?: string
   findings_count?: number
   findings?: FireSuppressionReportFinding[]
   inventory_items?: FireSuppressionInventoryItem[]
   uploaded_by_user?: FireSuppressionReportUser | null
   control_items?: FireSuppressionReportControlItem[]
   files?: FireSuppressionReportFile[]
+}
+
+// "Tesisat Durumu > Sistem" detay ekranı — bir sistemin kalıcı bileşenleri
+// (registry) ile SON raporun o sisteme ait kontrol/bulgu verisi birlikte.
+// İkisi ayrı kaynaktır: components rapordan bağımsız kalıcı kayıt,
+// control_items/findings sadece en son raporun o anki içeriğidir.
+export type FireSuppressionSystemComponentDetail = {
+  category: FireSuppressionCategory
+  components: FireSuppressionInventoryItem[]
+  control_items: FireSuppressionReportControlItem[]
+  findings: FireSuppressionReportFinding[]
+  report: { id: number; report_date: string; report_no?: string | null } | null
 }
 
 export type FireSuppressionReportFindingInput = {

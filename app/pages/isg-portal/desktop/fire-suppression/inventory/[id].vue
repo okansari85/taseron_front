@@ -122,7 +122,7 @@ const submitForm = async () => {
       notes: form.value.notes || null,
     })
     item.value = data
-    $toast.success('Envanter kaydı güncellendi.')
+    $toast.success('Sistem bileşeni güncellendi.')
     drawerOpen.value = false
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'Kayıt güncellenemedi.')
@@ -137,7 +137,7 @@ const removeItem = async () => {
   deleting.value = true
   try {
     await fireSuppressionInventoryApi.remove(item.value.id)
-    $toast.success('Envanter kaydı silindi.')
+    $toast.success('Sistem bileşeni silindi.')
     await navigateTo('/isg-portal/desktop/fire-suppression/inventory')
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'Kayıt silinemedi.')
@@ -158,7 +158,7 @@ const removeItem = async () => {
         <div class="mx-auto max-w-[1100px]">
           <NuxtLink to="/isg-portal/desktop/fire-suppression/inventory" class="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[#64748b] hover:text-[#111827] dark:hover:text-white">
             <ArrowLeft :size="16" />
-            Envantere Dön
+            Tesisat Durumuna Dön
           </NuxtLink>
 
           <div v-if="loading" class="py-16 text-center text-sm text-gray-400">Yükleniyor...</div>

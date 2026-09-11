@@ -30,11 +30,16 @@ export const FIRE_SUPPRESSION_CATEGORY_LABELS: Record<FireSuppressionCategory, s
   diger: 'Diğer',
 }
 
+export type FireSuppressionUnitScope = 'per_unit' | 'whole_unit'
+
 export type FireSuppressionInventoryItem = {
   id: number
   location_business_entity_id: number
+  parent_component_id?: number | null
   category: FireSuppressionCategory
+  unit_scope?: FireSuppressionUnitScope
   code?: string | null
+  display_name?: string | null
   location_note?: string | null
   brand?: string | null
   model?: string | null

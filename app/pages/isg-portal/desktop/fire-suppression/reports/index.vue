@@ -161,8 +161,6 @@ const resetWizard = () => {
   matchRows.value = []
   ambiguousMatches.value = []
   ambiguousResolutions.value = {}
-  newEquipmentDrafts.value = {}
-  newEquipmentAdditions.value = {}
   equipmentDraftItems.value = []
   expandedEquipmentCodes.value = new Set()
   matchingView.value = 'results'
@@ -217,19 +215,6 @@ type AmbiguousEntry = {
 const ambiguousMatches = ref<AmbiguousEntry[]>([])
 const ambiguousResolutions = ref<Record<number, AmbiguousMatchResolution>>({})
 
-// --- Yeni Ekipman (envanterde bulunamadı) — sessizce eklenmez, "Envantere
-// Ekle" ile kullanıcı onayı alınır (bkz. IsgMatchResultsTable "yeni" bucket).
-type NewEquipmentDraft = {
-  category: FireSuppressionCategory | null
-  code: string | null
-  brand: string | null
-  model: string | null
-  serialNo: string | null
-  locationNote: string | null
-}
-const newEquipmentDrafts = ref<Record<number, NewEquipmentDraft>>({})
-const newEquipmentAdditions = ref<Record<number, FireSuppressionInventoryItem>>({})
-
 // AI'ın döndürdüğü ham equipment dizisi (control_items dahil) — "Onayla"
 // adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
 const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
@@ -283,7 +268,6 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     const coveredIds = new Set(draft.matched_inventory_items.map(item => item.id))
     const rows: MatchRow[] = []
     const ambiguous: AmbiguousEntry[] = []
-    const newDrafts: Record<number, NewEquipmentDraft> = {}
 
     ;(draft.equipment ?? []).forEach((item, equipmentIndex) => {
       const status = item.match?.status ?? 'new'
@@ -311,15 +295,10 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
             .filter((i): i is FireSuppressionInventoryItem => !!i),
         })
       } else {
+        // "Yeni" (sıfır aday) — kullanıcıdan onay BEKLENMEZ, backend rapor
+        // kaydedilirken bu equipment_code'u otomatik olarak yeni bir Sistem
+        // Bileşeni kaydı olarak açar (bkz. FireSuppressionReportService::create()).
         bucket = 'yeni'
-        newDrafts[equipmentIndex] = {
-          category: item.category ?? null,
-          code: item.code ?? null,
-          brand: item.brand ?? null,
-          model: item.model ?? null,
-          serialNo: item.serial_no ?? null,
-          locationNote: item.location_note ?? null,
-        }
       }
 
       rows.push({
@@ -334,8 +313,6 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     matchRows.value = rows
     ambiguousMatches.value = ambiguous
     ambiguousResolutions.value = {}
-    newEquipmentDrafts.value = newDrafts
-    newEquipmentAdditions.value = {}
     form.value.covered_inventory_item_ids = [...coveredIds]
 
     if (draft.findings?.length) {
@@ -398,56 +375,6 @@ const resolutionLabel = (equipmentIndex: number): string | null => {
   return null
 }
 
-// --- "Yeni Ekipman" onayı — envanterde bulunamayan ekipmanlar sessizce
-// eklenmez, kullanıcı "Envantere Ekle" ile açıkça onaylar (kritik envanter
-// değişikliği onaysız yapılmaz).
-const newItemModalIndex = ref<number | null>(null)
-const newItemForm = ref({ category: 'yangin_dolabi' as FireSuppressionCategory, code: '', brand: '', model: '', serial_no: '', location_note: '' })
-const newItemSaving = ref(false)
-
-const openNewItemModal = (equipmentIndex: number) => {
-  const draft = newEquipmentDrafts.value[equipmentIndex]
-  if (!draft) return
-  newItemForm.value = {
-    category: draft.category ?? 'yangin_dolabi',
-    code: draft.code ?? '',
-    brand: draft.brand ?? '',
-    model: draft.model ?? '',
-    serial_no: draft.serialNo ?? '',
-    location_note: draft.locationNote ?? '',
-  }
-  newItemModalIndex.value = equipmentIndex
-}
-const closeNewItemModal = () => { newItemModalIndex.value = null }
-
-const newItemLabel = (equipmentIndex: number): string | null => {
-  const added = newEquipmentAdditions.value[equipmentIndex]
-  return added ? `Envantere Eklendi: ${added.code || FIRE_SUPPRESSION_CATEGORY_LABELS[added.category]}` : null
-}
-
-const submitNewItem = async () => {
-  if (!context.branchId || newItemModalIndex.value === null || newItemSaving.value) return
-  newItemSaving.value = true
-  try {
-    const { data: item } = await fireSuppressionInventoryApi.create(context.branchId, {
-      category: newItemForm.value.category,
-      code: newItemForm.value.code || null,
-      brand: newItemForm.value.brand || null,
-      model: newItemForm.value.model || null,
-      serial_no: newItemForm.value.serial_no || null,
-      location_note: newItemForm.value.location_note || null,
-    })
-    newEquipmentAdditions.value = { ...newEquipmentAdditions.value, [newItemModalIndex.value]: item }
-    if (!form.value.covered_inventory_item_ids.includes(item.id)) form.value.covered_inventory_item_ids.push(item.id)
-    $toast.success('Envanter kaydı eklendi.')
-    newItemModalIndex.value = null
-  } catch (e: any) {
-    $toast.error(e?.data?.message || e?.message || 'Envanter kaydı eklenemedi.')
-  } finally {
-    newItemSaving.value = false
-  }
-}
-
 const goToConfirm = () => {
   controlItemsForm.value = buildControlItemsFromDraft()
   wizardStage.value = 'confirm'
@@ -456,8 +383,10 @@ const backToMatching = () => { wizardStage.value = 'matching'; matchingView.valu
 
 // Eşleştirme adımında verilen kararlara göre bir equipmentIndex'in nihai
 // envanter id'sini çözer (kesin eşleşme / tekil aday / kullanıcının
-// belirsiz eşleşmede seçtiği aday / yeni eklenen kayıt) — "yeni ekipman"
-// henüz "Envantere Ekle" ile onaylanmadıysa null döner.
+// belirsiz eşleşmede seçtiği aday). "Yeni" (sıfır aday) için null döner —
+// kullanıcıdan onay beklenmez, backend rapor kaydedilirken equipment_code'u
+// otomatik olarak yeni bir Sistem Bileşeni kaydına çevirir (bkz.
+// FireSuppressionReportService::create()).
 const resolvedInventoryItemIdFor = (equipmentIndex: number, item: NonNullable<FireSuppressionReportAnalysisDraft['equipment']>[number]): number | null => {
   const status = item.match?.status ?? 'new'
   if (status === 'exact') return item.match?.matched_id ?? null
@@ -466,7 +395,7 @@ const resolvedInventoryItemIdFor = (equipmentIndex: number, item: NonNullable<Fi
     const resolution = ambiguousResolutions.value[equipmentIndex]
     return resolution?.action === 'match' ? (resolution.candidateId ?? null) : null
   }
-  return newEquipmentAdditions.value[equipmentIndex]?.id ?? null
+  return null
 }
 
 // --- Kontrol Maddeleri — statik bir şablondan DEĞİL, AI'ın rapordan
@@ -785,9 +714,7 @@ const doneStats = computed(() => ({
               v-if="matchingView === 'results'"
               :rows="matchRows"
               :resolution-label="resolutionLabel"
-              :new-item-label="newItemLabel"
               @inspect="openDetail"
-              @add-new="openNewItemModal"
             />
 
             <!-- Tekil belirsiz eşleşme detayı -->
@@ -1055,53 +982,6 @@ const doneStats = computed(() => ({
       </div>
     </div>
 
-    <!-- Yeni Ekipman → Envantere Ekle onayı -->
-    <div v-if="newItemModalIndex !== null" class="fixed inset-0 z-[10001] flex items-center justify-center bg-black/30 p-4" @click.self="closeNewItemModal">
-      <div class="w-full max-w-md rounded-xl bg-white p-5 dark:bg-gray-900">
-        <div class="mb-4 flex items-center justify-between">
-          <p class="text-sm font-bold text-[#172033] dark:text-white">Envantere Ekle</p>
-          <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5" @click="closeNewItemModal"><X :size="16" /></button>
-        </div>
-        <p class="mb-4 text-xs text-gray-400">Bu ekipman envanterinizde bulunamadı. Bilgileri kontrol edip onaylayın — onaylamadan envanter değişmez.</p>
-        <div class="space-y-3">
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kategori</label>
-            <select v-model="newItemForm.category" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Ekipman Kodu</label>
-            <input v-model="newItemForm.code" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Marka</label>
-              <input v-model="newItemForm.brand" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Model</label>
-              <input v-model="newItemForm.model" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-            </div>
-          </div>
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Seri No</label>
-            <input v-model="newItemForm.serial_no" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-          </div>
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Konum Notu</label>
-            <input v-model="newItemForm.location_note" type="text" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-          </div>
-        </div>
-        <div class="mt-5 flex gap-2">
-          <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="newItemSaving" @click="closeNewItemModal">Vazgeç</button>
-          <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="newItemSaving" @click="submitNewItem">
-            <LoaderCircle v-if="newItemSaving" :size="15" class="animate-spin" />
-            Envantere Ekle
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div v-else class="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-400 dark:bg-gray-950">
