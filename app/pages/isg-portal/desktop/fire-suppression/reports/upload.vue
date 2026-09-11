@@ -233,7 +233,8 @@ const onAnalysisFailed = (message: string) => {
 
 const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => {
   const draft = progressState.result
-  aiRawResult.value = progressState.result
+  // ai_raw_result is returned for debugging but is not part of the draft type.
+  aiRawResult.value = (progressState.result as (FireSuppressionReportAnalysisDraft & { ai_raw_result?: unknown }) | null | undefined)?.ai_raw_result ?? null
   showAiRawResult.value = false
   if (!draft) {
     onAnalysisFailed('Analiz sonucu alınamadı.')
