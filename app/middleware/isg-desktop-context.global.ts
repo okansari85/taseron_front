@@ -13,6 +13,17 @@ const isSelectionRoute = (path: string) =>
   path === '/isg-portal/desktop/select-location' || path === '/isg-portal/desktop/select-branch'
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  // SSR sırasında localStorage'a HİÇ erişilemez (bkz. isgDesktopContext.ts
+  // restore()'daki import.meta.client koruması). Bu middleware'i sunucu
+  // tarafında da çalıştırıp context "hazır değil" diye yönlendirseydik,
+  // tarayıcı orijinal sayfayı hiç görmeden doğrudan Lokasyon Seç ekranına
+  // 302'lenirdi — localStorage'daki GERÇEK seçimi okuma fırsatı bile
+  // olmazdı. Bu yüzden asıl karar SADECE CLIENT'TA verilir: sayfa SSR'de
+  // "hazır değil" haliyle render edilir (eski onMounted tabanlı koddan beri
+  // zaten hep böyleydi, sayfalar buna tolerant), hydration sonrası bu
+  // middleware client'ta TEKRAR çalışır (auth.global.ts ile aynı desen) ve
+  // orada localStorage + backend doğrulamasıyla gerçek karar verilir.
+  if (import.meta.server) return
   if (!to.path.startsWith('/isg-portal/desktop') || isSelectionRoute(to.path)) return
 
   const context = useIsgDesktopContextStore()
