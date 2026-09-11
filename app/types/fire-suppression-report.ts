@@ -144,6 +144,10 @@ export type FireSuppressionReportPayload = {
   covered_inventory_item_ids?: number[]
   control_items?: FireSuppressionReportControlItemInput[]
   additional_files?: FireSuppressionReportFileInput[]
+  // Raporda tespit edilip envanterde henüz kayıtlı olmayan, kullanıcının
+  // Eşleştirme adımında "envantere ekle" diye onayladığı whole_unit
+  // kategoriler (Su Deposu, Sabit Boru gibi) — bkz. upload.vue: detectedNewCategories.
+  approved_new_categories?: FireSuppressionCategory[]
 }
 
 // Matching Engine'in her ekipman satırı için döndürdüğü eşleşme durumu

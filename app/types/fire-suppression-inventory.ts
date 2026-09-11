@@ -58,6 +58,7 @@ export type FireSuppressionInventoryItem = {
 export type FireSuppressionInventoryPayload = {
   category: FireSuppressionCategory
   code?: string | null
+  display_name?: string | null
   location_note?: string | null
   brand?: string | null
   model?: string | null

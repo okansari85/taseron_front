@@ -18,6 +18,7 @@ import {
   ClipboardList,
   MinusCircle,
   Plus,
+  Trash2,
   Waves,
   X,
   XCircle,
@@ -33,12 +34,14 @@ import {
 import type { FireSuppressionReport, FireSuppressionReportControlItem } from '~/types/fire-suppression-report'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
+import { useFireSuppressionCategorySettings } from '~/composables/useFireSuppressionCategorySettings'
 
 definePageMeta({ layout: false })
 
 const { $toast } = useNuxtApp()
 const context = useIsgDesktopContextStore()
 const { isExpanded } = useIsgSidebar()
+const categorySettings = useFireSuppressionCategorySettings()
 
 // Rapor ve kalıcı Sistem Bileşenleri kaydı BİRBİRİNDEN BAĞIMSIZ — bu sayfa
 // artık "rapor var mı" sorusuna değil "tesisat hakkında HERHANGİ bir bilgi
@@ -78,6 +81,7 @@ onMounted(() => {
     return
   }
   load()
+  categorySettings.load()
 })
 
 watch(() => context.branchId, load)
@@ -97,7 +101,7 @@ const CATEGORY_ICONS: Partial<Record<string, typeof Droplets>> = {
   diger: FileText,
 }
 
-const categoryLabel = (category: string): string => FIRE_SUPPRESSION_CATEGORY_LABELS[category as FireSuppressionCategory] ?? category
+const categoryLabel = (category: string): string => categorySettings.label(category) || FIRE_SUPPRESSION_CATEGORY_LABELS[category as FireSuppressionCategory] || category
 const categoryIcon = (category: string) => CATEGORY_ICONS[category] ?? FileText
 
 const formatDate = (value?: string | null) => {
@@ -163,10 +167,21 @@ const systemSummaries = computed<SystemSummary[]>(() => {
   // kendisi bir "adet" değildir — sadece ALT kayıtlar (code dolu olanlar)
   // sayılır. Dolap/hidrant gibi per-unit bileşenlerde zaten hiç kapsayıcı
   // yok, her satırın kendisi zaten bir alt-kayıt gibi (code dolu) davranır.
+  //
+  // AMA Su Deposu gibi TAMAMEN whole_unit kategorilerde hiç "alt kayıt" YOK
+  // — tek kaydın kendisi zaten kapsayıcı ve code=null'dur (bkz. FireSuppressionInventoryItem
+  // model notu: "içindeki alt-birimler ayrı ayrı sayılmaz, tek bir checklist
+  // ile değerlendirilir"). Bu yüzden "kategori KAYITLI mı" sorusu code'lu
+  // satırlarla SINIRLANAMAZ — code'suz (kapsayıcı) bir satır bile o
+  // kategorinin GERÇEKTEN eklendiğini/onaylandığını gösterir; sadece SAYIM
+  // (registeredCount, "N adet dolap" gibi) code'lu alt kayıtlarla sınırlı
+  // kalmalı. İkisini ayrı tutuyoruz.
   const registeredByCategory = new Map<string, number>()
+  const registeredCategoriesPresent = new Set<string>()
   const registeredChildrenByCategory = new Map<string, typeof components.value>()
   for (const c of components.value) {
-    if (!c.code) continue // kapsayıcı satır — sayılmaz
+    registeredCategoriesPresent.add(c.category)
+    if (!c.code) continue // kapsayıcı satır — "adet" olarak sayılmaz
     registeredByCategory.set(c.category, (registeredByCategory.get(c.category) ?? 0) + 1)
     if (!registeredChildrenByCategory.has(c.category)) registeredChildrenByCategory.set(c.category, [])
     registeredChildrenByCategory.get(c.category)!.push(c)
@@ -176,8 +191,10 @@ const systemSummaries = computed<SystemSummary[]>(() => {
   // bir "olası kategoriler" listesi tutulmaz, rapor da tek başına bir
   // kategoriyi var etmez (bkz. yukarıdaki not). Kayıtlı bileşeni olan bir
   // kategoride henüz rapor verisi yoksa (byCategory'de yoksa) aşağıdaki
-  // items.length===0 dalı status:null ("Rapor Yok") üretir.
-  const categories = new Set<string>([...registeredByCategory.keys()])
+  // items.length===0 dalı status:null ("Rapor Yok") üretir. "Kayıtlı" burada
+  // registeredCategoriesPresent'e göre belirlenir (code'suz whole_unit
+  // kayıtlar dahil) — registeredByCategory'ye göre DEĞİL, o sadece sayım içindir.
+  const categories = new Set<string>([...registeredCategoriesPresent])
 
   return Array.from(categories).map((category) => {
     const items = byCategory.get(category) ?? []
@@ -273,6 +290,42 @@ const overallSummary = computed(() => {
 
 const maxNonconform = computed(() => Math.max(1, ...systemSummaries.value.map(s => s.nonconformCount)))
 
+// --- Sistemi tek tıkla sil ---
+// Yanlışlıkla eklenen bir sistemi (Su Deposu gibi TEK kayıtlı whole_unit
+// kategoriler dahil, Yangın Dolapları gibi ÇOK kayıtlı per_unit kategoriler
+// dahil) kategori detay sayfasına hiç girmeden, doğrudan ana ekrandan
+// silebilmek için — kategoriye kayıtlı TÜM bileşenleri tek seferde siler.
+// (Tek bileşenli whole_unit kategorilerde zaten tek kayıt vardır, farkı yok.)
+const componentsForCategory = (category: string) => components.value.filter(c => c.category === category)
+
+const deletingCategory = ref<string | null>(null)
+const deleteSystemCategory = async (s: SystemSummary) => {
+  const items = componentsForCategory(s.category)
+  if (!items.length || deletingCategory.value) return
+
+  const confirmMessage = items.length === 1
+    ? `"${categoryLabel(s.category)}" sistemini tesisat envanterinizden kalıcı olarak silmek istediğinize emin misiniz?`
+    : `"${categoryLabel(s.category)}" sistemine kayıtlı ${items.length} bileşenin TAMAMINI kalıcı olarak silmek istediğinize emin misiniz?`
+  if (!window.confirm(confirmMessage)) return
+
+  deletingCategory.value = s.category
+  try {
+    const results = await Promise.allSettled(items.map(item => fireSuppressionInventoryApi.remove(item.id)))
+    const failedCount = results.filter(r => r.status === 'rejected').length
+
+    if (failedCount === 0) {
+      $toast.success(items.length === 1 ? 'Sistem silindi.' : `${items.length} bileşen silindi.`)
+    } else if (failedCount < items.length) {
+      $toast.error(`${items.length - failedCount} bileşen silindi, ${failedCount} tanesi rapor/kontrol geçmişi olduğu için silinemedi.`)
+    } else {
+      $toast.error('Bu sistem silinemedi — muhtemelen rapor/kontrol geçmişi var, önce pasife alabilirsiniz.')
+    }
+    await load()
+  } finally {
+    deletingCategory.value = null
+  }
+}
+
 const resultMeta = (status?: string | null) => status === 'uygun'
   ? { label: 'Uygun', textCls: 'text-emerald-600', bgCls: 'bg-emerald-50 dark:bg-emerald-500/10' }
   : { label: 'Uygun Değil', textCls: 'text-[#d71920]', bgCls: 'bg-red-50 dark:bg-red-500/10' }
@@ -285,10 +338,10 @@ const resultMeta = (status?: string | null) => status === 'uygun'
 // erişilebilir hale getiriliyor.
 const addSystemOpen = ref(false)
 const addSystemSaving = ref(false)
-const addSystemForm = ref({ category: 'yangin_dolabi' as FireSuppressionCategory, code: '', location_note: '' })
+const addSystemForm = ref({ category: 'yangin_dolabi' as FireSuppressionCategory, code: '', display_name: '', location_note: '' })
 
 const openAddSystem = () => {
-  addSystemForm.value = { category: 'yangin_dolabi', code: '', location_note: '' }
+  addSystemForm.value = { category: 'yangin_dolabi', code: '', display_name: '', location_note: '' }
   addSystemOpen.value = true
 }
 const closeAddSystem = () => { addSystemOpen.value = false }
@@ -300,6 +353,7 @@ const submitAddSystem = async () => {
     await fireSuppressionInventoryApi.create(context.branchId, {
       category: addSystemForm.value.category,
       code: addSystemForm.value.code || null,
+      display_name: addSystemForm.value.display_name || null,
       location_note: addSystemForm.value.location_note || null,
     })
     $toast.success('Sistem bileşeni eklendi.')
@@ -479,7 +533,20 @@ const submitAddSystem = async () => {
                         </td>
                         <td class="px-3 py-3 font-semibold text-[#172033] dark:text-white">{{ s.controlItemCount || '—' }}</td>
                         <td class="px-3 py-3 font-semibold" :class="s.nonconformCount > 0 ? 'text-[#d71920]' : 'text-gray-400'">{{ s.status === null ? '—' : s.nonconformCount }}</td>
-                        <td class="px-3 py-3 text-right"><ChevronRight :size="16" class="text-gray-300" /></td>
+                        <td class="px-3 py-3 text-right">
+                          <div class="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              class="rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-[#d71920] disabled:opacity-40 dark:hover:bg-red-500/10"
+                              title="Sistemi sil"
+                              :disabled="deletingCategory === s.category"
+                              @click.stop="deleteSystemCategory(s)"
+                            >
+                              <Trash2 :size="15" />
+                            </button>
+                            <ChevronRight :size="16" class="text-gray-300" />
+                          </div>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -555,8 +622,14 @@ const submitAddSystem = async () => {
           <div>
             <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Sistem</label>
             <select v-model="addSystemForm.category" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-              <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
+              <option v-for="c in categorySettings.enabledCategories.value" :key="c" :value="c">{{ categoryLabel(c) }}</option>
             </select>
+            <p class="mt-1 text-[11px] text-gray-400">Sistem türü listesi Ayarlar &gt; Sistem Adları'ndan yönetilir.</p>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Görünen Ad (opsiyonel)</label>
+            <input v-model="addSystemForm.display_name" type="text" placeholder="Örn. Çatı Su Deposu" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+            <p class="mt-1 text-[11px] text-gray-400">Bu bileşeni tesisatınızda nasıl adlandırdığınız — sistem türü (yukarıdaki "Sistem") sabit kalır, sadece ekranlarda görünen ad değişir.</p>
           </div>
           <div>
             <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kod (opsiyonel)</label>

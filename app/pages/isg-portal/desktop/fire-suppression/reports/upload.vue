@@ -111,6 +111,8 @@ const resetWizard = () => {
   ambiguousMatches.value = []
   ambiguousResolutions.value = {}
   newEquipmentApprovals.value = {}
+  detectedNewCategories.value = []
+  newCategoryApprovals.value = {}
   equipmentDraftItems.value = []
   expandedEquipmentCodes.value = new Set()
   matchingView.value = 'results'
@@ -172,6 +174,28 @@ const toggleNewItemApproval = (equipmentIndex: number) => {
   newEquipmentApprovals.value = { ...newEquipmentApprovals.value, [equipmentIndex]: !isNewItemApproved(equipmentIndex) }
 }
 
+// --- "Ana başlık" (sistem/kategori) seviyesinde yeni sistem tespiti ---
+// Yukarıdaki newEquipmentApprovals TEK TEK ekipmanlar (YD14, Pompa 1 gibi)
+// içindir — Su Deposu, Sabit Boru gibi "whole_unit" kategoriler çoğu
+// raporda kendi kod/marka sütunlu bir ekipman TABLOSU olarak hiç geçmez
+// (bkz. backend AI prompt notu: equipment kaydı sadece gerçek bir ekipman
+// tablosundan türetilir), bu yüzden bu kategoriler AI'ın equipment[]
+// çıkarımına hiç girmeyebilir ve yukarıdaki mekanizmadan tamamen kaçabilir.
+// Bunun yerine draft.covered_categories'i (raporun AI tarafından genel
+// olarak, format bağımsız çıkarılan "bu rapor hangi sistemleri kapsıyor"
+// listesi — tek tek ekipman tablosu ARANMAZ) bu şubenin ZATEN KAYITLI
+// kategorileriyle karşılaştırıp raporda geçip envanterde olmayan HER
+// kategori için ayrı, açık bir "envantere eklensin mi?" onayı isteriz.
+// Varsayılan onaylı (bkz. section 12/26 kararı — "varsayılan işaretli,
+// kullanıcı isterse kaldırır"), backend bu liste olmadan (bkz.
+// approved_new_categories) hiçbir whole_unit kaydı otomatik açmaz.
+const detectedNewCategories = ref<FireSuppressionCategory[]>([])
+const newCategoryApprovals = ref<Record<string, boolean>>({})
+const isNewCategoryApproved = (category: FireSuppressionCategory): boolean => newCategoryApprovals.value[category] ?? true
+const toggleNewCategoryApproval = (category: FireSuppressionCategory) => {
+  newCategoryApprovals.value = { ...newCategoryApprovals.value, [category]: !isNewCategoryApproved(category) }
+}
+
 // AI'ın döndürdüğü ham equipment dizisi (control_items dahil) — "Onayla"
 // adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
 const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
@@ -216,6 +240,13 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     if (draft.overall_result) form.value.overall_result = draft.overall_result
     if (draft.company_name) form.value.inspection_company_name = draft.company_name
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
+
+    // Rapor genelinin kapsadığı sistemler ile bu şubede ZATEN KAYITLI
+    // kategoriler karşılaştırılır — sadece raporda geçip envanterde
+    // karşılığı olmayan kategoriler kullanıcıya "eklensin mi?" diye sorulur.
+    const registeredCategories = new Set(inventoryItems.value.map(i => i.category))
+    detectedNewCategories.value = (draft.covered_categories ?? []).filter(c => !registeredCategories.has(c))
+    newCategoryApprovals.value = Object.fromEntries(detectedNewCategories.value.map(c => [c, true]))
 
     equipmentDraftItems.value = draft.equipment ?? []
 
@@ -516,6 +547,7 @@ const submit = async () => {
         })),
       control_items: controlItemsForm.value,
       additional_files: additionalFiles.value,
+      approved_new_categories: detectedNewCategories.value.filter(c => isNewCategoryApproved(c)),
     })
     $toast.success('Rapor yüklendi.')
     savedReport.value = report
@@ -542,6 +574,9 @@ const doneStats = computed(() => {
     yeniHaricTutulan,
   }
 })
+
+const newCategoriesAdded = computed(() => detectedNewCategories.value.filter(c => isNewCategoryApproved(c)))
+const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(c => !isNewCategoryApproved(c)))
 </script>
 
 <template>
@@ -585,6 +620,29 @@ const doneStats = computed(() => {
 
               <!-- Adım 3: Eşleştirme -->
               <template v-else-if="wizardStage === 'matching'">
+                <!-- Raporun kapsadığı ama bu şubenin envanterinde HENÜZ kayıtlı
+                     olmayan ana sistemler/kategoriler — tek tek ekipmanlardan
+                     (aşağıdaki tablo) AYRI, çünkü Su Deposu/Sabit Boru gibi
+                     sistemler bir ekipman tablosu olarak hiç geçmeyebilir. -->
+                <div v-if="matchingView === 'results' && detectedNewCategories.length" class="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/20 dark:bg-amber-500/5">
+                  <p class="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Raporda Tespit Edilen Yeni Sistemler</p>
+                  <p class="mb-3 text-[11px] text-amber-700/80 dark:text-amber-400/70">Bu rapor aşağıdaki sistemleri kapsıyor ama bu şubenin tesisat envanterinde henüz kayıtlı değiller. Tesisat Durumu ekranında görünmeleri için envanterinize eklensin mi?</p>
+                  <div class="space-y-1.5">
+                    <label v-for="c in detectedNewCategories" :key="c" class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-white px-3 py-2 text-xs dark:border-amber-500/20 dark:bg-gray-900">
+                      <span class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</span>
+                      <span class="inline-flex cursor-pointer select-none items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          class="h-3.5 w-3.5 rounded border-gray-300 text-[#d71920] focus:ring-[#d71920]"
+                          :checked="isNewCategoryApproved(c)"
+                          @change="toggleNewCategoryApproval(c)"
+                        >
+                        Envantere ekle
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
                 <!-- Sonuç listesi -->
                 <IsgMatchResultsTable
                   v-if="matchingView === 'results'"
@@ -836,6 +894,12 @@ const doneStats = computed(() => {
                 </div>
                 <p v-if="doneStats.yeniHaricTutulan" class="mt-3 text-xs text-gray-400">
                   {{ doneStats.yeniHaricTutulan }} yeni ekipman onaylanmadığı için envantere eklenmedi, rapora da işlenmedi.
+                </p>
+                <p v-if="newCategoriesAdded.length" class="mt-1 text-xs text-gray-400">
+                  Yeni sistemler envanterinize eklendi: {{ newCategoriesAdded.map(c => FIRE_SUPPRESSION_CATEGORY_LABELS[c]).join(', ') }}.
+                </p>
+                <p v-if="newCategoriesExcluded.length" class="mt-1 text-xs text-gray-400">
+                  {{ newCategoriesExcluded.map(c => FIRE_SUPPRESSION_CATEGORY_LABELS[c]).join(', ') }} onaylanmadığı için envantere eklenmedi.
                 </p>
               </div>
             </div>

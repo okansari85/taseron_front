@@ -10,21 +10,23 @@ import {
   Gauge,
   Waves,
 } from '@lucide/vue'
-import { fireSuppressionSystemApi } from '~/api/fire-suppression-inventory'
+import { fireSuppressionInventoryApi, fireSuppressionSystemApi } from '~/api/fire-suppression-inventory'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
-  FIRE_SUPPRESSION_CATEGORY_LABELS,
   type FireSuppressionCategory,
 } from '~/types/fire-suppression-inventory'
 import type { FireSuppressionSystemComponentDetail } from '~/types/fire-suppression-report'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
+import { useFireSuppressionCategorySettings } from '~/composables/useFireSuppressionCategorySettings'
 
 definePageMeta({ layout: false })
 
 const route = useRoute()
 const context = useIsgDesktopContextStore()
 const { isExpanded } = useIsgSidebar()
+const categorySettings = useFireSuppressionCategorySettings()
+const { $toast } = useNuxtApp()
 
 const category = computed<FireSuppressionCategory>(() => {
   const raw = String(route.params.category)
@@ -63,6 +65,7 @@ onMounted(() => {
     return
   }
   load()
+  categorySettings.load()
 })
 
 watch([() => context.branchId, category], load)
@@ -81,7 +84,28 @@ const controlItemStatusMeta = (status: string) => status === 'uygun'
 const scopeLabel = (scope: string) => ({ all: 'Tüm Bileşenler', specific: 'Belirli Bileşen', area: 'Alan', unknown: 'Belirsiz' }[scope] ?? scope)
 
 const componentDisplayName = (item: { code?: string | null; display_name?: string | null }) =>
-  item.display_name || item.code || '—'
+  item.display_name || item.code || categorySettings.label(category.value)
+
+// --- Sil ---
+// Backend (FireSuppressionInventoryService::delete) bir bileşenin rapor
+// geçmişi varsa silinmesine izin vermez ("...pasife alabilirsiniz" hatası
+// döner) — burada özel bir kontrol yapmıyoruz, backend'in mesajını olduğu
+// gibi gösteriyoruz.
+const deletingId = ref<number | null>(null)
+const deleteComponent = async (item: { id: number }) => {
+  if (deletingId.value) return
+  if (!window.confirm('Bu bileşeni tesisat envanterinden kalıcı olarak silmek istediğinize emin misiniz?')) return
+  deletingId.value = item.id
+  try {
+    await fireSuppressionInventoryApi.remove(item.id)
+    $toast.success('Bileşen silindi.')
+    await load()
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'Bileşen silinemedi.')
+  } finally {
+    deletingId.value = null
+  }
+}
 
 // "Kontrol maddesi" ve "uygunsuzluk" sayıları, ham control_item SATIRLARI
 // değil, o kategorideki BENZERSİZ madde KODLARI üzerinden hesaplanır (aynı
@@ -105,11 +129,14 @@ const nonconformCount = computed(() => {
   return items.filter(ci => ci.status === 'uygun_degil').length
 })
 
-// Bazı ana bileşenler (Yangın Pompa Dairesi gibi) TEK bir kapsayıcı kayıt
-// (code=null) + onun altında ayrı kayıtlı ekipman (Pompa 1, Pompa 2...)
-// şeklinde tutuluyor — kapsayıcının kendisi bir "bileşen" olarak
-// listelenmez, sadece alt kayıtlar gösterilir.
-const visibleComponents = computed(() => (detail.value?.components ?? []).filter(c => !!c.code))
+// ÖNEMLİ: burada unit_scope'a göre filtreleme YAPMIYORUZ — bu sütun
+// sonradan eklendi (bkz. 2026_09_11_000001 migration) ve migration'dan ÖNCE
+// oluşturulmuş kodsuz (whole_unit — Su Deposu, Sabit Boru gibi) kayıtlar
+// veritabanında hâlâ eski varsayılan 'per_unit' değeriyle durabilir. O
+// yüzden kod'u olsun olmasın TÜM kayıtlı bileşenler burada listelenir —
+// aksi halde bu kategoriler "Bileşenler" sekmesinde hiç görünmez, dolayısıyla
+// silinemezdi (yaşanan asıl sorun buydu).
+const visibleComponents = computed(() => detail.value?.components ?? [])
 </script>
 
 <template>
@@ -134,7 +161,7 @@ const visibleComponents = computed(() => (detail.value?.components ?? []).filter
                 <component :is="CATEGORY_ICONS[category]" :size="22" />
               </span>
               <div>
-                <p class="text-lg font-bold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[category] }}</p>
+                <p class="text-lg font-bold text-[#172033] dark:text-white">{{ categorySettings.label(category) }}</p>
                 <p class="text-xs text-gray-400">{{ visibleComponents.length }} bileşen kayıtlı<span v-if="detail.report"> · Son rapor: {{ formatDate(detail.report.report_date) }}{{ detail.report.report_no ? ` (${detail.report.report_no})` : '' }}</span></p>
               </div>
             </section>
@@ -155,6 +182,7 @@ const visibleComponents = computed(() => (detail.value?.components ?? []).filter
                     <th class="px-4 py-2.5">Konum</th>
                     <th class="px-4 py-2.5">Son Kontrol</th>
                     <th class="px-4 py-2.5">Durum</th>
+                    <th class="px-4 py-2.5" />
                   </tr>
                 </thead>
                 <tbody>
@@ -164,6 +192,16 @@ const visibleComponents = computed(() => (detail.value?.components ?? []).filter
                     <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ formatDate(item.last_control_date) }}</td>
                     <td class="px-4 py-2.5">
                       <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="item.is_active ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-gray-100 text-gray-500 dark:bg-white/5'">{{ item.is_active ? 'Aktif' : 'Pasif' }}</span>
+                    </td>
+                    <td class="px-4 py-2.5 text-right">
+                      <button
+                        type="button"
+                        class="rounded-lg border border-[#dfe3e8] px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:border-[#d71920]/40 hover:text-[#d71920] disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                        :disabled="deletingId === item.id"
+                        @click="deleteComponent(item)"
+                      >
+                        {{ deletingId === item.id ? 'Siliniyor...' : 'Sil' }}
+                      </button>
                     </td>
                   </tr>
                 </tbody>

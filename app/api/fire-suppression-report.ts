@@ -47,6 +47,7 @@ export const fireSuppressionReportApi = {
     form.append('file', payload.file)
     payload.covered_categories?.forEach((c, i) => form.append(`covered_categories[${i}]`, c))
     payload.covered_inventory_item_ids?.forEach((id, i) => form.append(`covered_inventory_item_ids[${i}]`, String(id)))
+    payload.approved_new_categories?.forEach((c, i) => form.append(`approved_new_categories[${i}]`, c))
     if (payload.findings?.length) form.append('findings', JSON.stringify(payload.findings))
     if (payload.control_items?.length) form.append('control_items', JSON.stringify(payload.control_items))
     payload.additional_files?.forEach((entry, i) => {
