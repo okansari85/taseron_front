@@ -6,6 +6,7 @@ import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 definePageMeta({ layout: false })
 
 const context = useIsgDesktopContextStore()
+const auth = useAuth()
 
 const branches = ref<LocationBusinessEntity[]>([])
 const loading = ref(true)
@@ -56,7 +57,7 @@ const continueNext = async () => {
       code: b.pivot?.code,
       logo: branchBrand(b)?.logo_url,
       isActive: b.pivot?.is_active,
-    })
+    }, auth.user.value?.tenant_id)
     await navigateTo('/isg-portal/desktop')
   } finally {
     continuing.value = false

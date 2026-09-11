@@ -52,7 +52,7 @@ const continueNext = async () => {
       district: location.district?.name,
       image: resolveImageUrl(location.image),
       branchCount: location.branch_count ?? 0,
-    })
+    }, auth.user.value?.tenant_id)
 
     if (context.isStandaloneLocation) {
       const entities = await locationApi.businessEntities(location.id)
@@ -67,7 +67,7 @@ const continueNext = async () => {
         code: only.pivot?.code,
         logo: only.pivot?.brands?.[0]?.logo_url,
         isActive: only.pivot?.is_active,
-      })
+      }, auth.user.value?.tenant_id)
       await navigateTo('/isg-portal/desktop')
       return
     }
