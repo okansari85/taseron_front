@@ -159,7 +159,22 @@ export type FireSuppressionEquipmentMatch = {
   candidate_ids: number[]
 }
 
-// AI (NVIDIA NIM) ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi,
+export type FireSuppressionReportAnalysisSystem = {
+  name: string | null
+  category: FireSuppressionCategory
+  control_count: number
+  nonconforming_count: number
+  components: Array<{
+    code: string | null
+    name: string | null
+    location: string | null
+    brand: string | null
+    model: string | null
+    serial_no: string | null
+  }>
+}
+
+// AI ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi,
 // kullanıcı gözden geçirip düzenledikten sonra normal create() akışına gider.
 export type FireSuppressionReportAnalysisDraft = {
   control_date?: string | null
@@ -167,6 +182,7 @@ export type FireSuppressionReportAnalysisDraft = {
   overall_result?: FireSuppressionComplianceStatus | null
   company_name?: string | null
   covered_categories?: FireSuppressionCategory[]
+  systems?: FireSuppressionReportAnalysisSystem[]
   equipment?: {
     code?: string | null
     category?: FireSuppressionCategory | null
