@@ -19,7 +19,9 @@ export type FireSuppressionAnalysisProgress = {
   started_at?: string
   finished_at?: string | null
   error?: string
-  result?: FireSuppressionReportAnalysisDraft
+  result?: FireSuppressionReportAnalysisDraft & {
+    _debug_ai_raw?: unknown
+  }
   events: Array<{
     stage: string
     label: string
@@ -28,6 +30,7 @@ export type FireSuppressionAnalysisProgress = {
     [key: string]: unknown
   }>
 }
+
 type ProgressResponse = { data: FireSuppressionAnalysisProgress }
 
 // UI debug/telemetry için son analiz kimliği. Mevcut sayfa akışını değiştirmez.
@@ -76,9 +79,16 @@ export const fireSuppressionReportApi = {
   },
   analysisProgress: async (analysisId: string) => {
     const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
+
     if (response.data.status === 'completed' && response.data.result) {
       latestFireSuppressionAnalysisResult.value = response.data.result
+
+      // GEÇİCİ DEBUG: normalize edilmeden önce Gemini'den gelen ham JSON.
+      // UI/wizard state'ine dokunmadan sadece browser console'a basılır.
+      console.log('🔥 GEMINI RAW AI JSON:', response.data.result._debug_ai_raw)
+      console.log('🔥 NORMALIZED RESULT:', response.data.result)
     }
+
     return response
   },
   controlItemTemplates: (categories?: FireSuppressionCategory[]) => {
