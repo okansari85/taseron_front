@@ -32,6 +32,9 @@ type ProgressResponse = { data: FireSuppressionAnalysisProgress }
 
 // UI debug/telemetry için son analiz kimliği. Mevcut sayfa akışını değiştirmez.
 export const activeFireSuppressionAnalysisId = ref<string | null>(null)
+// Eşleştirme ekranındaki tesisat özeti için son tamamlanan analiz sonucu.
+// Sayfa akışını değiştirmez; analiz başlarken temizlenir.
+export const latestFireSuppressionAnalysisResult = ref<FireSuppressionReportAnalysisDraft | null>(null)
 
 export const fireSuppressionReportApi = {
   list: (locationBusinessEntityId: number) => apiClient<ListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports`),
@@ -63,6 +66,7 @@ export const fireSuppressionReportApi = {
     form.append('file', file)
     const analysisId = crypto.randomUUID()
     activeFireSuppressionAnalysisId.value = analysisId
+    latestFireSuppressionAnalysisResult.value = null
     // Bu istek artık sadece dosyayı saklayıp işi kuyruğa atıyor (202
     // Accepted) — NVIDIA çağrısı beklenmiyor, o yüzden sınırsız timeout'a
     // gerek yok, tıpkı create() gibi kısa bir süre yeterli.
@@ -70,7 +74,13 @@ export const fireSuppressionReportApi = {
       method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId },
     })
   },
-  analysisProgress: (analysisId: string) => apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 }),
+  analysisProgress: async (analysisId: string) => {
+    const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
+    if (response.data.status === 'completed' && response.data.result) {
+      latestFireSuppressionAnalysisResult.value = response.data.result
+    }
+    return response
+  },
   controlItemTemplates: (categories?: FireSuppressionCategory[]) => {
     const query = categories?.length ? `?${categories.map((c, i) => `categories[${i}]=${encodeURIComponent(c)}`).join('&')}` : ''
     return apiClient<ControlItemTemplatesResponse>(`/api/fire-suppression-control-item-templates${query}`)
