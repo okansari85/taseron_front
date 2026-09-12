@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, ChevronDown, Search, XCircle } from '@lucide/vue'
+import { CheckCircle2, ChevronDown, Search } from '@lucide/vue'
 import { FIRE_SUPPRESSION_CATEGORY_LABELS } from '~/types/fire-suppression-inventory'
 import { latestFireSuppressionAnalysisResult } from '~/api/fire-suppression-report'
 
@@ -89,7 +89,7 @@ const rowStatusMeta = (row: MatchRow) => {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="fire-suppression-match-results space-y-5">
     <!-- SİSTEMLER -->
     <section v-if="systemRows.length" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
@@ -200,3 +200,11 @@ const rowStatusMeta = (row: MatchRow) => {
     </div>
   </div>
 </template>
+
+<style>
+@media (min-width: 1024px) {
+  main:has(.fire-suppression-match-results) > .mx-auto.max-w-3xl {
+    max-width: 1100px;
+  }
+}
+</style>
