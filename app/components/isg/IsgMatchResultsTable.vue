@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // Rapor yükleme sihirbazının 3. adımı (sonuç listesi görünümü) — Matching
 // Engine'in her ekipman satırı için döndürdüğü durumu (kesin/belirsiz/yeni)
-// özetler. Domain'den bağımsız: satır şekli (MatchRow) hem Yangın Söndürme
-// Sistemleri hem YSC için aynı — üst bileşen kendi draft yanıtından bu şekle
-// çevirir. "İncele" sadece belirsiz satırlar için tıklanabilir, üst bileşen
-// tekil inceleme ekranını (AmbiguousMatchCard) açar.
+// özetler. Üst bölümde yalnızca yangın tesisatı analizinden gelen sistem
+// özeti gösterilir; eşleştirme satırları mevcut akışıyla aynı kalır.
+import { FIRE_SUPPRESSION_CATEGORY_LABELS } from '~/types/fire-suppression-inventory'
+import { latestFireSuppressionAnalysisResult } from '~/api/fire-suppression-report'
+
 export type MatchBucket = 'kesin' | 'belirsiz' | 'yeni'
 export type MatchRow = {
   equipmentIndex: number
@@ -30,6 +31,12 @@ const emit = defineEmits<{ inspect: [number]; 'toggle-new': [number] }>()
 
 const filter = ref<'all' | MatchBucket>(props.rows.some(r => r.bucket === 'belirsiz') ? 'belirsiz' : 'all')
 const search = ref('')
+const route = useRoute()
+
+const reportSystems = computed(() => {
+  if (!route.path.includes('/fire-suppression/')) return []
+  return latestFireSuppressionAnalysisResult.value?.systems ?? []
+})
 
 const counts = computed(() => ({
   all: props.rows.length,
@@ -63,6 +70,32 @@ const rowStatusMeta = (row: MatchRow) => {
 
 <template>
   <div>
+    <div v-if="reportSystems.length" class="mb-5 rounded-xl border border-[#e7e9ed] bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-semibold text-[#172033] dark:text-white">Tesisat Sistemleri</h3>
+          <p class="mt-0.5 text-xs text-gray-400">Raporda tespit edilen sistemler ve fiziksel bileşenler</p>
+        </div>
+        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:bg-white/5 dark:text-gray-400">{{ reportSystems.length }} sistem</span>
+      </div>
+
+      <div class="grid gap-2 md:grid-cols-2">
+        <div v-for="system in reportSystems" :key="`${system.category}-${system.name}`" class="rounded-lg border border-[#eef0f2] px-3 py-2.5 dark:border-gray-800">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-[#172033] dark:text-white">{{ system.name || 'İsimsiz Sistem' }}</p>
+              <p class="mt-0.5 text-xs text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category }}</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-white/5 dark:text-gray-400">{{ system.components.length }} bileşen</span>
+          </div>
+          <div v-if="system.category !== 'yangin_dolabi'" class="mt-2 flex gap-3 text-[11px] text-gray-400">
+            <span>Kontrol: {{ system.control_count }}</span>
+            <span>Uygunsuz: {{ system.nonconforming_count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
       <button type="button" class="rounded-xl border p-3 text-left transition" :class="filter === 'all' ? 'border-[#d71920] bg-red-50/40 dark:bg-red-500/5' : 'border-[#e7e9ed] dark:border-gray-800'" @click="filter = 'all'">
         <p class="text-2xl font-bold text-[#172033] dark:text-white">{{ counts.all }}</p>
