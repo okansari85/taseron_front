@@ -6,22 +6,44 @@ import { latestFireSuppressionAnalysisResult } from '~/api/fire-suppression-repo
 export type MatchBucket = 'kesin' | 'belirsiz' | 'yeni'
 export type MatchRow = { equipmentIndex: number; code: string | null; categoryLabel: string | null; locationNote: string | null; bucket: MatchBucket }
 
-const props = defineProps<{
-  rows: MatchRow[]
-  resolutionLabel?: (equipmentIndex: number) => string | null
-  newItemApproved?: (equipmentIndex: number) => boolean
-}>()
-
+const props = defineProps<{ rows: MatchRow[]; resolutionLabel?: (equipmentIndex: number) => string | null; newItemApproved?: (equipmentIndex: number) => boolean }>()
 const emit = defineEmits<{ inspect: [number]; 'toggle-new': [number] }>()
 const filter = ref<'all' | MatchBucket>(props.rows.some(r => r.bucket === 'belirsiz') ? 'belirsiz' : 'all')
 const search = ref('')
 const selectedSystems = ref<Set<string>>(new Set())
 const expandedSystems = ref<Set<string>>(new Set())
-const reportSystems = computed(() => latestFireSuppressionAnalysisResult.value?.systems ?? [])
+
+// AI çıktısındaki systems alanı eksik olsa bile covered_categories ve findings
+// üzerinden fiziksel sistem kategorilerini tamamlarız. Belge/proje/kayıt gibi
+// findings kategori taşımıyorsa sisteme dönüştürülmez.
+const reportSystems = computed(() => {
+  const draft = latestFireSuppressionAnalysisResult.value
+  if (!draft) return []
+  const systems = [...(draft.systems ?? [])]
+  const existingCategories = new Set(systems.map(s => s.category))
+  const categories = [
+    ...(draft.covered_categories ?? []),
+    ...(draft.findings ?? []).map(f => f.category).filter((c): c is NonNullable<typeof c> => !!c),
+    ...(draft.equipment ?? []).map(e => e.category).filter((c): c is NonNullable<typeof c> => !!c),
+  ]
+  for (const category of [...new Set(categories)]) {
+    if (existingCategories.has(category)) continue
+    const components = (draft.equipment ?? []).filter(e => e.category === category)
+    systems.push({
+      name: null,
+      category,
+      control_count: components.reduce((n, e) => n + (e.control_items?.length ?? 0), 0),
+      nonconforming_count: components.filter(e => e.result === 'uygun_degil' || e.control_items?.some(c => c.status === 'uygun_degil')).length,
+      components: components.map(e => ({ code: e.code ?? null, name: null, location: e.location_note ?? null, brand: e.brand ?? null, model: e.model ?? null, serial_no: e.serial_no ?? null })),
+    })
+    existingCategories.add(category)
+  }
+  return systems
+})
 
 const systemRows = computed(() => reportSystems.value.map((system, index) => ({
-  key: `${system.category}-${system.name}-${index}`,
-  name: system.name || 'İsimsiz Sistem',
+  key: `${system.category}-${system.name ?? 'kategori'}-${index}`,
+  name: system.name || FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category,
   category: system.category,
   categoryLabel: FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category,
   componentCount: system.components?.length ?? 0,
@@ -35,7 +57,7 @@ const toggleSystem = (key: string) => { const next = new Set(selectedSystems.val
 const toggleAllSystems = () => { selectedSystems.value = allSystemsSelected.value ? new Set() : new Set(systemRows.value.map(s => s.key)) }
 const toggleSystemExpanded = (key: string) => { const next = new Set(expandedSystems.value); if (next.has(key)) next.delete(key); else next.add(key); expandedSystems.value = next }
 const counts = computed(() => ({ all: props.rows.length, kesin: props.rows.filter(r => r.bucket === 'kesin').length, belirsiz: props.rows.filter(r => r.bucket === 'belirsiz').length, yeni: props.rows.filter(r => r.bucket === 'yeni').length }))
-const filteredRows = computed(() => props.rows.filter((r) => { if (filter.value !== 'all' && r.bucket !== filter.value) return false; const q = search.value.trim().toLocaleLowerCase('tr-TR'); return !q || `${r.code ?? ''} ${r.locationNote ?? ''} ${r.categoryLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(q) }))
+const filteredRows = computed(() => props.rows.filter(r => { if (filter.value !== 'all' && r.bucket !== filter.value) return false; const q = search.value.trim().toLocaleLowerCase('tr-TR'); return !q || `${r.code ?? ''} ${r.locationNote ?? ''} ${r.categoryLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(q) }))
 const rowStatusMeta = (row: MatchRow) => {
   if (row.bucket === 'kesin') return { label: 'Eşleşti', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' }
   if (row.bucket === 'yeni') { const approved = props.newItemApproved?.(row.equipmentIndex) ?? true; return approved ? { label: 'Yeni', cls: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' } : { label: 'Hariç', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' } }
@@ -49,88 +71,16 @@ const isCabinet = (system: { categoryLabel: string }) => system.categoryLabel.to
 <template>
   <div class="space-y-5">
     <section v-if="systemRows.length" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-      <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Sistemler</h3>
-              <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-400">{{ systemRows.length }}</span>
-            </div>
-            <p class="mt-1 text-xs text-gray-500">Rapor sistemlerini uygun sistem kategorisiyle eşleştirin.</p>
-          </div>
-          <button type="button" class="text-xs font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" @click="toggleAllSystems">{{ allSystemsSelected ? 'Seçimleri kaldır' : 'Tümünü seç' }}</button>
-        </div>
-      </div>
-
-      <div v-if="selectedSystemCount" class="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3 dark:border-gray-800 dark:bg-white/[0.02]">
-        <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ selectedSystemCount }} sistem seçildi</span>
-        <button type="button" class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white">Seçilenleri onayla</button>
-      </div>
-
+      <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800"><div class="flex flex-wrap items-center justify-between gap-3"><div><div class="flex items-center gap-2"><h3 class="text-base font-semibold text-gray-900 dark:text-white">Sistemler</h3><span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-400">{{ systemRows.length }}</span></div><p class="mt-1 text-xs text-gray-500">Rapor adı → sistem kategorisi eşleştirmesini kontrol edin.</p></div><button type="button" class="text-xs font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" @click="toggleAllSystems">{{ allSystemsSelected ? 'Seçimleri kaldır' : 'Tümünü seç' }}</button></div></div>
+      <div v-if="selectedSystemCount" class="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3 dark:border-gray-800 dark:bg-white/[0.02]"><span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ selectedSystemCount }} sistem seçildi</span><button type="button" class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white">Seçilenleri onayla</button></div>
       <div class="divide-y divide-gray-100 dark:divide-gray-800">
-        <div v-for="system in systemRows" :key="system.key" class="px-5 py-3.5">
-          <div class="flex items-center gap-3">
-            <input :checked="selectedSystems.has(system.key)" type="checkbox" class="h-4 w-4 shrink-0 rounded border-gray-300" @change="toggleSystem(system.key)">
-
-            <div class="min-w-0 flex-1">
-              <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                <span class="truncate font-semibold text-gray-900 dark:text-white">{{ system.name }}</span>
-                <span class="shrink-0 text-gray-300 dark:text-gray-600">→</span>
-                <span class="truncate font-medium text-gray-700 dark:text-gray-300">{{ system.categoryLabel }}</span>
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
-                <span>Rapor adı</span>
-                <span>·</span>
-                <span>Sistem kategorisi</span>
-              </div>
-            </div>
-
-            <button type="button" class="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:hover:bg-white/[0.03]" @click="toggleSystemExpanded(system.key)">
-              <ChevronDown :size="14" :class="expandedSystems.has(system.key) ? 'rotate-180' : ''" class="transition-transform" />
-              {{ expandedSystems.has(system.key) ? 'Gizle' : 'Detay' }}
-            </button>
-          </div>
-
-          <div v-if="expandedSystems.has(system.key)" class="mt-3 ml-7 grid gap-2 sm:grid-cols-3">
-            <div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-              <p class="text-[11px] text-gray-400">{{ isCabinet(system) ? 'Ekipman sayısı' : 'Bileşen sayısı' }}</p>
-              <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.componentCount }}</p>
-            </div>
-            <div v-if="isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-              <p class="text-[11px] text-gray-400">Uygun olmayan ekipman</p>
-              <p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p>
-            </div>
-            <div v-else class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-              <p class="text-[11px] text-gray-400">Kontrol</p>
-              <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.controlCount }}</p>
-            </div>
-            <div v-if="!isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-              <p class="text-[11px] text-gray-400">Uygunsuzluk</p>
-              <p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p>
-            </div>
-          </div>
+        <div v-for="system in systemRows" :key="system.key" class="px-5 py-3.5"><div class="flex items-center gap-3"><input :checked="selectedSystems.has(system.key)" type="checkbox" class="h-4 w-4 shrink-0 rounded border-gray-300" @change="toggleSystem(system.key)"><div class="min-w-0 flex-1"><div class="flex min-w-0 flex-wrap items-center gap-x-2 text-sm"><span class="text-[11px] font-medium text-gray-400">Rapor adı:</span><span class="truncate font-semibold text-gray-900 dark:text-white">{{ system.name }}</span><span class="shrink-0 text-gray-300 dark:text-gray-600">→</span><span class="text-[11px] font-medium text-gray-400">Sistem kategorisi:</span><span class="truncate font-medium text-gray-700 dark:text-gray-300">{{ system.categoryLabel }}</span></div></div><button type="button" class="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:hover:bg-white/[0.03]" @click="toggleSystemExpanded(system.key"><ChevronDown :size="14" :class="expandedSystems.has(system.key) ? 'rotate-180' : ''" class="transition-transform" />{{ expandedSystems.has(system.key) ? 'Gizle' : 'Detay' }}</button></div>
+          <div v-if="expandedSystems.has(system.key)" class="mt-3 ml-7 grid gap-2 sm:grid-cols-3"><div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">{{ isCabinet(system) ? 'Ekipman sayısı' : 'Bileşen sayısı' }}</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.componentCount }}</p></div><div v-if="isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygun olmayan ekipman</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div><div v-else class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Kontrol</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.controlCount }}</p></div><div v-if="!isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygunsuzluk</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div></div>
         </div>
       </div>
     </section>
 
-    <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div><h3 class="text-base font-semibold text-gray-900 dark:text-white">Bileşenler</h3><p class="mt-1 text-xs text-gray-500">Sadece karar gerektiren kayıtları inceleyin.</p></div>
-        <div class="relative w-full sm:w-64"><Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" type="text" placeholder="Bileşen ara..." class="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-gray-400 dark:border-gray-700 dark:bg-gray-800"></div>
-      </div>
-      <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <button v-for="item in [{ key: 'all', label: 'Tümü', value: counts.all }, { key: 'kesin', label: 'Kesin', value: counts.kesin }, { key: 'belirsiz', label: 'İnceleme', value: counts.belirsiz }, { key: 'yeni', label: 'Yeni', value: counts.yeni }]" :key="item.key" type="button" class="rounded-xl border px-3 py-2 text-left" :class="filter === item.key ? 'border-gray-900 bg-gray-50' : 'border-gray-200'" @click="filter = item.key as typeof filter"><p class="text-lg font-bold text-gray-900">{{ item.value }}</p><p class="text-[11px] text-gray-500">{{ item.label }}</p></button>
-      </div>
-      <div class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
-        <div v-for="row in filteredRows" :key="row.equipmentIndex" class="flex flex-wrap items-center gap-3 px-4 py-3">
-          <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-gray-900">{{ row.code || 'Kod belirtilmemiş' }}</p><p class="mt-0.5 text-xs text-gray-500">{{ row.categoryLabel || '—' }} · {{ row.locationNote || 'Konum belirtilmemiş' }}</p></div>
-          <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span>
-          <button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700" @click="emit('inspect', row.equipmentIndex)">İncele</button>
-          <label v-else-if="row.bucket === 'yeni' && newItemApproved" class="inline-flex items-center gap-1.5 text-xs text-gray-600"><input type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" :checked="newItemApproved(row.equipmentIndex)" @change="emit('toggle-new', row.equipmentIndex)"> Ekle</label>
-        </div>
-        <div v-if="!filteredRows.length" class="py-10 text-center text-xs text-gray-400">Gösterilecek bileşen yok.</div>
-      </div>
-    </section>
+    <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"><div class="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 class="text-base font-semibold text-gray-900 dark:text-white">Bileşenler</h3><p class="mt-1 text-xs text-gray-500">Sadece karar gerektiren kayıtları inceleyin.</p></div><div class="relative w-full sm:w-64"><Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input v-model="search" type="text" placeholder="Bileşen ara..." class="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-gray-400 dark:border-gray-700 dark:bg-gray-800"></div></div><div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><button v-for="item in [{ key: 'all', label: 'Tümü', value: counts.all }, { key: 'kesin', label: 'Kesin', value: counts.kesin }, { key: 'belirsiz', label: 'İnceleme', value: counts.belirsiz }, { key: 'yeni', label: 'Yeni', value: counts.yeni }]" :key="item.key" type="button" class="rounded-xl border px-3 py-2 text-left" :class="filter === item.key ? 'border-gray-900 bg-gray-50' : 'border-gray-200'" @click="filter = item.key as typeof filter"><p class="text-lg font-bold text-gray-900">{{ item.value }}</p><p class="text-[11px] text-gray-500">{{ item.label }}</p></button></div><div class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100"><div v-for="row in filteredRows" :key="row.equipmentIndex" class="flex flex-wrap items-center gap-3 px-4 py-3"><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-gray-900">{{ row.code || 'Kod belirtilmemiş' }}</p><p class="mt-0.5 text-xs text-gray-500">{{ row.categoryLabel || '—' }} · {{ row.locationNote || 'Konum belirtilmemiş' }}</p></div><span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="rowStatusMeta(row).cls">{{ rowStatusMeta(row).label }}</span><button v-if="row.bucket === 'belirsiz'" type="button" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700" @click="emit('inspect', row.equipmentIndex)">İncele</button><label v-else-if="row.bucket === 'yeni' && newItemApproved" class="inline-flex items-center gap-1.5 text-xs text-gray-600"><input type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" :checked="newItemApproved(row.equipmentIndex)" @change="emit('toggle-new', row.equipmentIndex)"> Ekle</label></div><div v-if="!filteredRows.length" class="py-10 text-center text-xs text-gray-400">Gösterilecek bileşen yok.</div></div></section>
 
     <div class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3"><CheckCircle2 :size="17" class="mt-0.5 shrink-0 text-blue-600" /><div><p class="text-xs font-semibold text-blue-900">Rapor adı korunur</p><p class="mt-0.5 text-xs text-blue-700/80">Rapor adı değiştirilmez. Sistem kategorisi yalnızca eşleştirme için kullanılır.</p></div></div>
   </div>
