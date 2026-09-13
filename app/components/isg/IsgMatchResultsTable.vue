@@ -28,15 +28,29 @@ const reportSystems = computed(() => {
     systems.push({
       name: null,
       category,
-      control_count: components.reduce((n, e) => n + (e.control_items?.length ?? 0), 0),
-      nonconforming_count: components.filter(e => e.result === 'uygun_degil' || e.control_items?.some(c => c.status === 'uygun_degil')).length,
+      control_count: [...new Set(components.flatMap(e => e.control_items ?? []).map(c => c.code).filter(Boolean))].length,
+      nonconforming_count: [...new Set(components.flatMap(e => e.nonconforming_controls ?? []).map(c => c.code).filter(Boolean))].length,
+      nonconforming_equipment_count: components.filter(e => e.status === 'uygun_degil').length,
+      equipment_count: components.length,
+      equipment_count_known: components.length > 0,
       components: components.map(e => ({ code: e.code ?? null, name: null, location: e.location_note ?? null, brand: e.brand ?? null, model: e.model ?? null, serial_no: e.serial_no ?? null })),
     })
     existingCategories.add(category)
   }
   return systems
 })
-const systemRows = computed(() => reportSystems.value.map((system, index) => ({ key: `${system.category}-${system.name ?? 'kategori'}-${index}`, name: system.name || FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category, category: system.category, categoryLabel: FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category, componentCount: system.components?.length ?? 0, controlCount: system.control_count ?? 0, nonconformingCount: system.nonconforming_count ?? 0 })))
+
+const systemRows = computed(() => reportSystems.value.map((system, index) => ({
+  key: `${system.category}-${system.name ?? 'kategori'}-${index}`,
+  name: system.name || FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category,
+  category: system.category,
+  categoryLabel: FIRE_SUPPRESSION_CATEGORY_LABELS[system.category] || system.category,
+  componentCount: system.equipment_count_known === false ? null : (system.equipment_count ?? system.components?.length ?? 0),
+  controlCount: system.control_count ?? 0,
+  nonconformingCount: system.nonconforming_equipment_count ?? system.nonconforming_count ?? 0,
+  status: system.status ?? 'belirtilmemis',
+})))
+
 const allSystemsSelected = computed(() => systemRows.value.length > 0 && systemRows.value.every(s => selectedSystems.value.has(s.key)))
 const selectedSystemCount = computed(() => selectedSystems.value.size)
 const toggleSystem = (key: string) => { const next = new Set(selectedSystems.value); if (next.has(key)) next.delete(key); else next.add(key); selectedSystems.value = next }
@@ -44,7 +58,7 @@ const toggleAllSystems = () => { selectedSystems.value = allSystemsSelected.valu
 const toggleSystemExpanded = (key: string) => { const next = new Set(expandedSystems.value); if (next.has(key)) next.delete(key); else next.add(key); expandedSystems.value = next }
 const counts = computed(() => ({ all: props.rows.length, kesin: props.rows.filter(r => r.bucket === 'kesin').length, belirsiz: props.rows.filter(r => r.bucket === 'belirsiz').length, yeni: props.rows.filter(r => r.bucket === 'yeni').length }))
 const filteredRows = computed(() => props.rows.filter(r => { if (filter.value !== 'all' && r.bucket !== filter.value) return false; const q = search.value.trim().toLocaleLowerCase('tr-TR'); return !q || `${r.code ?? ''} ${r.locationNote ?? ''} ${r.categoryLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(q) }))
-const rowStatusMeta = (row: MatchRow) => { if (row.bucket === 'kesin') return { label: 'Eşleşti', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' }; if (row.bucket === 'yeni') { const approved = props.newItemApproved?.(row.equipmentIndex) ?? true; return approved ? { label: 'Yeni', cls: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' } : { label: 'Hariç', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' } }; const resolved = props.resolutionLabel?.(row.equipmentIndex); if (resolved) return { label: resolved, cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' }; return { label: 'İncele', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' } }
+const rowStatusMeta = (row: MatchRow) => { if (row.bucket === 'kesin') return { label: 'Eşleşti', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' }; if (row.bucket === 'yeni') { const approved = props.newItemApproved?.(row.equipmentIndex) ?? true; return approved ? { label: 'Yeni', cls: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' } : { label: 'Hariç', cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400' }; } const resolved = props.resolutionLabel?.(row.equipmentIndex); if (resolved) return { label: resolved, cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' }; return { label: 'İncele', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' } }
 const isCabinet = (system: { categoryLabel: string }) => system.categoryLabel.toLocaleLowerCase('tr-TR').includes('yangın dolab')
 </script>
 
@@ -55,7 +69,7 @@ const isCabinet = (system: { categoryLabel: string }) => system.categoryLabel.to
       <div v-if="selectedSystemCount" class="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3 dark:border-gray-800 dark:bg-white/[0.02]"><span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ selectedSystemCount }} sistem seçildi</span><button type="button" class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white">Seçilenleri onayla</button></div>
       <div class="divide-y divide-gray-100 dark:divide-gray-800">
         <div v-for="system in systemRows" :key="system.key" class="px-5 py-3.5"><div class="flex items-center gap-3"><input :checked="selectedSystems.has(system.key)" type="checkbox" class="h-4 w-4 shrink-0 rounded border-gray-300" @change="toggleSystem(system.key)"><div class="min-w-0 flex-1"><div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm"><span class="text-[11px] font-medium text-gray-400">Rapor adı:</span><span class="truncate font-semibold text-gray-900 dark:text-white">{{ system.name }}</span><span class="shrink-0 text-gray-300 dark:text-gray-600">→</span><span class="text-[11px] font-medium text-gray-400">Sistem kategorisi:</span><span class="truncate font-medium text-gray-700 dark:text-gray-300">{{ system.categoryLabel }}</span></div></div><button type="button" class="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:hover:bg-white/[0.03]" @click="toggleSystemExpanded(system.key)"><ChevronDown :size="14" :class="expandedSystems.has(system.key) ? 'rotate-180' : ''" class="transition-transform" />{{ expandedSystems.has(system.key) ? 'Gizle' : 'Detay' }}</button></div>
-          <div v-if="expandedSystems.has(system.key)" class="mt-3 ml-7 grid gap-2 sm:grid-cols-3"><div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">{{ isCabinet(system) ? 'Ekipman sayısı' : 'Bileşen sayısı' }}</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.componentCount }}</p></div><div v-if="isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygun olmayan ekipman</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div><div v-else class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Kontrol</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.controlCount }}</p></div><div v-if="!isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygunsuzluk</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div></div>
+          <div v-if="expandedSystems.has(system.key)" class="mt-3 ml-7 grid gap-2 sm:grid-cols-3"><div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">{{ isCabinet(system) ? 'Ekipman sayısı' : 'Bileşen sayısı' }}</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.componentCount ?? 'Belirtilmemiş' }}</p></div><div v-if="isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygun olmayan ekipman</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div><div v-else class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Kontrol</p><p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ system.controlCount }}</p></div><div v-if="!isCabinet(system)" class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"><p class="text-[11px] text-gray-400">Uygunsuzluk</p><p class="mt-0.5 text-sm font-semibold" :class="system.nonconformingCount ? 'text-red-600' : 'text-gray-800 dark:text-gray-200'">{{ system.nonconformingCount }}</p></div></div>
         </div>
       </div>
     </section>
