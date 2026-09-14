@@ -39,7 +39,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ChevronDown, FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
+import { ChevronDown, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -69,6 +69,9 @@ const desktopSections = [
       { title: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports' },
     ] },
     { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection', icon: Radio },
+  ] },
+  { title: 'Test', items: [
+    { title: 'Gemini / V12 Test', path: '/isg-portal/desktop/fire-suppression/reports/gemini-test', icon: FlaskConical },
   ] },
   { title: '', items: [
     { title: 'Ayarlar', path: '/isg-portal/desktop/settings', icon: Settings },
