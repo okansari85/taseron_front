@@ -74,6 +74,10 @@ export const fireSuppressionReportApi = {
     const form = new FormData(); form.append('gemini_fixture_list', '1')
     return apiClient<GeminiFixtureListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 30000 })
   },
+  getGeminiFixture: (locationBusinessEntityId: number, fixtureId: string) => {
+    const form = new FormData(); form.append('gemini_fixture_get', '1'); form.append('fixture_id', fixtureId)
+    return apiClient<GeminiFixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 30000 })
+  },
   geminiFixtureV12: (locationBusinessEntityId: number, fixtureId: string) => {
     const form = new FormData(); form.append('gemini_fixture_v12', '1'); form.append('fixture_id', fixtureId)
     return apiClient<V12FixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 240000 })
