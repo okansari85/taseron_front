@@ -5,9 +5,6 @@ import type { FireSuppressionControlItemTemplate, FireSuppressionReport, FireSup
 type ListResponse = { data: FireSuppressionReport[] }
 type ItemResponse = { data: FireSuppressionReport }
 type MessageResponse = { message: string }
-// analyze() artık taslağı SENKRON döndürmüyor — sadece kuyruğa atıldığını
-// onaylıyor (202 Accepted). Gerçek taslak, analiz tamamlandığında
-// FireSuppressionAnalysisProgress.result içinde (polling üzerinden) gelir.
 type AnalysisResponse = { analysis_id: string }
 type ControlItemTemplatesResponse = { data: FireSuppressionControlItemTemplate[] }
 export type FireSuppressionAnalysisProgress = {
@@ -19,9 +16,7 @@ export type FireSuppressionAnalysisProgress = {
   started_at?: string
   finished_at?: string | null
   error?: string
-  result?: FireSuppressionReportAnalysisDraft & {
-    _debug_ai_raw?: unknown
-  }
+  result?: FireSuppressionReportAnalysisDraft
   events: Array<{
     stage: string
     label: string
@@ -33,10 +28,7 @@ export type FireSuppressionAnalysisProgress = {
 
 type ProgressResponse = { data: FireSuppressionAnalysisProgress }
 
-// UI debug/telemetry için son analiz kimliği. Mevcut sayfa akışını değiştirmez.
 export const activeFireSuppressionAnalysisId = ref<string | null>(null)
-// Eşleştirme ekranındaki tesisat özeti için son tamamlanan analiz sonucu.
-// Sayfa akışını değiştirmez; analiz başlarken temizlenir.
 export const latestFireSuppressionAnalysisResult = ref<FireSuppressionReportAnalysisDraft | null>(null)
 
 export const fireSuppressionReportApi = {
@@ -70,9 +62,6 @@ export const fireSuppressionReportApi = {
     const analysisId = crypto.randomUUID()
     activeFireSuppressionAnalysisId.value = analysisId
     latestFireSuppressionAnalysisResult.value = null
-    // Bu istek artık sadece dosyayı saklayıp işi kuyruğa atıyor (202
-    // Accepted) — NVIDIA çağrısı beklenmiyor, o yüzden sınırsız timeout'a
-    // gerek yok, tıpkı create() gibi kısa bir süre yeterli.
     return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
       method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId },
     })
@@ -82,11 +71,6 @@ export const fireSuppressionReportApi = {
 
     if (response.data.status === 'completed' && response.data.result) {
       latestFireSuppressionAnalysisResult.value = response.data.result
-
-      // GEÇİCİ DEBUG: normalize edilmeden önce Gemini'den gelen ham JSON.
-      // UI/wizard state'ine dokunmadan sadece browser console'a basılır.
-      console.log('🔥 GEMINI RAW AI JSON:', response.data.result._debug_ai_raw)
-      console.log('🔥 NORMALIZED RESULT:', response.data.result)
     }
 
     return response
