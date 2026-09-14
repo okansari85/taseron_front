@@ -13,9 +13,11 @@ export type GeminiSemanticFixture = {
   model: string | null
   original_file_name: string
   created_at: string
+  pdf_path?: string
   semantic: Record<string, unknown>
 }
 type GeminiFixtureResponse = { data: GeminiSemanticFixture }
+type V12FixtureResponse = { data: Record<string, unknown> }
 export type FireSuppressionAnalysisProgress = {
   status: 'running' | 'completed' | 'failed'
   current_stage: string
@@ -83,23 +85,24 @@ export const fireSuppressionReportApi = {
       method: 'POST', body: form, timeout: 240000,
     })
   },
+  geminiFixtureV12: (locationBusinessEntityId: number, fixtureId: string) => {
+    const form = new FormData()
+    form.append('gemini_fixture_v12', '1')
+    form.append('fixture_id', fixtureId)
+    return apiClient<V12FixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
+      method: 'POST', body: form, timeout: 240000,
+    })
+  },
   analysisProgress: async (analysisId: string) => {
     const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
-
     if (response.data.status === 'completed' && response.data.result) {
       const aiEvent = response.data.events?.find(event => event.stage === 'ai_result')
       const aiSemantic = aiEvent?.ai_semantic
-
       if (aiSemantic && typeof aiSemantic === 'object') {
-        Object.defineProperty(response.data.result, 'toJSON', {
-          value: () => aiSemantic,
-          enumerable: false,
-        })
+        Object.defineProperty(response.data.result, 'toJSON', { value: () => aiSemantic, enumerable: false })
       }
-
       latestFireSuppressionAnalysisResult.value = response.data.result
     }
-
     return response
   },
   controlItemTemplates: (categories?: FireSuppressionCategory[]) => {
