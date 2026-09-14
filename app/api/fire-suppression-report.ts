@@ -70,6 +70,19 @@ export const fireSuppressionReportApi = {
     const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
 
     if (response.data.status === 'completed' && response.data.result) {
+      const aiEvent = response.data.events?.find(event => event.stage === 'ai_result')
+      const aiSemantic = aiEvent?.ai_semantic
+
+      // upload.vue zaten aynı result nesnesini hem işleme hem de JSON önizlemeye
+      // kullanıyor. toJSON() sayesinde ekranda yalnızca NVIDIA'nın semantic
+      // çıktısı görünür; result nesnesinin gerçek alanları aynen korunur.
+      if (aiSemantic && typeof aiSemantic === 'object') {
+        Object.defineProperty(response.data.result, 'toJSON', {
+          value: () => aiSemantic,
+          enumerable: false,
+        })
+      }
+
       latestFireSuppressionAnalysisResult.value = response.data.result
     }
 
