@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, FileText, LoaderCircle, Sparkles, FlaskConical } from '@lucide/vue'
+import { ArrowLeft, FileText, LoaderCircle, Sparkles, FlaskConical, Trash2 } from '@lucide/vue'
 import { fireSuppressionReportApi, type GeminiFixtureSummary, type GeminiSemanticFixture } from '~/api/fire-suppression-report'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -10,6 +10,7 @@ const selectedFile = ref<File | null>(null)
 const loading = ref(false)
 const v12Loading = ref(false)
 const camelotLoading = ref(false)
+const deleteLoading = ref(false)
 const fixturesLoading = ref(false)
 const fixtureLoading = ref(false)
 const fixtures = ref<GeminiFixtureSummary[]>([])
@@ -39,6 +40,23 @@ const selectFixture = async (id: string) => {
   try { const response = await fireSuppressionReportApi.getGeminiFixture(context.branchId, id); fixture.value = response.data; showSemantic.value = true }
   catch (error: any) { fixture.value = null; $toast.error(error?.data?.message || error?.message || 'Fixture içeriği alınamadı.') }
   finally { fixtureLoading.value = false }
+}
+const deleteFixture = async () => {
+  if (!context.branchId || !selectedFixtureId.value || deleteLoading.value) return
+  const name = selectedSummary.value?.original_file_name || selectedFixtureId.value
+  if (!window.confirm(`"${name}" fixture'ını ve kayıtlı PDF'sini silmek istediğine emin misin?`)) return
+  deleteLoading.value = true
+  try {
+    await fireSuppressionReportApi.deleteGeminiFixture(context.branchId, selectedFixtureId.value)
+    selectedFixtureId.value = ''
+    fixture.value = null
+    camelotResult.value = null
+    v12Result.value = null
+    await loadFixtures()
+    $toast.success('Fixture silindi.')
+  }
+  catch (error: any) { $toast.error(error?.data?.message || error?.message || 'Fixture silinemedi.') }
+  finally { deleteLoading.value = false }
 }
 const runGemini = async () => {
   if (!context.branchId) return $toast.error('Önce çalışma alanı/şube seçmelisin.')
@@ -77,12 +95,12 @@ watch(() => context.branchId, () => { selectedFixtureId.value = ''; fixture.valu
     <main class="mx-auto max-w-7xl space-y-6 px-6 py-8">
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="mb-5"><h2 class="text-base font-semibold">1. Gemini Fixture</h2><p class="mt-1 text-sm text-slate-500">Daha önce kaydedilen Gemini çıktısını seç veya yeni PDF ile oluştur.</p></div>
-        <div class="flex gap-3"><select v-model="selectedFixtureId" class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-violet-500" :disabled="fixturesLoading || fixtureLoading" @change="selectFixture(selectedFixtureId)"><option value="">{{ fixturesLoading ? 'Fixturelar yükleniyor...' : 'Kayıtlı fixture seç...' }}</option><option v-for="item in fixtures" :key="item.fixture_id" :value="item.fixture_id">{{ item.original_file_name }} — {{ item.created_at ? new Date(item.created_at).toLocaleString('tr-TR') : item.fixture_id }}</option></select><button class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50" :disabled="fixturesLoading" @click="loadFixtures">Yenile</button></div>
+        <div class="flex gap-3"><select v-model="selectedFixtureId" class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-violet-500" :disabled="fixturesLoading || fixtureLoading || deleteLoading" @change="selectFixture(selectedFixtureId)"><option value="">{{ fixturesLoading ? 'Fixturelar yükleniyor...' : 'Kayıtlı fixture seç...' }}</option><option v-for="item in fixtures" :key="item.fixture_id" :value="item.fixture_id">{{ item.original_file_name }} — {{ item.created_at ? new Date(item.created_at).toLocaleString('tr-TR') : item.fixture_id }}</option></select><button class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50" :disabled="fixturesLoading" @click="loadFixtures">Yenile</button></div>
         <label class="mt-5 flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-4 hover:border-violet-400"><div class="rounded-xl bg-white p-3 shadow-sm"><FileText :size="22" class="text-violet-600" /></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-medium">{{ selectedFile?.name || 'PDF seç' }}</p><p class="mt-1 text-xs text-slate-500">Yeni Gemini fixture oluşturmak için veya PDF'si bulunmayan eski fixture için kullanılır. Maksimum 20 MB</p></div><input type="file" accept="application/pdf,.pdf" class="hidden" @change="onFileChange"></label>
         <button class="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" :disabled="loading || !selectedFile" @click="runGemini"><LoaderCircle v-if="loading" :size="18" class="animate-spin" /><Sparkles v-else :size="18" />{{ loading ? 'Gemini analiz ediyor...' : 'Yeni Gemini Fixture Kaydet' }}</button>
       </section>
       <section v-if="selectedFixtureId" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><h2 class="text-base font-semibold">2. Seçili Fixture</h2><p class="mt-1 text-sm text-slate-500">{{ fixtureLoading ? 'Fixture yükleniyor...' : fixture?.original_file_name || selectedFixtureId }}</p><p v-if="selectedSummary?.pdf_available === false" class="mt-1 text-xs font-medium text-amber-600">Bu eski fixture'ın PDF'si kayıtlı değil. Template + Camelot için aynı PDF'yi seç.</p></div><button class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50" :disabled="camelotLoading || fixtureLoading || (selectedSummary?.pdf_available === false && !selectedFile)" @click="runTemplateCamelot"><LoaderCircle v-if="camelotLoading" :size="17" class="animate-spin" /><FlaskConical v-else :size="17" />{{ camelotLoading ? 'Camelot çalışıyor...' : 'Template + Camelot Çalıştır' }}</button></div>
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><h2 class="text-base font-semibold">2. Seçili Fixture</h2><p class="mt-1 text-sm text-slate-500">{{ fixtureLoading ? 'Fixture yükleniyor...' : fixture?.original_file_name || selectedFixtureId }}</p><p v-if="selectedSummary?.pdf_available === false" class="mt-1 text-xs font-medium text-amber-600">Bu eski fixture'ın PDF'si kayıtlı değil. Template + Camelot için aynı PDF'yi seç.</p></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50" :disabled="deleteLoading || fixtureLoading || camelotLoading" @click="deleteFixture"><LoaderCircle v-if="deleteLoading" :size="17" class="animate-spin" /><Trash2 v-else :size="17" />{{ deleteLoading ? 'Siliniyor...' : 'Fixture’ı Sil' }}</button><button class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50" :disabled="camelotLoading || fixtureLoading || deleteLoading || (selectedSummary?.pdf_available === false && !selectedFile)" @click="runTemplateCamelot"><LoaderCircle v-if="camelotLoading" :size="17" class="animate-spin" /><FlaskConical v-else :size="17" />{{ camelotLoading ? 'Camelot çalışıyor...' : 'Template + Camelot Çalıştır' }}</button></div></div>
         <div v-if="semanticJson" class="px-6 py-5"><button class="mb-3 text-sm font-medium text-violet-700" @click="showSemantic = !showSemantic">{{ showSemantic ? 'Gemini çıktısını gizle' : 'Gemini çıktısını göster' }}</button><pre v-if="showSemantic" class="max-h-[55vh] overflow-auto rounded-xl bg-slate-950 p-5 text-xs leading-6 text-slate-100">{{ semanticJson }}</pre></div><div v-else class="px-6 py-5 text-sm text-slate-500">Fixture seçildi. Gemini semantic JSON yükleniyor veya fixture boş.</div>
       </section>
       <section v-if="camelotResult" class="rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="flex items-center justify-between border-b border-slate-200 px-6 py-5"><div><h2 class="text-base font-semibold">3. Template + Camelot JSON</h2><p class="mt-1 text-sm text-slate-500">Template Discovery çıktısı kullanılarak PDF tabloları Camelot ile çıkarıldı.</p></div><button class="text-sm font-medium text-violet-700" @click="showCamelot = !showCamelot">{{ showCamelot ? 'Gizle' : 'Göster' }}</button></div><div v-if="showCamelot" class="px-6 py-5"><pre class="max-h-[70vh] overflow-auto rounded-xl bg-slate-950 p-5 text-xs leading-6 text-slate-100">{{ camelotJson }}</pre></div></section>
