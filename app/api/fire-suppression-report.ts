@@ -7,6 +7,15 @@ type ItemResponse = { data: FireSuppressionReport }
 type MessageResponse = { message: string }
 type AnalysisResponse = { analysis_id: string }
 type ControlItemTemplatesResponse = { data: FireSuppressionControlItemTemplate[] }
+export type GeminiSemanticFixture = {
+  fixture_id: string
+  provider: 'gemini'
+  model: string | null
+  original_file_name: string
+  created_at: string
+  semantic: Record<string, unknown>
+}
+type GeminiFixtureResponse = { data: GeminiSemanticFixture }
 export type FireSuppressionAnalysisProgress = {
   status: 'running' | 'completed' | 'failed'
   current_stage: string
@@ -66,6 +75,14 @@ export const fireSuppressionReportApi = {
       method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId },
     })
   },
+  geminiFixture: (locationBusinessEntityId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('gemini_fixture', '1')
+    return apiClient<GeminiFixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
+      method: 'POST', body: form, timeout: 240000,
+    })
+  },
   analysisProgress: async (analysisId: string) => {
     const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
 
@@ -73,9 +90,6 @@ export const fireSuppressionReportApi = {
       const aiEvent = response.data.events?.find(event => event.stage === 'ai_result')
       const aiSemantic = aiEvent?.ai_semantic
 
-      // upload.vue zaten aynı result nesnesini hem işleme hem de JSON önizlemeye
-      // kullanıyor. toJSON() sayesinde ekranda yalnızca NVIDIA'nın semantic
-      // çıktısı görünür; result nesnesinin gerçek alanları aynen korunur.
       if (aiSemantic && typeof aiSemantic === 'object') {
         Object.defineProperty(response.data.result, 'toJSON', {
           value: () => aiSemantic,
