@@ -17,6 +17,8 @@ export type GeminiSemanticFixture = {
   semantic: Record<string, unknown>
 }
 type GeminiFixtureResponse = { data: GeminiSemanticFixture }
+export type GeminiFixtureSummary = Omit<GeminiSemanticFixture, 'semantic'>
+type GeminiFixtureListResponse = { data: GeminiFixtureSummary[] }
 type V12FixtureResponse = { data: Record<string, unknown> }
 export type FireSuppressionAnalysisProgress = {
   status: 'running' | 'completed' | 'failed'
@@ -28,17 +30,9 @@ export type FireSuppressionAnalysisProgress = {
   finished_at?: string | null
   error?: string
   result?: FireSuppressionReportAnalysisDraft
-  events: Array<{
-    stage: string
-    label: string
-    status: 'running' | 'done' | 'error'
-    at: string
-    [key: string]: unknown
-  }>
+  events: Array<{ stage: string; label: string; status: 'running' | 'done' | 'error'; at: string; [key: string]: unknown }>
 }
-
 type ProgressResponse = { data: FireSuppressionAnalysisProgress }
-
 export const activeFireSuppressionAnalysisId = ref<string | null>(null)
 export const latestFireSuppressionAnalysisResult = ref<FireSuppressionReportAnalysisDraft | null>(null)
 
@@ -68,39 +62,27 @@ export const fireSuppressionReportApi = {
   },
   remove: (reportId: number) => apiClient<MessageResponse>(`/api/fire-suppression-reports/${reportId}`, { method: 'DELETE' }),
   analyze: (locationBusinessEntityId: number, file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    const analysisId = crypto.randomUUID()
-    activeFireSuppressionAnalysisId.value = analysisId
-    latestFireSuppressionAnalysisResult.value = null
-    return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
-      method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId },
-    })
+    const form = new FormData(); form.append('file', file)
+    const analysisId = crypto.randomUUID(); activeFireSuppressionAnalysisId.value = analysisId; latestFireSuppressionAnalysisResult.value = null
+    return apiClient<AnalysisResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 30000, headers: { 'X-Analysis-Id': analysisId } })
   },
   geminiFixture: (locationBusinessEntityId: number, file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('gemini_fixture', '1')
-    return apiClient<GeminiFixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
-      method: 'POST', body: form, timeout: 240000,
-    })
+    const form = new FormData(); form.append('file', file); form.append('gemini_fixture', '1')
+    return apiClient<GeminiFixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 240000 })
+  },
+  listGeminiFixtures: (locationBusinessEntityId: number) => {
+    const form = new FormData(); form.append('gemini_fixture_list', '1')
+    return apiClient<GeminiFixtureListResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 30000 })
   },
   geminiFixtureV12: (locationBusinessEntityId: number, fixtureId: string) => {
-    const form = new FormData()
-    form.append('gemini_fixture_v12', '1')
-    form.append('fixture_id', fixtureId)
-    return apiClient<V12FixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, {
-      method: 'POST', body: form, timeout: 240000,
-    })
+    const form = new FormData(); form.append('gemini_fixture_v12', '1'); form.append('fixture_id', fixtureId)
+    return apiClient<V12FixtureResponse>(`/api/location-business-entities/${locationBusinessEntityId}/fire-suppression-reports/analyze`, { method: 'POST', body: form, timeout: 240000 })
   },
   analysisProgress: async (analysisId: string) => {
     const response = await apiClient<ProgressResponse>(`/api/fire-suppression-analysis/${analysisId}/progress`, { method: 'GET', timeout: 10000 })
     if (response.data.status === 'completed' && response.data.result) {
-      const aiEvent = response.data.events?.find(event => event.stage === 'ai_result')
-      const aiSemantic = aiEvent?.ai_semantic
-      if (aiSemantic && typeof aiSemantic === 'object') {
-        Object.defineProperty(response.data.result, 'toJSON', { value: () => aiSemantic, enumerable: false })
-      }
+      const aiEvent = response.data.events?.find(event => event.stage === 'ai_result'); const aiSemantic = aiEvent?.ai_semantic
+      if (aiSemantic && typeof aiSemantic === 'object') Object.defineProperty(response.data.result, 'toJSON', { value: () => aiSemantic, enumerable: false })
       latestFireSuppressionAnalysisResult.value = response.data.result
     }
     return response
