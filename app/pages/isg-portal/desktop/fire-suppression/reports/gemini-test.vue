@@ -91,7 +91,7 @@ const semanticJson = computed(() => fixture.value ? JSON.stringify(fixture.value
         >
           <LoaderCircle v-if="loading" :size="18" class="animate-spin" />
           <Sparkles v-else :size="18" />
-          {{ loading ? 'Gemini analiz ediyor...' : 'Gemini'yi Çalıştır' }}
+          {{ loading ? 'Gemini analiz ediyor...' : 'Gemini’yi Çalıştır' }}
         </button>
       </section>
 
