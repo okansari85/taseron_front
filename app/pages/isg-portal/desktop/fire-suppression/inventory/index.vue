@@ -312,7 +312,7 @@ const addSystem = async () => {
   <div v-if="context.ready" class="min-h-screen bg-[#f7f9fc] font-outfit dark:bg-gray-950">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[290px]' : 'lg:pl-[90px]']">
+    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
       <main class="px-4 py-5 sm:px-6 lg:px-8 xl:px-10">
