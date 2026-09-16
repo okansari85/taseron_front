@@ -143,7 +143,7 @@ const visibleComponents = computed(() => detail.value?.components ?? [])
   <div v-if="context.ready" class="min-h-screen bg-[#f7f8fa] font-outfit text-gray-900 dark:bg-gray-950 dark:text-white">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[230px]' : 'lg:pl-[72px]']">
+    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
       <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
