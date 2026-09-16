@@ -6,6 +6,7 @@ import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
 
 const auth = useAuth()
 const router = useRouter()
+const route = useRoute()
 const context = useIsgDesktopContextStore()
 const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
 const primaryColor = computed(() => workspaceColor.value || '#d71920')
@@ -67,27 +68,12 @@ const selectLocation = async (location: LocationApiItem) => {
   locationMenuOpen.value = false
   if (location.id === context.locationId) return
 
-  context.setLocation({
-    id: location.id,
-    name: location.name,
-    city: location.city?.name,
-    district: location.district?.name,
-    image: location.image,
-    branchCount: location.branch_count ?? 0,
-  })
+  context.setLocation({ id: location.id, name: location.name, city: location.city?.name, district: location.district?.name, image: location.image, branchCount: location.branch_count ?? 0 })
 
   if (context.isStandaloneLocation) {
     const entities = await locationApi.businessEntities(location.id)
     const only = entities.find(e => e.type === 'company') ?? entities[0]
-    if (only) {
-      context.setBranch({
-        id: only.pivot?.id ?? only.id,
-        name: branchLabel(only),
-        code: only.pivot?.code,
-        logo: only.pivot?.brands?.[0]?.logo_url,
-        isActive: only.pivot?.is_active,
-      })
-    }
+    if (only) context.setBranch({ id: only.pivot?.id ?? only.id, name: branchLabel(only), code: only.pivot?.code, logo: only.pivot?.brands?.[0]?.logo_url, isActive: only.pivot?.is_active })
     return
   }
 
@@ -99,13 +85,7 @@ const selectBranch = (b: LocationBusinessEntity) => {
   branchMenuOpen.value = false
   const id = b.pivot?.id ?? b.id
   if (id === context.branchId) return
-  context.setBranch({
-    id,
-    name: branchLabel(b),
-    code: b.pivot?.code,
-    logo: b.pivot?.brands?.[0]?.logo_url,
-    isActive: b.pivot?.is_active,
-  })
+  context.setBranch({ id, name: branchLabel(b), code: b.pivot?.code, logo: b.pivot?.brands?.[0]?.logo_url, isActive: b.pivot?.is_active })
 }
 
 const handleLogout = async () => {
@@ -119,10 +99,7 @@ const handleLogout = async () => {
   <header class="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3 dark:border-gray-800 dark:bg-gray-900">
     <div class="flex shrink-0 items-center gap-2.5">
       <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-white dark:bg-white/10" :style="{ backgroundColor: primaryColor }"><Flame :size="18" /></span>
-      <div class="hidden sm:block">
-        <p class="text-sm font-semibold text-gray-900 dark:text-white/90">İSG / Yangın Güvenlik</p>
-        <p class="text-[11px] text-gray-400">Denetim Uygulaması</p>
-      </div>
+      <div class="hidden sm:block"><p class="text-sm font-semibold text-gray-900 dark:text-white/90">İSG / Yangın Güvenlik</p><p class="text-[11px] text-gray-400">Denetim Uygulaması</p></div>
     </div>
 
     <div class="flex min-w-0 flex-1 items-center justify-center gap-2.5">
@@ -134,9 +111,7 @@ const handleLogout = async () => {
         </button>
         <div v-if="locationMenuOpen" class="absolute left-0 top-full z-50 mt-2 max-h-80 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
           <p v-if="locationsLoading" class="px-3 py-2 text-xs text-gray-400">Yükleniyor...</p>
-          <button v-for="location in locations" :key="location.id" type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-white/5" :class="location.id === context.locationId ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'" :style="location.id === context.locationId ? { color: primaryColor } : undefined" @click="selectLocation(location)">
-            <Check v-if="location.id === context.locationId" :size="14" class="shrink-0" /><Building2 v-else :size="14" class="shrink-0 text-gray-300" /><span class="min-w-0 flex-1 truncate">{{ location.name }}</span>
-          </button>
+          <button v-for="location in locations" :key="location.id" type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-white/5" :class="location.id === context.locationId ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'" :style="location.id === context.locationId ? { color: primaryColor } : undefined" @click="selectLocation(location)"><Check v-if="location.id === context.locationId" :size="14" class="shrink-0" /><Building2 v-else :size="14" class="shrink-0 text-gray-300" /><span class="min-w-0 flex-1 truncate">{{ location.name }}</span></button>
           <p v-if="!locationsLoading && !locations.length" class="px-3 py-2 text-xs text-gray-400">Lokasyon bulunamadı.</p>
         </div>
       </div>
@@ -149,9 +124,7 @@ const handleLogout = async () => {
         </button>
         <div v-if="branchMenuOpen" class="absolute left-0 top-full z-50 mt-2 max-h-80 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
           <p v-if="branchesLoading" class="px-3 py-2 text-xs text-gray-400">Yükleniyor...</p>
-          <button v-for="b in branches" :key="b.pivot?.id ?? b.id" type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-white/5" :class="(b.pivot?.id ?? b.id) === context.branchId ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'" :style="(b.pivot?.id ?? b.id) === context.branchId ? { color: primaryColor } : undefined" @click="selectBranch(b)">
-            <Check v-if="(b.pivot?.id ?? b.id) === context.branchId" :size="14" class="shrink-0" /><Store v-else :size="14" class="shrink-0 text-gray-300" /><span class="min-w-0 flex-1 truncate">{{ branchLabel(b) }}</span>
-          </button>
+          <button v-for="b in branches" :key="b.pivot?.id ?? b.id" type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-white/5" :class="(b.pivot?.id ?? b.id) === context.branchId ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'" :style="(b.pivot?.id ?? b.id) === context.branchId ? { color: primaryColor } : undefined" @click="selectBranch(b)"><Check v-if="(b.pivot?.id ?? b.id) === context.branchId" :size="14" class="shrink-0" /><Store v-else :size="14" class="shrink-0 text-gray-300" /><span class="min-w-0 flex-1 truncate">{{ branchLabel(b) }}</span></button>
           <p v-if="!branchesLoading && !branches.length" class="px-3 py-2 text-xs text-gray-400">Şube bulunamadı.</p>
         </div>
       </div>
@@ -169,4 +142,5 @@ const handleLogout = async () => {
       </div>
     </div>
   </header>
+  <FireSuppressionDesktopNav v-if="route.path.startsWith('/isg-portal/desktop/fire-suppression/')" class="px-5 pt-3 sm:px-7 lg:px-8" />
 </template>
