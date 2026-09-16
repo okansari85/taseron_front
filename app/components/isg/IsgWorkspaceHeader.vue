@@ -26,7 +26,17 @@ const initials = computed(() => {
   return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr-TR')
 })
 
-onMounted(() => loadWorkspaceTheme(Number(auth.user.value?.tenant_id ?? 0) || null))
+const syncBranding = () => {
+  if (!import.meta.client) return
+  document.documentElement.style.setProperty('--workspace-brand', primaryColor.value)
+  document.documentElement.classList.toggle('fire-suppression-theme', route.path.startsWith('/isg-portal/desktop/fire-suppression/'))
+}
+
+onMounted(async () => {
+  await loadWorkspaceTheme(Number(auth.user.value?.tenant_id ?? 0) || null)
+  syncBranding()
+})
+watch([primaryColor, () => route.path], syncBranding)
 
 const loadLocations = async () => {
   if (locationsLoaded.value) return
@@ -50,33 +60,20 @@ const loadBranches = async () => {
   }
 }
 
-const openLocationMenu = async () => {
-  branchMenuOpen.value = false
-  locationMenuOpen.value = !locationMenuOpen.value
-  if (locationMenuOpen.value) await loadLocations()
-}
-
-const openBranchMenu = async () => {
-  locationMenuOpen.value = false
-  branchMenuOpen.value = !branchMenuOpen.value
-  if (branchMenuOpen.value) await loadBranches()
-}
-
+const openLocationMenu = async () => { branchMenuOpen.value = false; locationMenuOpen.value = !locationMenuOpen.value; if (locationMenuOpen.value) await loadLocations() }
+const openBranchMenu = async () => { locationMenuOpen.value = false; branchMenuOpen.value = !branchMenuOpen.value; if (branchMenuOpen.value) await loadBranches() }
 const branchLabel = (b: LocationBusinessEntity) => b.pivot?.brands?.[0]?.name || b.company?.name || b.name
 
 const selectLocation = async (location: LocationApiItem) => {
   locationMenuOpen.value = false
   if (location.id === context.locationId) return
-
   context.setLocation({ id: location.id, name: location.name, city: location.city?.name, district: location.district?.name, image: location.image, branchCount: location.branch_count ?? 0 })
-
   if (context.isStandaloneLocation) {
     const entities = await locationApi.businessEntities(location.id)
     const only = entities.find(e => e.type === 'company') ?? entities[0]
     if (only) context.setBranch({ id: only.pivot?.id ?? only.id, name: branchLabel(only), code: only.pivot?.code, logo: only.pivot?.brands?.[0]?.logo_url, isActive: only.pivot?.is_active })
     return
   }
-
   branchMenuOpen.value = true
   await loadBranches()
 }
@@ -88,11 +85,7 @@ const selectBranch = (b: LocationBusinessEntity) => {
   context.setBranch({ id, name: branchLabel(b), code: b.pivot?.code, logo: b.pivot?.brands?.[0]?.logo_url, isActive: b.pivot?.is_active })
 }
 
-const handleLogout = async () => {
-  profileOpen.value = false
-  await auth.logout()
-  await router.push('/isg-portal/login')
-}
+const handleLogout = async () => { profileOpen.value = false; await auth.logout(); await router.push('/isg-portal/login') }
 </script>
 
 <template>
@@ -106,8 +99,7 @@ const handleLogout = async () => {
       <div class="relative">
         <button type="button" class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-left dark:border-gray-700 dark:bg-gray-800" @click="openLocationMenu">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10" :style="{ color: primaryColor }"><MapPin :size="14" /></span>
-          <span class="min-w-0"><span class="block text-[10px] font-medium uppercase tracking-wide text-gray-400">Lokasyon</span><span class="block max-w-[160px] truncate text-sm font-semibold text-gray-900 dark:text-white/90">{{ context.locationName || 'Seçilmedi' }}</span></span>
-          <ChevronDown :size="14" class="shrink-0 text-gray-400" />
+          <span class="min-w-0"><span class="block text-[10px] font-medium uppercase tracking-wide text-gray-400">Lokasyon</span><span class="block max-w-[160px] truncate text-sm font-semibold text-gray-900 dark:text-white/90">{{ context.locationName || 'Seçilmedi' }}</span></span><ChevronDown :size="14" class="shrink-0 text-gray-400" />
         </button>
         <div v-if="locationMenuOpen" class="absolute left-0 top-full z-50 mt-2 max-h-80 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
           <p v-if="locationsLoading" class="px-3 py-2 text-xs text-gray-400">Yükleniyor...</p>
@@ -119,8 +111,7 @@ const handleLogout = async () => {
       <div class="relative">
         <button type="button" class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-left disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800" :disabled="!context.locationId" @click="openBranchMenu">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10" :style="{ color: primaryColor }"><Store :size="14" /></span>
-          <span class="min-w-0"><span class="block text-[10px] font-medium uppercase tracking-wide text-gray-400">Marka</span><span class="block max-w-[160px] truncate text-sm font-semibold text-gray-900 dark:text-white/90">{{ context.branchName || 'Seçilmedi' }}</span></span>
-          <ChevronDown :size="14" class="shrink-0 text-gray-400" />
+          <span class="min-w-0"><span class="block text-[10px] font-medium uppercase tracking-wide text-gray-400">Marka</span><span class="block max-w-[160px] truncate text-sm font-semibold text-gray-900 dark:text-white/90">{{ context.branchName || 'Seçilmedi' }}</span></span><ChevronDown :size="14" class="shrink-0 text-gray-400" />
         </button>
         <div v-if="branchMenuOpen" class="absolute left-0 top-full z-50 mt-2 max-h-80 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
           <p v-if="branchesLoading" class="px-3 py-2 text-xs text-gray-400">Yükleniyor...</p>
@@ -135,8 +126,7 @@ const handleLogout = async () => {
       <div class="relative">
         <button type="button" class="flex items-center gap-2.5 border-l border-gray-200 pl-3 dark:border-gray-800" @click="profileOpen = !profileOpen">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold dark:bg-white/10" :style="{ color: primaryColor }">{{ initials }}</span>
-          <span class="hidden text-left sm:block"><span class="block text-sm font-semibold text-gray-900 dark:text-white/90">{{ auth.user.value?.name || 'Kullanıcı' }}</span><span class="block text-xs text-gray-400">İSG Uzmanı</span></span>
-          <ChevronDown :size="15" class="text-gray-400" />
+          <span class="hidden text-left sm:block"><span class="block text-sm font-semibold text-gray-900 dark:text-white/90">{{ auth.user.value?.name || 'Kullanıcı' }}</span><span class="block text-xs text-gray-400">İSG Uzmanı</span></span><ChevronDown :size="15" class="text-gray-400" />
         </button>
         <div v-if="profileOpen" class="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900"><button type="button" class="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5" @click="handleLogout">Çıkış Yap</button></div>
       </div>
