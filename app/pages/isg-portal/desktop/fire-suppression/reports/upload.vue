@@ -3,13 +3,14 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  FlaskConical,
   Image as ImageIcon,
   LoaderCircle,
   Paperclip,
   Plus,
   X,
 } from '@lucide/vue'
-import { fireSuppressionReportApi, type FireSuppressionAnalysisProgress } from '~/api/fire-suppression-report'
+import { fireSuppressionReportApi, type FireSuppressionAnalysisProgress, type GeminiFixtureSummary } from '~/api/fire-suppression-report'
 import { fireSuppressionInventoryApi } from '~/api/fire-suppression-inventory'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
@@ -69,20 +70,52 @@ watch(() => context.branchId, loadInventoryItems)
 // Rapor Yükleme Sihirbazı — nihai akış: Dosya Yükle → AI Analizi →
 // Eşleştirme (sonuç listesi ↔ tekil belirsiz inceleme) → Onayla → Tamamlandı.
 // =====================================================================
-type WizardStage = 'upload' | 'analyzing' | 'matching' | 'confirm' | 'done'
+// 'fixture' GEÇİCİ bir adım (bkz. AnalyzeFireSuppressionReportJob $fixtureId) —
+// gerçek dosya yükleyip Gemini'ye tekrar tekrar istek atmadan, kayıtlı bir
+// Gemini fixture'ı seçerek Camelot/eşleştirme akışını test etmek için. Görsel
+// olarak "Dosya Yükle" adımının bir alt durumu (aynı step numarası).
+type WizardStage = 'upload' | 'fixture' | 'analyzing' | 'matching' | 'confirm' | 'done'
 const wizardStage = ref<WizardStage>('upload')
-const wizardStageOrder: WizardStage[] = ['upload', 'analyzing', 'matching', 'confirm', 'done']
 const wizardStepLabels = [
   { key: 'upload', number: 1, label: 'Dosya Yükle' },
   { key: 'analyzing', number: 2, label: 'AI Analizi' },
   { key: 'matching', number: 3, label: 'Eşleştirme' },
   { key: 'confirm', number: 4, label: 'Onayla' },
 ] as const
-const currentStepNumber = computed(() => wizardStageOrder.indexOf(wizardStage.value) >= 3 ? 4 : wizardStageOrder.indexOf(wizardStage.value) + 1)
+const stepNumberByStage: Record<WizardStage, number> = { upload: 1, fixture: 1, analyzing: 2, matching: 3, confirm: 4, done: 4 }
+const currentStepNumber = computed(() => stepNumberByStage[wizardStage.value])
 
 const saving = ref(false)
 const selectedFile = ref<File | null>(null)
 const savedReport = ref<{ id: number } | null>(null)
+
+// --- GEÇİCİ test modu: kayıtlı Gemini fixture'ı ile devam et ---
+const fixtures = ref<GeminiFixtureSummary[]>([])
+const fixturesLoading = ref(false)
+const selectedFixtureId = ref('')
+const loadFixtures = async () => {
+  if (!context.branchId) return
+  fixturesLoading.value = true
+  try {
+    const { data } = await fireSuppressionReportApi.listGeminiFixtures(context.branchId)
+    fixtures.value = data
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'Fixture listesi alınamadı.')
+  } finally {
+    fixturesLoading.value = false
+  }
+}
+const goToFixtureStep = () => { wizardStage.value = 'fixture'; loadFixtures() }
+const runAnalyzingFromFixture = async () => {
+  if (!context.branchId || !selectedFixtureId.value) return
+  wizardStage.value = 'analyzing'
+  try {
+    await fireSuppressionReportApi.analyzeFromFixture(context.branchId, selectedFixtureId.value)
+  } catch (e: any) {
+    $toast.error(e?.data?.message || e?.message || 'Fixture ile analiz başlatılamadı.')
+    wizardStage.value = 'fixture'
+  }
+}
 
 type FindingForm = FireSuppressionReportFindingInput
 const emptyFinding = (): FindingForm => ({ category: null, control_item: '', description: '', scope: 'unknown', area_note: '', affected_item_ids: [] })
@@ -107,6 +140,7 @@ const resetWizard = () => {
   additionalFiles.value = []
   controlItemsForm.value = []
   savedReport.value = null
+  selectedFixtureId.value = ''
   matchRows.value = []
   ambiguousMatches.value = []
   ambiguousResolutions.value = {}
@@ -137,14 +171,9 @@ const selectFile = (file: File) => {
   runAnalyzing()
 }
 
-// --- Adım 2: AI Analizi (görsel ilerleme + gerçek analyze() çağrısı) ---
-const analyzingSteps = ref([
-  { label: 'PDF dosyası yüklendi', done: false },
-  { label: 'Metin çıkarılıyor...', done: false },
-  { label: 'AI ile analiz ediliyor (biraz sürebilir)', done: false },
-  { label: 'Envanter ile eşleştiriliyor', done: false },
-])
-
+// --- Adım 2: AI Analizi — gerçek analyze() çağrısı, ilerleme
+// IsgReportAnalyzingProgress'in kendi polling'inden gelen gerçek
+// aşama/etiket verisiyle gösterilir (bkz. o bileşen).
 const matchRows = ref<MatchRow[]>([])
 
 type AmbiguousEntry = {
@@ -210,8 +239,6 @@ const showAiRawResult = ref(false)
 const runAnalyzing = async () => {
   if (!context.branchId || !selectedFile.value) return
   wizardStage.value = 'analyzing'
-  analyzingSteps.value = analyzingSteps.value.map((s, i) => ({ ...s, done: i === 0 }))
-  const step1Timer = window.setTimeout(() => { analyzingSteps.value[1].done = true }, 500)
 
   try {
     await fireSuppressionReportApi.analyze(context.branchId, selectedFile.value)
@@ -221,14 +248,12 @@ const runAnalyzing = async () => {
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'PDF analiz başlatılamadı.')
     wizardStage.value = 'upload'
-  } finally {
-    clearTimeout(step1Timer)
   }
 }
 
 const onAnalysisFailed = (message: string) => {
   $toast.error(message || 'PDF analiz edilemedi.')
-  wizardStage.value = 'upload'
+  wizardStage.value = selectedFixtureId.value ? 'fixture' : 'upload'
 }
 
 const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => {
@@ -330,14 +355,18 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
       })
     }
 
-    analyzingSteps.value = analyzingSteps.value.map(s => ({ ...s, done: true }))
     wizardStage.value = 'matching'
   } catch (e: any) {
     $toast.error(e?.message || 'Analiz sonucu işlenemedi.')
-    wizardStage.value = 'upload'
+    wizardStage.value = selectedFixtureId.value ? 'fixture' : 'upload'
   }
 }
-const cancelAnalyzing = () => { wizardStage.value = 'upload'; selectedFile.value = null }
+const cancelAnalyzing = () => {
+  // Fixture'dan mı yoksa gerçek dosyadan mı başladığımıza göre bir önceki
+  // adıma dön (bkz. runAnalyzingFromFixture / runAnalyzing).
+  wizardStage.value = selectedFixtureId.value ? 'fixture' : 'upload'
+  selectedFile.value = null
+}
 
 // --- Adım 3: Eşleştirme (sonuç listesi + tekil belirsiz inceleme) ---
 const matchingView = ref<'results' | 'detail'>('results')
@@ -608,17 +637,57 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
 
             <div class="px-5 py-5">
               <!-- Adım 1: Dosya Yükle -->
-              <IsgReportFileDropzone
-                v-if="wizardStage === 'upload'"
-                hint="Sadece yıllık periyodik kontrol raporları yüklenebilir. Dosya seçildiğinde analiz otomatik başlar."
-                @select="selectFile"
-              />
+              <template v-if="wizardStage === 'upload'">
+                <IsgReportFileDropzone
+                  hint="Sadece yıllık periyodik kontrol raporları yüklenebilir. Dosya seçildiğinde analiz otomatik başlar."
+                  @select="selectFile"
+                />
+                <button
+                  type="button"
+                  class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-violet-300 bg-violet-50/60 py-2.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300"
+                  @click="goToFixtureStep"
+                >
+                  <FlaskConical :size="14" />
+                  Test Modu: Kayıtlı Gemini Fixture'ı ile Devam Et (dosya yüklemeden)
+                </button>
+              </template>
+
+              <!-- Adım 1.5 (GEÇİCİ, test modu): Fixture Seç -->
+              <div v-else-if="wizardStage === 'fixture'">
+                <div class="mb-4 flex items-start gap-2 rounded-lg border border-violet-200 bg-violet-50/60 px-3.5 py-3 dark:border-violet-500/20 dark:bg-violet-500/5">
+                  <FlaskConical :size="15" class="mt-0.5 shrink-0 text-violet-600" />
+                  <p class="text-[11px] leading-relaxed text-violet-700 dark:text-violet-300">
+                    Test modu: Gemini'ye tekrar istek atılmaz, daha önce kaydedilmiş bir fixture'ın çıktısı kullanılır. PDF de fixture ile birlikte zaten kayıtlıdır.
+                  </p>
+                </div>
+
+                <div v-if="fixturesLoading" class="flex items-center justify-center gap-2 py-10 text-xs text-gray-400">
+                  <LoaderCircle :size="16" class="animate-spin" />Fixturelar yükleniyor...
+                </div>
+                <div v-else-if="!fixtures.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">
+                  Kayıtlı Gemini fixture'ı bulunamadı.
+                </div>
+                <div v-else class="max-h-[420px] space-y-1.5 overflow-y-auto">
+                  <label
+                    v-for="item in fixtures"
+                    :key="item.fixture_id"
+                    class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-xs"
+                    :class="selectedFixtureId === item.fixture_id ? 'border-[#d71920] bg-red-50 dark:bg-red-500/10' : 'border-[#e7e9ed] hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/5'"
+                  >
+                    <input v-model="selectedFixtureId" type="radio" :value="item.fixture_id" class="hidden">
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate font-semibold text-[#172033] dark:text-white">{{ item.original_file_name }}</p>
+                      <p class="mt-0.5 text-[10px] text-gray-400">{{ item.created_at ? new Date(item.created_at).toLocaleString('tr-TR') : item.fixture_id }}</p>
+                    </div>
+                    <span v-if="item.pdf_available === false" class="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:bg-amber-500/10">PDF yok</span>
+                  </label>
+                </div>
+              </div>
 
               <!-- Adım 2: AI Analizi -->
               <IsgReportAnalyzingProgress
                 v-else-if="wizardStage === 'analyzing'"
                 :file="selectedFile"
-                :steps="analyzingSteps"
                 @cancel="cancelAnalyzing"
                 @completed="onAnalysisCompleted"
                 @failed="onAnalysisFailed"
@@ -936,8 +1005,14 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
               <template v-if="wizardStage === 'upload'">
                 <button type="button" class="w-full rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="goToReportsList">Vazgeç</button>
               </template>
+              <template v-else-if="wizardStage === 'fixture'">
+                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="wizardStage = 'upload'; selectedFixtureId = ''">Geri</button>
+                <button type="button" class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="!selectedFixtureId" @click="runAnalyzingFromFixture">
+                  <FlaskConical :size="15" />Fixture ile Devam Et
+                </button>
+              </template>
               <template v-else-if="wizardStage === 'matching' && matchingView === 'results'">
-                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="wizardStage = 'upload'; selectedFile = null">Geri</button>
+                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="wizardStage = selectedFixtureId ? 'fixture' : 'upload'; selectedFile = null">Geri</button>
                 <button type="button" class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white" @click="goToConfirm">Onaya Geç<ChevronRight :size="15" /></button>
               </template>
               <template v-else-if="wizardStage === 'confirm'">
