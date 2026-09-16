@@ -89,7 +89,7 @@ const handleLogout = async () => { profileOpen.value = false; await auth.logout(
 </script>
 
 <template>
-  <header class="relative z-30 flex w-full items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3 dark:border-gray-800 dark:bg-gray-900 lg:-ml-[60px] lg:w-[calc(100%+60px)]">
+  <header class="relative z-30 flex w-full items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3 dark:border-gray-800 dark:bg-gray-900">
     <div class="flex shrink-0 items-center gap-2.5">
       <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-white dark:bg-white/10" :style="{ backgroundColor: primaryColor }"><Flame :size="18" /></span>
       <div class="hidden sm:block"><p class="text-sm font-semibold text-gray-900 dark:text-white/90">İSG / Yangın Güvenlik</p><p class="text-[11px] text-gray-400">Denetim Uygulaması</p></div>
