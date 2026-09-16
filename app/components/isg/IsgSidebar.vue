@@ -2,12 +2,16 @@
   <div>
     <div v-if="isMobileOpen" class="fixed inset-0 z-[9998] bg-black/30 lg:hidden" @click="closeMobile"></div>
     <aside :class="['fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r transition-all duration-300', desktop ? 'border-black bg-black text-white' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900', desktop ? (isExpanded ? 'w-[230px]' : 'w-[72px]') : (isExpanded ? 'w-[290px]' : 'w-[90px]'), isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0']">
-      <div :class="['flex', desktop ? 'px-5 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
+      <div :class="['relative flex', desktop ? 'px-5 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
         <NuxtLink :to="desktop ? '/isg-portal/desktop' : '/isg-portal/documents'" class="flex items-center gap-3">
           <template v-if="desktop && context.branchLogo"><img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl bg-white p-1 object-contain" /></template>
           <span v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
           <span v-if="isExpanded" :class="['text-lg font-semibold', desktop ? 'text-white' : 'text-gray-800 dark:text-white/90']">İSG Portalı</span>
         </NuxtLink>
+        <button v-if="desktop" type="button" class="absolute -right-3 top-7 z-[10000] flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:scale-105 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" :title="isExpanded ? 'Menüyü daralt' : 'Menüyü genişlet'" @click="toggle">
+          <ChevronLeft v-if="isExpanded" :size="14" />
+          <ChevronRight v-else :size="14" />
+        </button>
       </div>
       <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
         <template v-for="(section, sectionIndex) in menuSections" :key="sectionIndex">
@@ -39,7 +43,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ChevronDown, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
@@ -48,7 +52,7 @@ const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: fals
 const route = useRoute()
 const auth = useAuth()
 const context = useIsgDesktopContextStore()
-const { isExpanded, isMobileOpen, closeMobile } = useIsgSidebar()
+const { isExpanded, isMobileOpen, closeMobile, toggle } = useIsgSidebar()
 const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
 const primaryColor = computed(() => workspaceColor.value || '#d71920')
 
