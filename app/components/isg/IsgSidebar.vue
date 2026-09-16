@@ -20,9 +20,9 @@
                 <ChevronDown v-if="isExpanded" :size="14" class="shrink-0 transition-transform" :class="{ 'rotate-180': expandedGroups.has(item.title) }" />
               </button>
               <div v-if="'children' in item && item.children && isExpanded && expandedGroups.has(item.title)" class="ml-4 flex flex-col gap-1 border-l border-white/10 pl-3">
-                <NuxtLink v-for="child in item.children" :key="child.path" :to="child.path" :class="['rounded-lg px-3 py-2 text-sm transition', isActive(child.path) ? (desktop ? 'bg-[#d71920] text-white' : 'menu-item-active') : (desktop ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5')]" @click="closeMobile">{{ child.title }}</NuxtLink>
+                <NuxtLink v-for="child in item.children" :key="child.path" :to="child.path" :class="['rounded-lg px-3 py-2 text-sm transition', isActive(child.path) ? 'text-white' : (desktop ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5')]" :style="isActive(child.path) && desktop ? { backgroundColor: primaryColor } : undefined" @click="closeMobile">{{ child.title }}</NuxtLink>
               </div>
-              <NuxtLink v-else-if="!('children' in item)" :to="item.path" :class="['menu-item group', isActive(item.path) ? (desktop ? 'bg-[#d71920] text-white shadow-[0_8px_24px_rgba(215,25,32,0.22)]' : 'menu-item-active') : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'), isExpanded ? 'justify-start' : 'justify-center']" @click="closeMobile">
+              <NuxtLink v-else-if="!('children' in item)" :to="item.path" :class="['menu-item group', isActive(item.path) ? (desktop ? 'text-white shadow-[0_8px_24px_rgba(15,23,42,0.22)]' : 'menu-item-active') : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'), isExpanded ? 'justify-start' : 'justify-center']" :style="isActive(item.path) && desktop ? { backgroundColor: primaryColor } : undefined" @click="closeMobile">
                 <component :is="item.icon" :size="18" /><span v-if="isExpanded" class="truncate">{{ item.title }}</span>
               </NuxtLink>
             </template>
@@ -42,12 +42,17 @@
 import { ChevronDown, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings, ShieldCheck } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
+import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
 
 const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: false })
 const route = useRoute()
 const auth = useAuth()
 const context = useIsgDesktopContextStore()
 const { isExpanded, isMobileOpen, closeMobile } = useIsgSidebar()
+const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
+const primaryColor = computed(() => workspaceColor.value || '#d71920')
+
+onMounted(() => loadWorkspaceTheme(Number(auth.user.value?.tenant_id ?? 0) || null))
 
 const defaultSections = [
   { title: 'Portal', items: [
