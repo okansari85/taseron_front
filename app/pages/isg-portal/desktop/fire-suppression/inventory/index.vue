@@ -315,8 +315,8 @@ const addSystem = async () => {
     <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
-      <main class="px-4 py-5 sm:px-6 lg:px-8 xl:px-10">
-        <div class="mx-auto max-w-[1480px]">
+      <main class="w-full px-4 py-5 sm:px-5 lg:px-6">
+        <div class="w-full">
           <section class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-[11px] font-extrabold uppercase tracking-[0.18em]" :style="{ color: primaryColor }">YANGIN SÖNDÜRME SİSTEMLERİ</p>
