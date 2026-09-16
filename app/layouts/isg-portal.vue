@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen xl:flex">
-    <IsgSidebar />
+    <IsgSidebar :desktop="true" />
     <div :class="['min-w-0 flex-1 transition-all duration-300 ease-in-out', isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[72px]']">
       <IsgHeader />
       <ImpersonationBanner />
