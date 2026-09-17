@@ -1,82 +1,178 @@
 <script setup lang="ts">
-import { Bell, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Download, Eye, FileText, Flame, Gauge, Grid2X2, History, Home, MoreVertical, Pencil, Plus, QrCode, Search, Settings, ShieldCheck, SlidersHorizontal, Truck, Wrench, X } from '@lucide/vue'
+import { CalendarDays, CheckCircle2, ChevronRight, Download, Eye, Flame, Pencil, Plus, QrCode, Search, ShieldCheck, SlidersHorizontal, Wrench } from '@lucide/vue'
+import { locationEmergencyEquipmentApi } from '~/api/location-emergency-equipment'
+import { emergencyEquipmentTypeApi } from '~/api/emergency-equipment-type'
+import type { EmergencyEquipmentType } from '~/types/emergency-equipment'
+import type { LocationEmergencyEquipmentItem, LocationEmergencyEquipmentPeriodicStatus } from '~/types/location-emergency-equipment'
+import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'isg-portal' })
 
-const activeTab = ref('overview')
+const context = useIsgDesktopContextStore()
+const activeTab = ref<'overview' | 'monthly' | 'annual' | 'fill' | 'history'>('overview')
 const search = ref('')
-const statusFilter = ref('all')
-const selected = ref({
-  code: 'YSC-001', serial: 'TR-2024-001', type: 'KKT / 6 kg', location: 'Giriş Kat - Restoran Alanı', last: '15.08.2025', next: '15.09.2025', status: 'Aylık Kontrol', responsible: 'Ahmet Yılmaz', qr: 'YSC-001',
-})
+const statusFilter = ref('')
+const items = ref<LocationEmergencyEquipmentItem[]>([])
+const types = ref<EmergencyEquipmentType[]>([])
+const loading = ref(false)
+const selected = ref<LocationEmergencyEquipmentItem | null>(null)
 
-const rows = ref([
-  { code: 'YSC-001', serial: 'TR-2024-001', type: 'KKT / 6 kg', location: 'Giriş Kat - Restoran Alanı', last: '15.08.2025', next: '15.09.2025', status: 'Aylık Kontrol' },
-  { code: 'YSC-002', serial: 'TR-2023-045', type: 'KKT / 6 kg', location: 'Mutfak', last: '10.07.2025', next: '10.07.2026', status: 'Aktif' },
-  { code: 'YSC-003', serial: 'TR-2022-112', type: 'CO₂ / 5 kg', location: 'Jeneratör Odası', last: '05.06.2025', next: '05.06.2026', status: 'Aktif' },
-  { code: 'YSC-004', serial: 'TR-2021-078', type: 'KKT / 12 kg', location: 'Depo', last: '12.05.2025', next: '12.05.2029', status: 'Dolum Zamanı' },
-  { code: 'YSC-005', serial: 'TR-2024-210', type: 'KKT / 6 kg', location: 'Ofis', last: '20.08.2025', next: '20.09.2025', status: 'Aylık Kontrol' },
-  { code: 'YSC-006', serial: 'TR-2023-067', type: 'KKT / 6 kg', location: '2. Kat - Koridor', last: '15.03.2025', next: '15.03.2026', status: 'Aktif' },
-  { code: 'YSC-007', serial: 'TR-2022-189', type: 'CO₂ / 5 kg', location: 'Elektrik Odası', last: '18.06.2025', next: '18.06.2026', status: 'Aktif' },
-  { code: 'YSC-008', serial: 'TR-2021-091', type: 'KKT / 12 kg', location: 'Müşteri Alanı', last: '25.04.2025', next: '25.04.2029', status: 'Bakım Zamanı' },
-])
-
-const filteredRows = computed(() => rows.value.filter(r => {
-  const q = search.value.trim().toLocaleLowerCase('tr-TR')
-  return (!q || [r.code, r.serial, r.type, r.location].some(v => v.toLocaleLowerCase('tr-TR').includes(q))) && (statusFilter.value === 'all' || r.status === statusFilter.value)
-}))
-
-const selectRow = (row: typeof rows.value[number]) => {
-  selected.value = { ...row, responsible: 'Ahmet Yılmaz', qr: row.code }
+const load = async () => {
+  if (!context.branchId) return
+  loading.value = true
+  try {
+    const [itemsRes, typesRes] = await Promise.all([
+      locationEmergencyEquipmentApi.list(context.branchId),
+      types.value.length ? Promise.resolve({ data: types.value }) : emergencyEquipmentTypeApi.list(),
+    ])
+    items.value = itemsRes.data
+    types.value = typesRes.data
+    if (!selected.value || !items.value.some(i => i.id === selected.value?.id)) selected.value = items.value[0] ?? null
+  } finally {
+    loading.value = false
+  }
 }
 
-const statusClass = (status: string) => ({
+onMounted(() => {
+  if (!context.ready) {
+    navigateTo('/isg-portal/desktop/select-location')
+    return
+  }
+  load()
+})
+watch(() => context.branchId, load)
+
+const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value)) : '—'
+const daysUntil = (value?: string | null) => value ? Math.ceil((new Date(value).getTime() - Date.now()) / 86400000) : null
+
+const monthlyStatus = (item: LocationEmergencyEquipmentItem): LocationEmergencyEquipmentPeriodicStatus | null => {
+  const freq = item.equipment_type?.inspection_frequency_days
+  const base = item.latest_inspection?.inspected_at ?? item.install_date
+  if (!freq || !base) return null
+  const next = new Date(base)
+  next.setDate(next.getDate() + freq)
+  const now = new Date()
+  const in30 = new Date(now)
+  in30.setDate(now.getDate() + 30)
+  if (next < now) return 'gecikmis'
+  if (next <= in30) return 'yaklasiyor'
+  return 'guncel'
+}
+
+const periodicMeta = (status: LocationEmergencyEquipmentPeriodicStatus | null) => ({
+  gecikmis: { label: 'Gecikmiş', cls: 'bg-red-50 text-red-700' },
+  yaklasiyor: { label: 'Yaklaşıyor', cls: 'bg-orange-50 text-orange-700' },
+  guncel: { label: 'Güncel', cls: 'bg-emerald-50 text-emerald-700' },
+}[status ?? ''] ?? { label: 'Kontrol Yok', cls: 'bg-gray-100 text-gray-500' })
+
+const annualPending = computed(() => items.value.filter(i => ['gecikmis', 'yaklasiyor'].includes(i.annual_control_status ?? '')).length)
+const fillPending = computed(() => items.value.filter(i => ['gecikmis', 'yaklasiyor'].includes(i.fill_status ?? '')).length)
+const monthlyPending = computed(() => items.value.filter(i => ['gecikmis', 'yaklasiyor'].includes(monthlyStatus(i) ?? '')).length)
+const activeCount = computed(() => items.value.filter(i => i.is_active).length)
+
+const rowStatus = (item: LocationEmergencyEquipmentItem) => {
+  const monthly = monthlyStatus(item)
+  if (item.fill_status === 'gecikmis' || item.fill_status === 'yaklasiyor') return '4 Yıllık Dolum'
+  if (item.annual_control_status === 'gecikmis' || item.annual_control_status === 'yaklasiyor') return 'Yıllık Bakım'
+  if (monthly === 'gecikmis' || monthly === 'yaklasiyor') return 'Aylık Kontrol'
+  return item.is_active ? 'Aktif' : 'Pasif'
+}
+
+const rowStatusClass = (item: LocationEmergencyEquipmentItem) => ({
   'Aktif': 'bg-emerald-50 text-emerald-700',
   'Aylık Kontrol': 'bg-orange-50 text-orange-700',
-  'Dolum Zamanı': 'bg-violet-50 text-violet-700',
-  'Bakım Zamanı': 'bg-red-50 text-red-700',
-}[status] || 'bg-gray-100 text-gray-600')
+  'Yıllık Bakım': 'bg-red-50 text-red-700',
+  '4 Yıllık Dolum': 'bg-violet-50 text-violet-700',
+  'Pasif': 'bg-gray-100 text-gray-600',
+}[rowStatus(item)] || 'bg-gray-100 text-gray-600')
 
-const extinguisherImage = 'https://alayyangin.com/assets/6kg.png'
+const filteredItems = computed(() => {
+  const q = search.value.trim().toLocaleLowerCase('tr-TR')
+  return items.value.filter(item => {
+    if (q && !`${item.code ?? ''} ${item.location_note ?? ''} ${item.equipment_type?.tip ?? ''} ${item.equipment_type?.name ?? ''}`.toLocaleLowerCase('tr-TR').includes(q)) return false
+    if (statusFilter.value && rowStatus(item) !== statusFilter.value) return false
+    if (activeTab.value === 'monthly' && !['gecikmis', 'yaklasiyor'].includes(monthlyStatus(item) ?? '')) return false
+    if (activeTab.value === 'annual' && !['gecikmis', 'yaklasiyor'].includes(item.annual_control_status ?? '')) return false
+    if (activeTab.value === 'fill' && !['gecikmis', 'yaklasiyor'].includes(item.fill_status ?? '')) return false
+    return true
+  })
+})
+
+const selectItem = (item: LocationEmergencyEquipmentItem) => { selected.value = item }
+const equipmentLabel = (item: LocationEmergencyEquipmentItem) => item.equipment_type?.capacity_kg ? `${item.equipment_type?.tip || item.equipment_type?.name || 'YSC'} / ${item.equipment_type.capacity_kg} kg` : item.equipment_type?.tip || item.equipment_type?.name || 'Yangın Söndürücü'
+const nextDate = (item: LocationEmergencyEquipmentItem) => item.next_annual_maintenance_date || item.next_fill_date || item.latest_inspection?.inspected_at
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f6f8fb] font-outfit text-[#12204b]">
-    <aside class="fixed inset-y-0 left-0 z-40 hidden w-[238px] overflow-hidden bg-[#07090b] text-white shadow-2xl lg:block">
-      <div class="flex h-[72px] items-center gap-3 border-b border-white/10 px-5"><div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e30613] shadow-lg shadow-red-900/30"><Flame :size="22" /></div><div><div class="text-[15px] font-extrabold tracking-wide">OLIVIUM</div><div class="text-[11px] font-semibold tracking-[.18em] text-[#ffb300]">BURGER</div></div></div>
-      <nav class="px-3 py-5 text-[13px] font-medium">
-        <NuxtLink to="/isg-portal/desktop" class="mb-1 flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5 hover:text-white"><Home :size="18" /> Ana Sayfa</NuxtLink>
-        <div class="mb-2 mt-6 px-3 text-[10px] font-bold tracking-[.18em] text-white/35">YANGIN YÖNETİMİ</div>
-        <NuxtLink to="/isg-portal/desktop" class="flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><Grid2X2 :size="18" /> Dashboard</NuxtLink>
-        <div class="mt-1 rounded-xl bg-[#5b0a0d] shadow-[0_10px_28px_rgba(227,6,19,.22)]">
-          <div class="flex items-center gap-3 px-3 py-3 font-semibold"><Flame :size="18" /> Yangın Ekipmanları <ChevronDown class="ml-auto" :size="16" /></div>
-          <div class="border-t border-white/10 px-2 pb-2 pt-1">
-            <NuxtLink to="/isg-portal/desktop/fire-extinguishers" class="flex items-center gap-3 rounded-lg bg-[#e30613] px-3 py-2.5 font-semibold"><span class="h-2 w-2 rounded-full bg-white" /> Yangın Söndürücüler (YSC)</NuxtLink>
-            <NuxtLink to="/isg-portal/desktop/fire-cabinets" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-white/75 hover:bg-white/10"><span class="h-2 w-2 rounded-full bg-white/50" /> Yangın Dolapları</NuxtLink>
-            <NuxtLink to="/isg-portal/desktop/fire-pumps" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-white/75 hover:bg-white/10"><span class="h-2 w-2 rounded-full bg-white/50" /> Yangın Pompaları</NuxtLink>
-            <NuxtLink to="/isg-portal/desktop/hydrants" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-white/75 hover:bg-white/10"><span class="h-2 w-2 rounded-full bg-white/50" /> Hidrantlar</NuxtLink>
+  <div class="min-h-[calc(100vh-64px)] bg-[#f6f8fb] text-[#12204b]">
+    <main class="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
+      <div class="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <div class="mb-1 text-[12px] font-semibold text-[#1b4297]">Olivium Burger <span class="mx-2 text-gray-300">›</span> Yangın Yönetimi <span class="mx-2 text-gray-300">›</span> Yangın Söndürücüler (YSC)</div>
+          <div class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm"><img src="/images/fire-extinguisher.svg" class="h-11 w-8 object-contain" alt="Yangın söndürücü" /></div>
+            <div><h1 class="text-[28px] font-extrabold tracking-[-.03em]">Yangın Söndürücüler (YSC)</h1><p class="text-sm text-[#64748b]">Şubedeki yangın söndürücülerin kontrol, bakım ve dolum süreçlerini yönetin.</p></div>
           </div>
         </div>
-        <NuxtLink to="/isg-portal/desktop/fire-suppression/inventory" class="mt-1 flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><FileText :size="18" /> Sistem ve Tesisat <ChevronDown class="ml-auto" :size="16" /></NuxtLink>
-        <NuxtLink to="/isg-portal/desktop/field-findings" class="flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><ShieldCheck :size="18" /> Saha Bulguları</NuxtLink>
-        <div class="mb-2 mt-7 px-3 text-[10px] font-bold tracking-[.18em] text-white/35">RAPORLAR</div>
-        <NuxtLink to="/isg-portal/desktop/fire-suppression/reports" class="flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><History :size="18" /> Yangın Raporları</NuxtLink>
-        <NuxtLink to="/isg-portal/desktop/fire-suppression/reports" class="flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><Gauge :size="18" /> Analiz ve İstatistikler</NuxtLink>
-        <div class="mb-2 mt-7 px-3 text-[10px] font-bold tracking-[.18em] text-white/35">YÖNETİM</div>
-        <NuxtLink to="/isg-portal/desktop/settings" class="flex items-center gap-3 rounded-lg px-3 py-3 text-white/70 hover:bg-white/5"><Settings :size="18" /> Ayarlar</NuxtLink>
-      </nav>
-      <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4"><div class="flex items-center gap-3 text-sm"><div class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">DK</div><div><div class="font-semibold">Deniz Kaya</div><div class="text-xs text-white/45">İSG Uzmanı</div></div></div></div>
-    </aside>
-    <div class="lg:pl-[238px]">
-      <header class="sticky top-0 z-30 flex h-[64px] items-center justify-between border-b border-[#e8ebf0] bg-white/95 px-5 backdrop-blur sm:px-7"><div class="flex items-center gap-3"><img src="/vector-fire-global.svg" class="h-9 w-auto" alt="Vector Fire Global"/><div class="hidden h-7 w-px bg-gray-200 sm:block"/><div class="hidden text-xs text-gray-500 sm:block">İSG / Yangın Güvenlik</div></div><div class="flex items-center gap-4"><div class="hidden rounded-xl border border-gray-200 px-4 py-2 text-xs sm:block"><span class="text-gray-400">LOKASYON</span><div class="font-bold">OLIVIUM BURGER</div></div><Bell :size="19" class="text-[#12204b]"/><div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#3d1a9b] text-xs font-bold text-white">DK</div><div class="hidden sm:block"><div class="text-xs font-bold">Deniz Kaya</div><div class="text-[10px] text-gray-400">İSG Uzmanı</div></div><ChevronDown :size="16"/></div></header>
-      <main class="px-4 py-6 sm:px-7 lg:px-8"><div class="mx-auto max-w-[1500px]">
-        <div class="mb-5 flex items-end justify-between gap-4"><div><div class="mb-1 text-[12px] font-semibold text-[#1b4297]">Olivium Burger <span class="mx-2 text-gray-300">›</span> Yangın Yönetimi <span class="mx-2 text-gray-300">›</span> Yangın Söndürücüler</div><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm"><img :src="extinguisherImage" class="h-10 w-8 object-contain" alt="Yangın söndürücü"/></div><div><h1 class="text-[29px] font-extrabold tracking-[-.03em]">Yangın Söndürücüler (YSC)</h1><p class="text-sm text-[#64748b]">Olivium Burger şubesindeki yangın söndürücülerinizi, kontrol, bakım ve dolum süreçlerini takip edin.</p></div></div></div><button class="inline-flex h-11 items-center gap-2 rounded-lg bg-[#e30613] px-5 text-sm font-bold text-white shadow-lg shadow-red-200 hover:bg-[#c80510]"><Plus :size="18"/> Yeni YSC Ekle</button></div>
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><div v-for="card in [{title:'Toplam YSC',value:'28',sub:'Bu şubedeki söndürücüler',tone:'blue',icon:Flame},{title:'Aktif',value:'26',sub:'Kullanıma hazır',tone:'green',icon:CircleCheck},{title:'Aylık Kontrol Bekleyen',value:'4',sub:'Bu ay kontrol edilmesi gereken',tone:'orange',icon:CalendarDays},{title:'Yıllık Bakım Bekleyen',value:'2',sub:'Bu yıl bakım zamanı gelen',tone:'red',icon:ShieldCheck},{title:'4 Yıllık Dolum Bekleyen',value:'1',sub:'Bu yıl dolum zamanı gelen',tone:'purple',icon:Wrench}]" :key="card.title" :class="['rounded-xl border p-4 shadow-[0_4px_16px_rgba(15,23,42,.045)]',card.tone==='blue'?'border-blue-100 bg-[#f0f7ff]':card.tone==='green'?'border-emerald-100 bg-[#effcf7]':card.tone==='orange'?'border-orange-100 bg-[#fff8ed]':card.tone==='red'?'border-red-100 bg-[#fff1f2]':'border-violet-100 bg-[#f7f2ff]']"><div class="flex items-start gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/80"><component :is="card.icon" :size="24"/></div><div><p class="text-xs font-semibold text-[#64748b]">{{card.title}}</p><p class="mt-1 text-[27px] font-extrabold leading-none">{{card.value}}</p><p class="mt-2 text-[11px] text-[#64748b]">{{card.sub}}</p></div></div></div></section>
-        <div class="mt-4 flex overflow-x-auto rounded-xl border border-[#e5e9ef] bg-white"><button v-for="tab in [{id:'overview',label:'Genel Bakış',icon:Home},{id:'monthly',label:'Aylık Kontroller',icon:CalendarDays},{id:'annual',label:'Yıllık Bakımlar',icon:Wrench},{id:'fill',label:'4 Yıllık Dolumlar',icon:History},{id:'history',label:'Kontrol Geçmişi',icon:History}]" :key="tab.id" @click="activeTab=tab.id" :class="['flex min-w-[165px] items-center justify-center gap-2 border-r border-[#edf0f3] px-5 py-3 text-sm font-semibold transition last:border-0',activeTab===tab.id?'bg-[#e30613] text-white':'text-[#1d376e] hover:bg-gray-50']"><component :is="tab.icon" :size="16"/>{{tab.label}}</button></div>
-        <div v-if="activeTab!=='overview'" class="mt-4 rounded-xl border border-[#e5e9ef] bg-white p-6"><div class="flex items-center justify-between"><div><h2 class="text-lg font-bold">{{activeTab==='monthly'?'Aylık Kontroller':activeTab==='annual'?'Yıllık Bakımlar':activeTab==='fill'?'4 Yıllık Dolumlar':'Kontrol Geçmişi'}}</h2><p class="mt-1 text-sm text-gray-500">Bu sekme için YSC kayıtları ve işlem geçmişi.</p></div><button class="rounded-lg border px-4 py-2 text-sm font-semibold"><Download :size="15" class="mr-2 inline"/>Excel'e Aktar</button></div><div class="mt-6 grid gap-4 md:grid-cols-3"><div class="rounded-xl bg-gray-50 p-5"><div class="text-xs text-gray-500">Toplam Kayıt</div><div class="mt-2 text-2xl font-bold">{{activeTab==='monthly'?'28':activeTab==='annual'?'26':activeTab==='fill'?'8':'96'}}</div></div><div class="rounded-xl bg-red-50 p-5"><div class="text-xs text-red-500">Uygunsuzluk</div><div class="mt-2 text-2xl font-bold text-red-600">{{activeTab==='monthly'?'3':activeTab==='annual'?'2':activeTab==='fill'?'1':'6'}}</div></div><div class="rounded-xl bg-emerald-50 p-5"><div class="text-xs text-emerald-600">Uygun</div><div class="mt-2 text-2xl font-bold text-emerald-700">{{activeTab==='monthly'?'25':activeTab==='annual'?'24':activeTab==='fill'?'7':'90'}}</div></div></div></div>
-        <div v-else class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_275px]"><section class="overflow-hidden rounded-xl border border-[#e5e9ef] bg-white shadow-[0_4px_20px_rgba(15,23,42,.035)]"><div class="flex flex-col gap-3 border-b border-[#edf0f3] p-4 xl:flex-row xl:items-center"><div class="relative flex-1"><Search :size="17" class="absolute left-3 top-1/2 -translate-y-1/2 text-[#d71920]"/><input v-model="search" class="h-11 w-full rounded-lg border border-gray-200 pl-10 pr-4 text-sm outline-none focus:border-[#d71920]" placeholder="YSC kodu, seri no, konum, tip ara..."/></div><select v-model="statusFilter" class="h-11 rounded-lg border border-gray-200 px-3 text-sm"><option value="all">Tüm Durumlar</option><option>Aylık Kontrol</option><option>Aktif</option><option>Dolum Zamanı</option><option>Bakım Zamanı</option></select><button class="h-11 rounded-lg border border-gray-200 px-4 text-sm font-semibold"><SlidersHorizontal :size="15" class="mr-2 inline"/>Filtrele</button><button class="h-11 rounded-lg border border-gray-200 px-4 text-sm font-semibold"><Download :size="15" class="mr-2 inline"/>Excel'e Aktar</button></div><div class="overflow-x-auto"><table class="min-w-[980px] w-full text-left"><thead><tr class="bg-[#f8fafc] text-[11px] font-bold text-[#64748b]"><th class="px-4 py-3">Fotoğraf</th><th class="px-3 py-3">YSC Kodu</th><th class="px-3 py-3">Seri Numarası</th><th class="px-3 py-3">Tip / Kapasite</th><th class="px-3 py-3">Konum</th><th class="px-3 py-3">Son Kontrol</th><th class="px-3 py-3">Sonraki Kontrol</th><th class="px-3 py-3">Durum</th><th class="px-3 py-3">İşlemler</th></tr></thead><tbody><tr v-for="row in filteredRows" :key="row.code" @click="selectRow(row)" class="cursor-pointer border-t border-[#edf0f3] hover:bg-[#fffafa]"><td class="px-4 py-2"><div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-50"><img :src="extinguisherImage" class="h-11 w-9 object-contain" alt="YSC"/></div></td><td class="px-3 py-3 text-sm font-bold text-[#17367d]">{{row.code}}</td><td class="px-3 py-3 text-xs text-[#36517f]">{{row.serial}}</td><td class="px-3 py-3 text-xs font-medium">{{row.type}}</td><td class="px-3 py-3 text-xs">{{row.location}}</td><td class="px-3 py-3 text-xs">{{row.last}}</td><td class="px-3 py-3 text-xs font-semibold" :class="row.status==='Aylık Kontrol'?'text-red-500':'text-emerald-600'">{{row.next}}</td><td class="px-3 py-3"><span :class="['rounded-md px-2.5 py-1 text-[10px] font-bold',statusClass(row.status)]">{{row.status}}</span></td><td class="px-3 py-3"><div class="flex items-center gap-1"><button class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100"><Eye :size="15"/></button><button class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100"><Pencil :size="15"/></button><button class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100"><MoreVertical :size="15"/></button></div></td></tr></tbody></table></div><div class="flex items-center justify-between border-t border-[#edf0f3] px-4 py-3 text-xs text-[#64748b]"><span>{{filteredRows.length}} kayıt gösteriliyor. Toplam 28 kayıt.</span><div class="flex gap-1"><button class="h-8 w-8 rounded-lg border">‹</button><button class="h-8 w-8 rounded-lg bg-[#e30613] text-white">1</button><button class="h-8 w-8 rounded-lg border">2</button><button class="h-8 w-8 rounded-lg border">3</button><button class="h-8 w-8 rounded-lg border">›</button></div></div></section><aside class="rounded-xl border border-[#e5e9ef] bg-white p-4 shadow-[0_4px_20px_rgba(15,23,42,.035)]"><div class="flex items-center justify-between"><h3 class="text-lg font-bold">{{selected.code}} Detayları</h3><span class="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">● Aktif</span></div><div class="mt-4 flex items-center justify-between rounded-xl bg-[#fbfbfc] p-3"><img :src="extinguisherImage" class="h-32 w-24 object-contain" alt="Yangın söndürücü"/><div class="text-center"><div class="text-2xl font-extrabold">{{selected.code}}</div><div class="mt-1 text-xs text-gray-500">{{selected.serial}}</div></div></div><div class="mt-3 flex items-center justify-center rounded-xl bg-white py-2"><div class="relative flex h-28 w-28 items-center justify-center border-4 border-gray-900 p-2"><QrCode :size="86"/></div></div><div class="mt-2 text-center text-xs font-bold text-[#12204b]">{{selected.qr}}</div><dl class="mt-4 space-y-2 text-xs"><div class="flex justify-between gap-4"><dt class="text-gray-500">Tip / Kapasite</dt><dd class="font-semibold">{{selected.type}}</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Marka / Model</dt><dd class="font-semibold">KKT ABC</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Üretim Tarihi</dt><dd class="font-semibold">12.03.2024</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Konum</dt><dd class="max-w-[155px] text-right font-semibold">{{selected.location}}</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Son Kontrol</dt><dd class="font-semibold">{{selected.last}}</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Sonraki Kontrol</dt><dd class="font-semibold text-red-500">{{selected.next}}</dd></div><div class="flex justify-between gap-4"><dt class="text-gray-500">Sorumlu</dt><dd class="font-semibold">{{selected.responsible}}</dd></div></dl><div class="mt-4 grid grid-cols-2 gap-2"><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><Pencil :size="14" class="mr-1 inline"/>Düzenle</button><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><CalendarDays :size="14" class="mr-1 inline"/>Kontrol Ekle</button></div><div class="mt-2 grid grid-cols-2 gap-2"><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><Download :size="14" class="mr-1 inline"/>QR Kod İndir</button><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><QrCode :size="14" class="mr-1 inline"/>QR Yazdır</button></div><button class="mt-3 w-full rounded-lg bg-[#e30613] py-3 text-sm font-bold text-white">Detayları Görüntüle <ChevronRight :size="17" class="ml-1 inline"/></button></aside></div>
-        <div class="mt-4 flex items-center gap-4 rounded-xl border border-red-100 bg-gradient-to-r from-red-50 to-white px-5 py-4"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#e30613] text-white"><Flame :size="25"/></div><div><div class="text-lg font-extrabold text-[#e30613]">Yangın güvenliği, güvenli lezzet demektir.</div><div class="text-sm text-[#64748b]">Düzenli kontrol, güvenli yarınlar. Olivium Burger.</div></div><div class="ml-auto hidden text-right text-sm font-bold italic text-[#e30613] sm:block">Güvenli<br/>Mekanlar<br/>Daha Güzel Lezzetler!</div></div>
-      </div></main>
-    </div>
+        <button class="inline-flex h-11 items-center gap-2 rounded-lg bg-[#e30613] px-5 text-sm font-bold text-white shadow-lg shadow-red-100"><Plus :size="18" /> Yeni YSC Ekle</button>
+      </div>
+
+      <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div class="rounded-xl border border-blue-100 bg-[#f0f7ff] p-4"><div class="flex items-center gap-3"><img src="/images/fire-extinguisher.svg" class="h-12 w-9 object-contain" /><div><div class="text-xs font-semibold text-[#64748b]">Toplam YSC</div><div class="mt-1 text-[27px] font-extrabold">{{ items.length }}</div><div class="text-[11px] text-[#64748b]">Bu şubedeki söndürücüler</div></div></div></div>
+        <div class="rounded-xl border border-emerald-100 bg-[#effcf7] p-4"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white"><CheckCircle2 class="text-emerald-600" :size="25" /></div><div><div class="text-xs font-semibold text-[#64748b]">Aktif</div><div class="mt-1 text-[27px] font-extrabold">{{ activeCount }}</div><div class="text-[11px] text-[#64748b]">Kullanıma hazır</div></div></div></div>
+        <div class="rounded-xl border border-orange-100 bg-[#fff8ed] p-4"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white"><CalendarDays class="text-orange-500" :size="25" /></div><div><div class="text-xs font-semibold text-[#64748b]">Aylık Kontrol Bekleyen</div><div class="mt-1 text-[27px] font-extrabold">{{ monthlyPending }}</div><div class="text-[11px] text-[#64748b]">Yaklaşan veya geciken</div></div></div></div>
+        <div class="rounded-xl border border-red-100 bg-[#fff1f2] p-4"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white"><ShieldCheck class="text-red-600" :size="25" /></div><div><div class="text-xs font-semibold text-[#64748b]">Yıllık Bakım Bekleyen</div><div class="mt-1 text-[27px] font-extrabold">{{ annualPending }}</div><div class="text-[11px] text-[#64748b]">Akredite bakım süreci</div></div></div></div>
+        <div class="rounded-xl border border-violet-100 bg-[#f7f2ff] p-4"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white"><Wrench class="text-violet-600" :size="25" /></div><div><div class="text-xs font-semibold text-[#64748b]">4 Yıllık Dolum Bekleyen</div><div class="mt-1 text-[27px] font-extrabold">{{ fillPending }}</div><div class="text-[11px] text-[#64748b]">Dolum zamanı gelen</div></div></div></div>
+      </section>
+
+      <div class="mt-4 flex overflow-x-auto rounded-xl border border-[#e5e9ef] bg-white">
+        <button v-for="tab in [{id:'overview',label:'Genel Bakış'},{id:'monthly',label:'Aylık Kontroller'},{id:'annual',label:'Yıllık Bakımlar'},{id:'fill',label:'4 Yıllık Dolumlar'},{id:'history',label:'Kontrol Geçmişi'}]" :key="tab.id" @click="activeTab = tab.id as typeof activeTab" :class="['min-w-[165px] border-r border-[#edf0f3] px-5 py-3 text-sm font-semibold last:border-0', activeTab === tab.id ? 'bg-[#e30613] text-white' : 'text-[#1d376e] hover:bg-gray-50']">{{ tab.label }}</button>
+      </div>
+
+      <section class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_290px]">
+        <div class="overflow-hidden rounded-xl border border-[#e5e9ef] bg-white shadow-[0_4px_20px_rgba(15,23,42,.035)]">
+          <div class="flex flex-col gap-3 border-b border-[#edf0f3] p-4 xl:flex-row xl:items-center">
+            <div class="relative flex-1"><Search :size="17" class="absolute left-3 top-1/2 -translate-y-1/2 text-[#d71920]" /><input v-model="search" class="h-11 w-full rounded-lg border border-gray-200 pl-10 pr-4 text-sm outline-none focus:border-[#d71920]" placeholder="YSC kodu, konum veya tip ara..." /></div>
+            <select v-model="statusFilter" class="h-11 rounded-lg border border-gray-200 px-3 text-sm"><option value="">Tüm Durumlar</option><option>Aktif</option><option>Aylık Kontrol</option><option>Yıllık Bakım</option><option>4 Yıllık Dolum</option><option>Pasif</option></select>
+            <button class="h-11 rounded-lg border border-gray-200 px-4 text-sm font-semibold"><SlidersHorizontal :size="15" class="mr-2 inline" />Filtrele</button>
+            <button class="h-11 rounded-lg border border-gray-200 px-4 text-sm font-semibold"><Download :size="15" class="mr-2 inline" />Excel'e Aktar</button>
+          </div>
+          <div v-if="loading" class="p-12 text-center text-sm text-gray-500">YSC kayıtları yükleniyor...</div>
+          <div v-else-if="!filteredItems.length" class="p-12 text-center text-sm text-gray-500">Bu filtreye uygun YSC bulunamadı.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-[1050px] w-full text-left">
+              <thead><tr class="bg-[#f8fafc] text-[11px] font-bold text-[#64748b]"><th class="px-4 py-3">Fotoğraf</th><th class="px-3 py-3">YSC Kodu</th><th class="px-3 py-3">Tip / Kapasite</th><th class="px-3 py-3">Konum</th><th class="px-3 py-3">Son Kontrol</th><th class="px-3 py-3">Sonraki İşlem</th><th class="px-3 py-3">Durum</th><th class="px-3 py-3">İşlemler</th></tr></thead>
+              <tbody>
+                <tr v-for="item in filteredItems" :key="item.id" class="cursor-pointer border-t border-[#edf0f3] hover:bg-[#fffafa]" @click="selectItem(item)">
+                  <td class="px-4 py-2"><div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-50"><img src="/images/fire-extinguisher.svg" class="h-11 w-8 object-contain" alt="YSC" /></div></td>
+                  <td class="px-3 py-3 text-sm font-bold text-[#17367d]">{{ item.code || `YSC-${item.id}` }}</td>
+                  <td class="px-3 py-3 text-xs font-medium">{{ equipmentLabel(item) }}</td>
+                  <td class="px-3 py-3 text-xs">{{ item.location_note || '—' }}</td>
+                  <td class="px-3 py-3 text-xs">{{ formatDate(item.latest_inspection?.inspected_at) }}</td>
+                  <td class="px-3 py-3 text-xs font-semibold">{{ formatDate(nextDate(item)) }}</td>
+                  <td class="px-3 py-3"><span :class="['rounded-md px-2.5 py-1 text-[10px] font-bold', rowStatusClass(item)]">{{ rowStatus(item) }}</span></td>
+                  <td class="px-3 py-3"><button class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100"><Eye :size="15" /></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex items-center justify-between border-t border-[#edf0f3] px-4 py-3 text-xs text-[#64748b]"><span>{{ filteredItems.length }} kayıt gösteriliyor. Toplam {{ items.length }} kayıt.</span><span class="rounded-lg bg-gray-50 px-3 py-2">Canlı API verisi</span></div>
+        </div>
+
+        <aside class="rounded-xl border border-[#e5e9ef] bg-white p-4 shadow-[0_4px_20px_rgba(15,23,42,.035)]">
+          <div class="flex items-center justify-between"><h3 class="text-lg font-bold">{{ selected?.code || 'YSC Detayı' }}</h3><span v-if="selected" class="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">● {{ selected.is_active ? 'Aktif' : 'Pasif' }}</span></div>
+          <template v-if="selected">
+            <div class="mt-4 flex items-center justify-between rounded-xl bg-[#fbfbfc] p-3"><img src="/images/fire-extinguisher.svg" class="h-32 w-24 object-contain" alt="Yangın söndürücü" /><div class="text-right"><div class="text-2xl font-extrabold">{{ selected.code || `YSC-${selected.id}` }}</div><div class="mt-1 text-xs text-gray-500">{{ selected.equipment_type?.name || 'Yangın Söndürücü' }}</div></div></div>
+            <div class="mt-3 flex flex-col items-center rounded-xl bg-gray-50 py-4"><div class="flex h-28 w-28 items-center justify-center rounded-xl bg-white shadow-sm"><QrCode :size="82" /></div><div class="mt-2 text-xs font-bold">{{ selected.code || `YSC-${selected.id}` }}</div></div>
+            <dl class="mt-4 space-y-2 text-xs"><div class="flex justify-between gap-3"><dt class="text-gray-500">Tip / Kapasite</dt><dd class="text-right font-semibold">{{ equipmentLabel(selected) }}</dd></div><div class="flex justify-between gap-3"><dt class="text-gray-500">Konum</dt><dd class="max-w-[160px] text-right font-semibold">{{ selected.location_note || '—' }}</dd></div><div class="flex justify-between gap-3"><dt class="text-gray-500">Son Kontrol</dt><dd class="font-semibold">{{ formatDate(selected.latest_inspection?.inspected_at) }}</dd></div><div class="flex justify-between gap-3"><dt class="text-gray-500">Sonraki İşlem</dt><dd class="font-semibold" :class="daysUntil(nextDate(selected)) !== null && daysUntil(nextDate(selected))! < 0 ? 'text-red-600' : 'text-[#12204b]'">{{ formatDate(nextDate(selected)) }}</dd></div><div class="flex justify-between gap-3"><dt class="text-gray-500">Yıllık Bakım</dt><dd class="font-semibold">{{ periodicMeta(selected.annual_control_status ?? null).label }}</dd></div><div class="flex justify-between gap-3"><dt class="text-gray-500">4 Yıllık Dolum</dt><dd class="font-semibold">{{ periodicMeta(selected.fill_status ?? null).label }}</dd></div></dl>
+            <div class="mt-4 grid grid-cols-2 gap-2"><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><Pencil :size="14" class="mr-1 inline" />Düzenle</button><button class="rounded-lg border border-gray-200 py-2 text-xs font-bold"><CalendarDays :size="14" class="mr-1 inline" />Kontrol Ekle</button></div>
+            <button class="mt-3 w-full rounded-lg bg-[#e30613] py-3 text-sm font-bold text-white">Detayları Görüntüle <ChevronRight :size="17" class="ml-1 inline" /></button>
+          </template>
+          <div v-else class="py-10 text-center text-sm text-gray-500">Henüz YSC kaydı bulunmuyor.</div>
+        </aside>
+      </section>
+
+      <div class="mt-4 flex items-center gap-4 rounded-xl border border-red-100 bg-gradient-to-r from-red-50 to-white px-5 py-4"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#e30613] text-white"><Flame :size="25" /></div><div><div class="text-lg font-extrabold text-[#e30613]">Yangın güvenliği, güvenli lezzet demektir.</div><div class="text-sm text-[#64748b]">Düzenli kontrol, güvenli yarınlar. Olivium Burger.</div></div></div>
+    </main>
   </div>
 </template>
