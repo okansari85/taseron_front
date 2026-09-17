@@ -5,6 +5,7 @@ import {
   ChevronRight,
   FlaskConical,
   Image as ImageIcon,
+  Info,
   LoaderCircle,
   Paperclip,
   Plus,
@@ -25,6 +26,7 @@ import {
   type FireSuppressionFindingScope,
   type FireSuppressionReportAnalysisDraft,
   type FireSuppressionReportControlItemInput,
+  type FireSuppressionReportEquipmentInput,
   type FireSuppressionReportFileInput,
   type FireSuppressionReportFileType,
   type FireSuppressionReportFindingInput,
@@ -111,14 +113,23 @@ const runAnalyzingFromFixture = async () => {
   wizardStage.value = 'analyzing'
   try {
     await fireSuppressionReportApi.analyzeFromFixture(context.branchId, selectedFixtureId.value)
+    // "Raporu Kaydet" adımı normalde gerçek bir dosya (selectedFile) bekler -
+    // fixture akışında kullanıcı hiç dosya seçmediği için PDF'i buradan
+    // indirmek yerine backend'e fixtureId gönderiyoruz (bkz. submit()):
+    // sunucu zaten kendi diskinde duran fixture PDF'ini indirme/tekrar
+    // yükleme turu olmadan doğrudan kullanıyor.
   } catch (e: any) {
     $toast.error(e?.data?.message || e?.message || 'Fixture ile analiz başlatılamadı.')
     wizardStage.value = 'fixture'
   }
 }
 
-type FindingForm = FireSuppressionReportFindingInput
-const emptyFinding = (): FindingForm => ({ category: null, control_item: '', description: '', scope: 'unknown', area_note: '', affected_item_ids: [] })
+// _systemName backend'e HİÇ gönderilmez (submit() sadece belirli alanları
+// seçip gönderir) - sadece kategori "diger" (Diğer) genel kovasına düşüp
+// kullanıcı sonradan gerçek kategoriyi seçtiğinde bu bulgunun kategorisini
+// de düzeltebilmek için saklanır (bkz. applyCategoryOverridesAndContinue).
+type FindingForm = FireSuppressionReportFindingInput & { _systemName?: string | null }
+const emptyFinding = (): FindingForm => ({ category: null, control_item: '', description: '', scope: 'unknown', area_note: '', affected_item_ids: [], equipment_codes: [], _systemName: null })
 
 const form = ref({
   report_date: '',
@@ -134,11 +145,13 @@ const form = ref({
 
 const additionalFiles = ref<FireSuppressionReportFileInput[]>([])
 const controlItemsForm = ref<FireSuppressionReportControlItemInput[]>([])
+const equipmentPayload = ref<FireSuppressionReportEquipmentInput[]>([])
 
 const resetWizard = () => {
   selectedFile.value = null
   additionalFiles.value = []
   controlItemsForm.value = []
+  equipmentPayload.value = []
   savedReport.value = null
   selectedFixtureId.value = ''
   matchRows.value = []
@@ -148,9 +161,12 @@ const resetWizard = () => {
   detectedNewCategories.value = []
   newCategoryApprovals.value = {}
   equipmentDraftItems.value = []
+  systemsDraftItems.value = []
   expandedEquipmentCodes.value = new Set()
+  expandedSystemCategories.value = new Set()
   matchingView.value = 'results'
   activeDetailIndex.value = null
+  confirmTab.value = 'info'
   wizardStage.value = 'upload'
   form.value = {
     report_date: '',
@@ -224,10 +240,45 @@ const isNewCategoryApproved = (category: FireSuppressionCategory): boolean => ne
 const toggleNewCategoryApproval = (category: FireSuppressionCategory) => {
   newCategoryApprovals.value = { ...newCategoryApprovals.value, [category]: !isNewCategoryApproved(category) }
 }
+const normalizeSystemName = (s: string) => s.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ')
+
+// Backend bir sistemi kesin bir kategoriye oturtamazsa "diger" (Diğer) genel
+// kovasına düşürür - "Yeni Sistemler" listesinde sadece "Diğer" yazması
+// kullanıcıya hangi sistem olduğunu göstermez. Ayrıca hiçbir zaman körü
+// körüne başka bir kategoriye de gömülmez (aynı raporda ayrı bir bölümse
+// ayrı kalır) - ve savunmacı olarak, backend'in hiç beklenmeyen/bilinmeyen
+// bir kategori değeri üretmesi ihtimaline karşı da (label haritasında hiç
+// karşılığı olmayan HERHANGİ bir değer) aynı "çözülmemiş" muamelesi görür,
+// asla boş gösterilmez. Bu map, kullanıcının modalde SEÇTİĞİ gerçek
+// kategoriyi (rapor sistem adına göre) tutar; İleri tuşuna basılınca
+// uygulanır (equipmentDraftItems/systemsDraftItems/findings üzerinde
+// category alanı düzeltilir).
+const categoryOverrides = ref<Record<string, FireSuppressionCategory>>({})
+const showCategoryOverrideModal = ref(false)
+const categoryOverrideDrafts = ref<Record<string, FireSuppressionCategory | ''>>({})
+const categoryNeedsResolution = (c: string): boolean => c === 'diger' || !(c in FIRE_SUPPRESSION_CATEGORY_LABELS)
+// Kategorisi çözülememiş (diger ya da hiç tanınmayan), henüz kullanıcı
+// tarafından çözülmemiş HAM rapor sistem adları - hem "Yeni Sistemler"
+// listesinde italik gösterim hem modal için.
+const unresolvedCategorySystemNames = computed(() => {
+  if (!detectedNewCategories.value.some(categoryNeedsResolution)) return []
+  const names = new Set<string>()
+  for (const s of systemsDraftItems.value) {
+    if (!categoryNeedsResolution(s.category) || !s.name) continue
+    if (categoryOverrides.value[normalizeSystemName(s.name)]) continue
+    names.add(s.name)
+  }
+  return [...names]
+})
 
 // AI'ın döndürdüğü ham equipment dizisi (control_items dahil) — "Onayla"
 // adımında gerçek madde listesini kurmak için saklanıyor (bkz. buildControlItemsFromDraft).
 const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['equipment']>>([])
+// Sistem seviyeli (equipment'a bağlı olmayan, scope='system') kontrol
+// maddeleri draft.equipment'ta DEĞİL draft.systems[].control_items'te -
+// "Belge ve Kayıt Kontrolleri" gibi hiç ekipmanı olmayan sistemlerin kendi
+// maddeleri buradan gelir (bkz. buildControlItemsFromDraft).
+const systemsDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['systems']>>([])
 
 // Geçici debug: analiz tamamlandığında frontend'e gelen JSON'u görmek için.
 const aiRawResult = ref<unknown | null>(null)
@@ -266,10 +317,11 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
   }
 
   try {
-    if (draft.control_date) form.value.report_date = draft.control_date
-    if (draft.next_control_date) form.value.next_control_date = draft.next_control_date
-    if (draft.overall_result) form.value.overall_result = draft.overall_result
-    if (draft.company_name) form.value.inspection_company_name = draft.company_name
+    if (draft.report?.control_date) form.value.report_date = draft.report.control_date
+    if (draft.report?.next_control_date) form.value.next_control_date = draft.report.next_control_date
+    if (draft.report?.overall_result) form.value.overall_result = draft.report.overall_result
+    if (draft.report?.company_name) form.value.inspection_company_name = draft.report.company_name
+    if (draft.report?.report_no) form.value.report_no = draft.report.report_no
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
 
     // Rapor genelinin kapsadığı sistemler ile bu şubede ZATEN KAYITLI
@@ -280,6 +332,7 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     newCategoryApprovals.value = Object.fromEntries(detectedNewCategories.value.map(c => [c, true]))
 
     equipmentDraftItems.value = draft.equipment ?? []
+    systemsDraftItems.value = draft.systems ?? []
 
     const matchedByCode = new Map(draft.matched_inventory_items.map(item => [item.code, item.id]))
     const candidateItemsById = new Map((draft.candidate_inventory_items ?? []).map(item => [item.id, item]))
@@ -339,22 +392,45 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     )
     form.value.covered_inventory_item_ids = [...coveredIds]
 
+    // Bulgunun 'category'si backend'den hiç gelmiyor - gelen sadece
+    // system_name (raporun kendi sistem başlığı, örn. "Yangın Dolapları ve
+    // Hortum Sistemlerinin Kontrolü"). draft.systems zaten AYNI adı
+    // kategorisiyle birlikte taşıyor - bulgunun kategorisini oradan
+    // eşleştirerek türetiyoruz, kullanıcının elle seçmesine gerek kalmadan.
+    const categoryBySystemName = new Map((draft.systems ?? []).filter(s => s.name).map(s => [normalizeSystemName(s.name as string), s.category]))
+
     if (draft.findings?.length) {
       form.value.findings = draft.findings.map((f) => {
-        const affectedIds = (f.equipment_codes ?? [])
+        const equipmentCodes = f.affected_equipment ?? []
+        // Zaten mevcut envanterle eşleşmiş kodlar (matchedByCode) varsa
+        // gerçek id'leri de gönderiyoruz (küçük bir optimizasyon - backend
+        // zaten equipment_codes'tan da aynı sonuca ulaşır), ama asıl
+        // bağlama artık equipment_codes üzerinden: backend kategori+kod
+        // eşleşmesi bulamazsa YENİ bir Sistem Bileşeni açar (control_items'teki
+        // AYNI mantık) - böylece henüz envanterde kayıtlı olmayan bir
+        // ekipmana değinen bir bulgu da "eklensin" diye kullanıcıyı
+        // uğraştırmadan doğru şekilde bağlanır/oluşturulur.
+        const affectedIds = equipmentCodes
           .map(code => matchedByCode.get(code))
           .filter((id): id is number => id !== undefined)
         return {
-          category: f.category ?? null,
-          control_item: f.control_item ?? '',
+          category: (f.system_name ? categoryBySystemName.get(normalizeSystemName(f.system_name)) : null) ?? null,
+          _systemName: f.system_name ?? null,
+          control_item: null,
           description: f.description,
-          scope: affectedIds.length ? 'specific' : f.scope,
-          area_note: f.area_note ?? '',
+          // equipment_codes doluysa doğrudan 'specific' - kullanıcıya hiç
+          // sorulmaz, backend kod bazlı çözer/oluşturur. Boşsa (AI hiç
+          // ekipman belirtmemiş) kullanıcıyı zorla kapsam seçtirmeden
+          // 'unknown' (sadece bilgi amaçlı) atanır.
+          scope: equipmentCodes.length ? 'specific' : 'unknown',
+          area_note: '',
           affected_item_ids: affectedIds,
+          equipment_codes: equipmentCodes,
         }
       })
     }
 
+    matchingTab.value = detectedNewCategories.value.length ? 'new_systems' : 'systems'
     wizardStage.value = 'matching'
   } catch (e: any) {
     $toast.error(e?.message || 'Analiz sonucu işlenemedi.')
@@ -369,6 +445,78 @@ const cancelAnalyzing = () => {
 }
 
 // --- Adım 3: Eşleştirme (sonuç listesi + tekil belirsiz inceleme) ---
+// Üç blok (Yeni Sistemler / Sistemler / Bileşenler) eskiden alt alta
+// sıralıydı; kullanıcı bunları 3 ayrı sekme olarak istedi.
+type MatchingTab = 'new_systems' | 'systems' | 'components'
+const matchingTab = ref<MatchingTab>('systems')
+const matchingStepOrder: MatchingTab[] = ['new_systems', 'systems', 'components']
+const matchingStepLabels: Record<MatchingTab, string> = { new_systems: 'Yeni Sistemler', systems: 'Sistemler', components: 'Bileşenler' }
+const matchingStepIndex = computed(() => matchingStepOrder.indexOf(matchingTab.value))
+const matchingNext = () => {
+  // "Yeni Sistemler" adımından çıkmadan önce, "diger" (Diğer) genel kovasına
+  // düşmüş çözümlenmemiş sistem varsa kullanıcıyı zorla kategori seçtiren
+  // modal açılır - aksi halde bu sistemler sonsuza kadar belirsiz "Diğer"
+  // olarak kalır.
+  if (matchingTab.value === 'new_systems' && unresolvedCategorySystemNames.value.length) {
+    categoryOverrideDrafts.value = Object.fromEntries(unresolvedCategorySystemNames.value.map(n => [n, '']))
+    showCategoryOverrideModal.value = true
+    return
+  }
+  const next = matchingStepOrder[matchingStepIndex.value + 1]
+  if (next) matchingTab.value = next
+}
+const applyCategoryOverridesAndContinue = () => {
+  // Kod → sistem adı eşlemesi, henüz mutasyona uğramamış systemsDraftItems
+  // üzerinden kurulur (equipmentDraftItems'ın kendisi sistem adını taşımaz,
+  // sadece kategori taşır).
+  const codeToSystemName = new Map<string, string>()
+  for (const s of systemsDraftItems.value) {
+    if (!s.name) continue
+    for (const c of s.components ?? []) {
+      if (c.code) codeToSystemName.set(c.code, s.name)
+    }
+  }
+
+  for (const [name, category] of Object.entries(categoryOverrideDrafts.value)) {
+    if (!category) continue
+    categoryOverrides.value[normalizeSystemName(name)] = category
+  }
+
+  for (const s of systemsDraftItems.value) {
+    if (!s.name) continue
+    const override = categoryOverrides.value[normalizeSystemName(s.name)]
+    if (override) s.category = override
+  }
+  for (const e of equipmentDraftItems.value) {
+    if (e.category !== 'diger' || !e.code) continue
+    const sysName = codeToSystemName.get(e.code)
+    const override = sysName ? categoryOverrides.value[normalizeSystemName(sysName)] : undefined
+    if (override) e.category = override
+  }
+  for (const f of form.value.findings) {
+    if (f.category !== 'diger' || !f._systemName) continue
+    const override = categoryOverrides.value[normalizeSystemName(f._systemName)]
+    if (override) f.category = override
+  }
+
+  const registeredCategories = new Set(inventoryItems.value.map(i => i.category))
+  const allCategories = new Set<FireSuppressionCategory>(form.value.covered_categories)
+  for (const s of systemsDraftItems.value) allCategories.add(s.category)
+  if (!systemsDraftItems.value.some(s => s.category === 'diger')) allCategories.delete('diger')
+  form.value.covered_categories = [...allCategories]
+  detectedNewCategories.value = [...allCategories].filter(c => !registeredCategories.has(c))
+  newCategoryApprovals.value = Object.fromEntries(detectedNewCategories.value.map(c => [c, newCategoryApprovals.value[c] ?? true]))
+
+  showCategoryOverrideModal.value = false
+  const next = matchingStepOrder[matchingStepIndex.value + 1]
+  if (next) matchingTab.value = next
+}
+const matchingBack = () => {
+  const prev = matchingStepOrder[matchingStepIndex.value - 1]
+  if (prev) { matchingTab.value = prev; return }
+  wizardStage.value = selectedFixtureId.value ? 'fixture' : 'upload'
+  selectedFile.value = null
+}
 const matchingView = ref<'results' | 'detail'>('results')
 const activeDetailIndex = ref<number | null>(null)
 
@@ -403,11 +551,29 @@ const resolutionLabel = (equipmentIndex: number): string | null => {
   return null
 }
 
+// Onayla adımı da (Eşleştirme'deki gibi) tıklanabilir sekme DEĞİL,
+// "İleri"/"Geri" ile ilerlenen sıralı bir alt-akış - Bulgular, Kontrol
+// Maddeleri'nden HEMEN SONRA kendi adımında gelir, hepsi tek uzun sayfada
+// üst üste değil.
+type ConfirmTab = 'info' | 'controls' | 'systemControls' | 'findings' | 'equipment'
+const confirmTab = ref<ConfirmTab>('info')
+const confirmStepOrder: ConfirmTab[] = ['info', 'controls', 'systemControls', 'findings', 'equipment']
+const confirmStepLabels: Record<ConfirmTab, string> = { info: 'Rapor Bilgileri', controls: 'Kontrol Maddeleri', systemControls: 'Sistem Maddeleri', findings: 'Bulgular', equipment: 'Ekipmanlar' }
+const confirmStepIndex = computed(() => confirmStepOrder.indexOf(confirmTab.value))
+const confirmNext = () => { const next = confirmStepOrder[confirmStepIndex.value + 1]; if (next) confirmTab.value = next }
+
 const goToConfirm = () => {
   controlItemsForm.value = buildControlItemsFromDraft()
+  equipmentPayload.value = buildEquipmentPayloadFromDraft()
+  confirmTab.value = 'info'
   wizardStage.value = 'confirm'
 }
 const backToMatching = () => { wizardStage.value = 'matching'; matchingView.value = 'results' }
+const confirmBack = () => {
+  const prev = confirmStepOrder[confirmStepIndex.value - 1]
+  if (prev) { confirmTab.value = prev; return }
+  backToMatching()
+}
 
 // Eşleştirme adımında verilen kararlara göre bir equipmentIndex'in nihai
 // envanter id'sini çözer (kesin eşleşme / tekil aday / kullanıcının
@@ -459,8 +625,55 @@ const buildControlItemsFromDraft = (): FireSuppressionReportControlItemInput[] =
     }
   })
 
+  // Sistem seviyeli (equipment'a bağlı olmayan) maddeler - "Belge ve Kayıt
+  // Kontrolleri" gibi hiç ekipmanı olmayan sistemlerin kendi maddeleri.
+  // equipment_code=null gönderilir, backend bunu category'ye göre whole_unit
+  // Sistem Bileşeni'yle eşleştirir/açar (control_items'teki equipment_code'lu
+  // dal ile AYNI create() akışı, bkz. FireSuppressionReportService).
+  systemsDraftItems.value.forEach((system) => {
+    for (const ci of system.control_items ?? []) {
+      if (ci.scope === 'equipment') continue
+      if (ci.result_normalized === null || ci.result_normalized === undefined) continue
+      items.push({
+        category: system.category ?? null,
+        equipment_code: null,
+        inventory_item_id: null,
+        code: ci.code ?? null,
+        title: ci.criterion ?? ci.code ?? '',
+        status: ci.result_normalized,
+        description: '',
+      })
+    }
+  })
+
   return items
 }
+
+// Raporun TÜM ekipmanları — buildControlItemsFromDraft'ın aksine
+// item.control_items?.length'e göre SÜZMEZ: equipment-seviyeli kontrol
+// maddesi hiç olmayan (örn. Pompa Dairesi'ndeki tek tek pompalar, sadece
+// sistem-seviyeli maddeleri olan) ekipmanlar da buraya girer. Eskiden bir
+// ekipman SADECE control_items'i varsa (matriste yer alıyorsa) envantere
+// kaydediliyordu - bu, marka/model/seri no/özellikleri taşıyan tek yol
+// olduğu için bu listedeki her kalem backend'de kaydedilir/güncellenir
+// (bkz. FireSuppressionReportService::create() $equipmentInput bloğu).
+const buildEquipmentPayloadFromDraft = (): FireSuppressionReportEquipmentInput[] =>
+  equipmentDraftItems.value.map((item, equipmentIndex) => {
+    const status = item.match?.status ?? 'new'
+    const approved = status !== 'new' || isNewItemApproved(equipmentIndex)
+    return {
+      code: item.code ?? null,
+      category: item.category ?? null,
+      inventory_item_id: resolvedInventoryItemIdFor(equipmentIndex, item),
+      brand: item.brand ?? null,
+      model: item.model ?? null,
+      serial_no: item.serial_no ?? null,
+      location_note: item.location_note ?? null,
+      properties: item.properties ?? {},
+      approved,
+    }
+  }).filter(e => e.approved)
+
 // Ekipman başına onlarca madde tek seferde açık listelenince (20 ekipman x
 // ~14 madde) kullanıcıyı yoruyordu — ekipman bazında özet karta geçildi:
 // uygun ekipmanlar varsayılan KAPALI (sadece "Uygun" rozeti), uygunsuz
@@ -476,9 +689,26 @@ type ControlItemEquipmentGroup = {
 const controlItemsByEquipment = computed<ControlItemEquipmentGroup[]>(() => {
   const groups = new Map<string, ControlItemEquipmentGroup>()
   for (const item of controlItemsForm.value) {
-    const code = item.equipment_code || '—'
+    if (!item.equipment_code) continue // sistem seviyeli maddeler - bkz. controlItemsBySystem
+    const code = item.equipment_code
     if (!groups.has(code)) groups.set(code, { equipmentCode: code, category: item.category ?? null, items: [], udItems: [], okCount: 0 })
     const group = groups.get(code)!
+    group.items.push(item)
+    if (item.status === 'uygun_degil') group.udItems.push(item)
+    else group.okCount++
+  }
+  return Array.from(groups.values())
+})
+// Sistem seviyeli maddeler (equipment_code=null) - kategoriye göre gruplanır,
+// ekipman kartlarıyla ayrı bir ekranda gösterilir (bkz. confirmTab 'systemControls').
+type ControlItemSystemGroup = { category: FireSuppressionCategory | null; items: FireSuppressionReportControlItemInput[]; udItems: FireSuppressionReportControlItemInput[]; okCount: number }
+const controlItemsBySystem = computed<ControlItemSystemGroup[]>(() => {
+  const groups = new Map<string, ControlItemSystemGroup>()
+  for (const item of controlItemsForm.value) {
+    if (item.equipment_code) continue
+    const key = item.category ?? '—'
+    if (!groups.has(key)) groups.set(key, { category: item.category ?? null, items: [], udItems: [], okCount: 0 })
+    const group = groups.get(key)!
     group.items.push(item)
     if (item.status === 'uygun_degil') group.udItems.push(item)
     else group.okCount++
@@ -492,7 +722,19 @@ const toggleEquipmentExpanded = (code: string) => {
   else next.add(code)
   expandedEquipmentCodes.value = next
 }
+const expandedSystemCategories = ref<Set<string>>(new Set())
+const toggleSystemCategoryExpanded = (category: string) => {
+  const next = new Set(expandedSystemCategories.value)
+  if (next.has(category)) next.delete(category)
+  else next.add(category)
+  expandedSystemCategories.value = next
+}
 const controlItemStatusOptions: FireSuppressionControlItemStatus[] = ['uygun', 'uygun_degil', 'uygulanamiyor']
+// Bu ekipman koduna değinen bulgu (Uygunsuzluklar) sayısı - ekipman kartının
+// başlığında küçük bir bilgi ikonu + tooltip olarak gösterilir, kullanıcı
+// Bulgular sekmesine gitmeden bu ekipmanla ilgili bir bulgu olduğunu görsün.
+const findingsCountForEquipment = (code: string): number =>
+  form.value.findings.filter(f => f.equipment_codes?.includes(code)).length
 
 // --- Kontrol Maddeleri özeti (tıpkı "Tamamlandı" adımındaki istatistik
 // kartları gibi) — ekipman kartlarına hiç girmeden genel tabloyu görmek için.
@@ -541,11 +783,50 @@ const toggleCoveredItem = (id: number) => {
   if (idx === -1) form.value.covered_inventory_item_ids.push(id)
   else form.value.covered_inventory_item_ids.splice(idx, 1)
 }
+// "Bu Raporda Kontrol Edilen Ekipmanlar" ARTIK sadece şubede zaten kayıtlı
+// envanteri (inventoryItems) değil, RAPORUN KENDİ tespit ettiği ekipmanları
+// (matchRows) gösterir - yeni bir şube için (henüz hiç envanter yokken) bu
+// liste hep boş kalıyordu, "Bu şubede envanter kaydı yok" yazıyordu, halbuki
+// rapor onlarca ekipman içeriyordu. Zaten eşleşmiş kalemler işaretlenebilir
+// (covered_inventory_item_ids); henüz id'si olmayan YENİ kalemler backend'de
+// kaydedilirken otomatik oluşturulup rapora bağlanır (bkz.
+// FireSuppressionReportService::create() - touchedInventoryItemIds), bu
+// yüzden burada salt bilgilendirme amaçlı, işaretlemeye gerek yoktur.
+const reportEquipmentChecklist = computed(() => matchRows.value.map((row) => {
+  const item = equipmentDraftItems.value[row.equipmentIndex]
+  const inventoryItemId = item ? resolvedInventoryItemIdFor(row.equipmentIndex, item) : null
+  return {
+    equipmentIndex: row.equipmentIndex,
+    code: row.code,
+    categoryLabel: row.categoryLabel || 'Diğer',
+    inventoryItemId,
+  }
+}))
 const toggleFindingItem = (finding: FindingForm, id: number) => {
   finding.affected_item_ids ??= []
   const idx = finding.affected_item_ids.indexOf(id)
   if (idx === -1) finding.affected_item_ids.push(id)
   else finding.affected_item_ids.splice(idx, 1)
+}
+// "Ekipman Seç" listesi ARTIK sadece zaten envanterde kayıtlı ekipmanları
+// değil, RAPORUN KENDİ ekipmanlarını gösterir (kayıtlı olsun olmasın) -
+// backend kod+kategori ile eşleştirir, yoksa yeni bir Sistem Bileşeni
+// olarak açar (bkz. FireSuppressionReportService::resolveFindingScope).
+// Eskiden burada sadece inventoryItems (mevcut envanter) listeleniyordu,
+// bu yüzden henüz kayıtlı olmayan bir ekipmana değinen bulgu için liste
+// boş kalıyordu.
+const reportEquipmentForCategory = (category?: FireSuppressionCategory | null) => {
+  const seen = new Set<string>()
+  return equipmentDraftItems.value
+    .filter(e => e.code && (!category || e.category === category))
+    .filter((e) => { const code = e.code as string; if (seen.has(code)) return false; seen.add(code); return true })
+    .map(e => ({ code: e.code as string, matched: (e.match?.status ?? 'new') !== 'new' }))
+}
+const toggleFindingEquipmentCode = (finding: FindingForm, code: string) => {
+  finding.equipment_codes ??= []
+  const idx = finding.equipment_codes.indexOf(code)
+  if (idx === -1) finding.equipment_codes.push(code)
+  else finding.equipment_codes.splice(idx, 1)
 }
 
 const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
@@ -557,7 +838,10 @@ const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
 
 // --- Adım 4: Onayla → kaydet ---
 const submit = async () => {
-  if (!context.branchId || !selectedFile.value || saving.value) return
+  // Normal akışta gerçek dosya (selectedFile) şart; fixture akışında hiç
+  // dosya seçilmediği için onun yerine fixtureId gönderilir (bkz.
+  // fireSuppressionReportApi.create / backend uploadedFileFromFixture).
+  if (!context.branchId || saving.value || (!selectedFile.value && !selectedFixtureId.value)) return
   saving.value = true
   try {
     const { data: report } = await fireSuppressionReportApi.create(context.branchId, {
@@ -569,6 +853,7 @@ const submit = async () => {
       inspection_company_name: form.value.inspection_company_name || null,
       notes: form.value.notes || null,
       file: selectedFile.value,
+      fixtureId: selectedFile.value ? null : selectedFixtureId.value,
       covered_inventory_item_ids: form.value.covered_inventory_item_ids,
       findings: form.value.findings
         .filter(f => f.description.trim())
@@ -579,8 +864,10 @@ const submit = async () => {
           scope: f.scope,
           area_note: f.scope === 'area' ? (f.area_note || null) : null,
           affected_item_ids: f.scope === 'specific' ? f.affected_item_ids : [],
+          equipment_codes: f.scope === 'specific' ? f.equipment_codes : [],
         })),
       control_items: controlItemsForm.value,
+      equipment: equipmentPayload.value,
       additional_files: additionalFiles.value,
       approved_new_categories: detectedNewCategories.value.filter(c => isNewCategoryApproved(c)),
     })
@@ -618,7 +905,7 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
   <div v-if="context.ready" class="min-h-screen bg-[#f7f8fa] font-outfit text-gray-900 dark:bg-gray-950 dark:text-white">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
+    <div :class="['min-h-screen w-full transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
       <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
@@ -695,29 +982,6 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
 
               <!-- Adım 3: Eşleştirme -->
               <template v-else-if="wizardStage === 'matching'">
-                <!-- Raporun kapsadığı ama bu şubenin envanterinde HENÜZ kayıtlı
-                     olmayan ana sistemler/kategoriler — tek tek ekipmanlardan
-                     (aşağıdaki tablo) AYRI, çünkü Su Deposu/Sabit Boru gibi
-                     sistemler bir ekipman tablosu olarak hiç geçmeyebilir. -->
-                <div v-if="matchingView === 'results' && detectedNewCategories.length" class="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/20 dark:bg-amber-500/5">
-                  <p class="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Raporda Tespit Edilen Yeni Sistemler</p>
-                  <p class="mb-3 text-[11px] text-amber-700/80 dark:text-amber-400/70">Bu rapor aşağıdaki sistemleri kapsıyor ama bu şubenin tesisat envanterinde henüz kayıtlı değiller. Tesisat Durumu ekranında görünmeleri için envanterinize eklensin mi?</p>
-                  <div class="space-y-1.5">
-                    <label v-for="c in detectedNewCategories" :key="c" class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-white px-3 py-2 text-xs dark:border-amber-500/20 dark:bg-gray-900">
-                      <span class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</span>
-                      <span class="inline-flex cursor-pointer select-none items-center gap-1.5 text-gray-600 dark:text-gray-300">
-                        <input
-                          type="checkbox"
-                          class="h-3.5 w-3.5 rounded border-gray-300 text-[#d71920] focus:ring-[#d71920]"
-                          :checked="isNewCategoryApproved(c)"
-                          @change="toggleNewCategoryApproval(c)"
-                        >
-                        Envantere ekle
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
                 <!-- Geçici AI JSON görüntüleme — sadece analiz sonucunu incelemek için. -->
                 <div v-if="matchingView === 'results'" class="mb-4 overflow-hidden rounded-xl border border-[#e7e9ed] bg-white dark:border-gray-800 dark:bg-gray-900">
                   <button
@@ -740,9 +1004,66 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                   >{{ JSON.stringify(aiRawResult, null, 2) }}</pre>
                 </div>
 
-                <!-- Sonuç listesi -->
+                <!-- Yeni Sistemler / Sistemler / Bileşenler — tıklanabilir sekme
+                     DEĞİL, "İleri"/"Geri" ile ilerlenen sıralı bir alt-akış
+                     (sadece nerede olduğunu gösteren, tıklanamayan bir gösterge). -->
+                <div v-if="matchingView === 'results'" class="mb-4 flex items-center gap-2">
+                  <div
+                    v-for="(step, index) in matchingStepOrder"
+                    :key="step"
+                    class="flex items-center gap-2"
+                    :class="index > 0 ? 'flex-1' : ''"
+                  >
+                    <span v-if="index > 0" class="h-px flex-1" :class="matchingStepOrder.indexOf(matchingTab) >= index ? 'bg-[#d71920]' : 'bg-[#e7e9ed] dark:bg-gray-800'" />
+                    <span class="flex items-center gap-1.5 text-xs font-semibold" :class="matchingTab === step ? 'text-[#d71920]' : matchingStepOrder.indexOf(matchingTab) > index ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'">
+                      {{ matchingStepLabels[step] }}
+                      <span v-if="step === 'new_systems' && detectedNewCategories.length" class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">{{ detectedNewCategories.length }}</span>
+                      <span v-if="step === 'components' && matchRows.length" class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-white/5 dark:text-gray-300">{{ matchRows.length }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Sekme: Yeni Sistemler — raporun kapsadığı ama bu şubenin
+                     envanterinde HENÜZ kayıtlı olmayan ana sistemler/kategoriler,
+                     tek tek ekipmanlardan (Bileşenler sekmesi) AYRI, çünkü Su
+                     Deposu/Sabit Boru gibi sistemler bir ekipman tablosu olarak
+                     hiç geçmeyebilir. -->
+                <div v-if="matchingView === 'results' && matchingTab === 'new_systems'">
+                  <div v-if="detectedNewCategories.length" class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/20 dark:bg-amber-500/5">
+                    <p class="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Raporda Tespit Edilen Yeni Sistemler</p>
+                    <p class="mb-3 text-[11px] text-amber-700/80 dark:text-amber-400/70">Bu rapor aşağıdaki sistemleri kapsıyor ama bu şubenin tesisat envanterinde henüz kayıtlı değiller. Tesisat Durumu ekranında görünmeleri için envanterinize eklensin mi?</p>
+                    <div class="space-y-1.5">
+                      <label v-for="c in detectedNewCategories" :key="c" class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-white px-3 py-2 text-xs dark:border-amber-500/20 dark:bg-gray-900">
+                        <span class="min-w-0">
+                          <!-- "Diğer" (ya da label haritasında hiç karşılığı olmayan,
+                               beklenmedik bir kategori) hangi rapor sistemi olduğunu
+                               göstermez - HİÇBİR ZAMAN boş/tahmini bırakılmaz, ham
+                               sistem adı(ları) + "kategori eşleştirme gerekli" gösterilir. -->
+                          <template v-if="categoryNeedsResolution(c) && unresolvedCategorySystemNames.length">
+                            <span class="font-semibold text-[#172033] dark:text-white">{{ unresolvedCategorySystemNames.join(', ') }}</span>
+                            <span class="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Kategori eşleştirme gerekli</span>
+                          </template>
+                          <span v-else class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</span>
+                        </span>
+                        <span class="inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                          <input
+                            type="checkbox"
+                            class="h-3.5 w-3.5 rounded border-gray-300 text-[#d71920] focus:ring-[#d71920]"
+                            :checked="isNewCategoryApproved(c)"
+                            @change="toggleNewCategoryApproval(c)"
+                          >
+                          Envantere ekle
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-else class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Rapor, bu şubenin envanterinde henüz kayıtlı olmayan yeni bir sistem içermiyor.</div>
+                </div>
+
+                <!-- Sekme: Sistemler + Bileşenler (IsgMatchResultsTable, section prop ile tek tek gösterir) -->
                 <IsgMatchResultsTable
-                  v-if="matchingView === 'results'"
+                  v-if="matchingView === 'results' && (matchingTab === 'systems' || matchingTab === 'components')"
+                  :section="matchingTab"
                   :rows="matchRows"
                   :resolution-label="resolutionLabel"
                   :new-item-approved="isNewItemApproved"
@@ -773,7 +1094,16 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
 
               <!-- Adım 4: Onayla -->
               <template v-else-if="wizardStage === 'confirm'">
-                <div class="space-y-6">
+                <!-- Rapor Bilgileri / Kontrol Maddeleri / Bulgular / Ekipmanlar —
+                     tıklanamayan, sadece nerede olduğunu gösteren adım göstergesi. -->
+                <div class="mb-5 flex items-center gap-2">
+                  <div v-for="(step, index) in confirmStepOrder" :key="step" class="flex items-center gap-2" :class="index > 0 ? 'flex-1' : ''">
+                    <span v-if="index > 0" class="h-px flex-1" :class="confirmStepIndex >= index ? 'bg-[#d71920]' : 'bg-[#e7e9ed] dark:bg-gray-800'" />
+                    <span class="text-xs font-semibold" :class="confirmTab === step ? 'text-[#d71920]' : confirmStepIndex > index ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'">{{ confirmStepLabels[step] }}</span>
+                  </div>
+                </div>
+
+                <div v-if="confirmTab === 'info'" class="space-y-6">
                   <div>
                     <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Rapor Bilgileri</p>
                     <div class="grid grid-cols-2 gap-3">
@@ -803,128 +1133,6 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                         <option value="uygun_degil">Uygun Değil</option>
                       </select>
                     </div>
-                  </div>
-
-                  <div>
-                    <p class="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
-                    <p class="mb-3 text-[11px] text-gray-400">Raporun kendisinden, ekipman bazında otomatik çıkarılmıştır — açıklamalar bulgu metninden alınmıştır. Uygun ekipmanlar özet gösterilir.</p>
-                    <div v-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Raporda ekipman bazlı kontrol maddesi tespit edilemedi.</div>
-                    <template v-else>
-                      <div class="mb-3 grid grid-cols-2 gap-3">
-                        <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
-                          <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.totalNonconformities }}</p>
-                          <p class="text-[11px] text-[#d71920]">Toplam Uygunsuzluk</p>
-                        </div>
-                        <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
-                          <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.nonconformingEquipmentCount }}</p>
-                          <p class="text-[11px] text-[#d71920]">Uygunsuz Ekipman</p>
-                        </div>
-                      </div>
-                      <div class="mb-3 overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
-                        <div v-for="cs in controlItemsCategorySummary" :key="cs.category" class="flex items-center justify-between gap-2 border-b border-[#f1f2f4] px-3 py-2 text-xs last:border-0 dark:border-gray-800">
-                          <span class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[cs.category] }}</span>
-                          <span class="flex items-center gap-2 text-[11px]">
-                            <span class="text-gray-400">{{ cs.total }} ekipman</span>
-                            <span class="font-semibold text-emerald-600">{{ cs.uygunCount }} uygun</span>
-                            <span class="font-semibold text-[#d71920]">{{ cs.uygunsuzCount }} uygunsuz</span>
-                          </span>
-                        </div>
-                      </div>
-                    </template>
-                    <div v-if="controlItemsForm.length" class="space-y-2">
-                      <div v-for="group in controlItemsByEquipment" :key="group.equipmentCode" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
-                        <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleEquipmentExpanded(group.equipmentCode)">
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.equipmentCode }}</span>
-                            <span v-if="group.category" class="text-[11px] text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] }}</span>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <span v-if="group.udItems.length" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10">Uygun Değil · {{ group.udItems.length }}</span>
-                            <span v-else class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10">Uygun</span>
-                            <ChevronRight :size="14" class="shrink-0 text-gray-400 transition-transform" :class="expandedEquipmentCodes.has(group.equipmentCode) ? 'rotate-90' : ''" />
-                          </div>
-                        </button>
-                        <div v-if="expandedEquipmentCodes.has(group.equipmentCode) || group.udItems.length" class="space-y-2 border-t border-[#f1f2f4] p-3 dark:border-gray-800">
-                          <div v-for="(ci, ciIndex) in (expandedEquipmentCodes.has(group.equipmentCode) ? group.items : group.udItems)" :key="`${group.equipmentCode}-${ci.code}-${ciIndex}`" class="rounded-lg border border-[#f1f2f4] p-2.5 dark:border-gray-800">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                              <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
-                                <span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>
-                                {{ ci.title }}
-                              </p>
-                              <div class="flex shrink-0 gap-1">
-                                <button
-                                  v-for="status in controlItemStatusOptions"
-                                  :key="status"
-                                  type="button"
-                                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
-                                  :class="ci.status === status
-                                    ? (status === 'uygun' ? 'bg-emerald-500 text-white' : status === 'uygun_degil' ? 'bg-[#d71920] text-white' : 'bg-gray-500 text-white')
-                                    : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'"
-                                  @click="ci.status = status"
-                                >
-                                  {{ FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[status] }}
-                                </button>
-                              </div>
-                            </div>
-                            <textarea v-if="ci.status !== 'uygun'" v-model="ci.description" rows="2" placeholder="Tespit / açıklama" class="mt-2 w-full rounded-lg border border-[#dfe3e8] px-2.5 py-1.5 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
-                          </div>
-                          <button v-if="!expandedEquipmentCodes.has(group.equipmentCode) && group.okCount > 0" type="button" class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" @click="toggleEquipmentExpanded(group.equipmentCode)">+{{ group.okCount }} uygun madde daha (göster)</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="mb-3 flex items-center justify-between">
-                      <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Uygunsuzluklar (Opsiyonel)</p>
-                      <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="addFinding"><Plus :size="13" />Ekle</button>
-                    </div>
-                    <div v-if="!form.findings.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Uygunsuzluk yoksa boş bırakabilirsiniz.</div>
-                    <div v-for="(finding, index) in form.findings" :key="index" class="mb-3 rounded-lg border border-[#e7e9ed] p-3.5 dark:border-gray-800">
-                      <div class="mb-2 flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-500">Uygunsuzluk {{ index + 1 }}</span>
-                        <button type="button" class="text-gray-400 hover:text-[#d71920]" @click="removeFinding(index)"><X :size="14" /></button>
-                      </div>
-                      <textarea v-model="finding.description" rows="2" placeholder="Açıklama" class="mb-2 w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
-                      <div class="mb-2 grid grid-cols-2 gap-2">
-                        <select v-model="finding.category" class="h-9 rounded-lg border border-[#dfe3e8] bg-white px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
-                          <option :value="null">Kategori seç</option>
-                          <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
-                        </select>
-                        <input v-model="finding.control_item" type="text" placeholder="Kontrol maddesi (örn. D.9)" class="h-9 rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
-                      </div>
-                      <div class="mb-2">
-                        <p class="mb-1.5 text-[11px] font-semibold text-gray-500">Kapsam</p>
-                        <div class="flex flex-wrap gap-1.5">
-                          <label v-for="opt in scopeOptions" :key="opt.value" class="flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium" :class="finding.scope === opt.value ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
-                            <input v-model="finding.scope" type="radio" :value="opt.value" class="hidden">
-                            {{ opt.label }}
-                          </label>
-                        </div>
-                      </div>
-                      <div v-if="finding.scope === 'area'">
-                        <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
-                      </div>
-                      <div v-if="finding.scope === 'specific'" class="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#f1f2f4] p-2 dark:border-gray-800">
-                        <label v-for="item in itemsForCategory(finding.category)" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                          <input type="checkbox" :checked="finding.affected_item_ids?.includes(item.id)" @change="toggleFindingItem(finding, item.id)">
-                          {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }}
-                        </label>
-                        <p v-if="!itemsForCategory(finding.category).length" class="text-[11px] text-gray-400">Bu kategoride kayıtlı ekipman yok.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Bu Raporda Kontrol Edilen Ekipmanlar</p>
-                    <div class="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
-                      <label v-for="item in inventoryItems" :key="item.id" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                        <input type="checkbox" :checked="form.covered_inventory_item_ids.includes(item.id)" @change="toggleCoveredItem(item.id)">
-                        {{ item.code || FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }} <span class="text-gray-400">({{ FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] }})</span>
-                      </label>
-                      <p v-if="!inventoryItems.length" class="text-[11px] text-gray-400">Bu şubede envanter kaydı yok.</p>
-                    </div>
-                    <p class="mt-1.5 text-[11px] text-gray-400">AI eşleştirmesi + belirsiz eşleşme kararlarınız burada otomatik işaretlenmiştir; gerekirse elle düzenleyebilirsiniz.</p>
                   </div>
 
                   <div>
@@ -963,6 +1171,181 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                     <textarea v-model="form.notes" rows="2" class="w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
                   </div>
                 </div>
+
+                <div v-else-if="confirmTab === 'controls'">
+                  <p class="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Kontrol Maddeleri</p>
+                    <p class="mb-3 text-[11px] text-gray-400">Raporun kendisinden, ekipman bazında otomatik çıkarılmıştır — açıklamalar bulgu metninden alınmıştır. Uygun ekipmanlar özet gösterilir.</p>
+                    <div v-if="!controlItemsForm.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Raporda ekipman bazlı kontrol maddesi tespit edilemedi.</div>
+                    <template v-else>
+                      <div class="mb-3 grid grid-cols-2 gap-3">
+                        <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
+                          <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.totalNonconformities }}</p>
+                          <p class="text-[11px] text-[#d71920]">Toplam Uygunsuzluk</p>
+                        </div>
+                        <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
+                          <p class="text-xl font-bold text-[#d71920]">{{ controlItemsOverallSummary.nonconformingEquipmentCount }}</p>
+                          <p class="text-[11px] text-[#d71920]">Uygunsuz Ekipman</p>
+                        </div>
+                      </div>
+                      <div class="mb-3 overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
+                        <div v-for="cs in controlItemsCategorySummary" :key="cs.category" class="flex items-center justify-between gap-2 border-b border-[#f1f2f4] px-3 py-2 text-xs last:border-0 dark:border-gray-800">
+                          <span class="font-semibold text-[#172033] dark:text-white">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[cs.category] }}</span>
+                          <span class="flex items-center gap-2 text-[11px]">
+                            <span class="text-gray-400">{{ cs.total }} ekipman</span>
+                            <span class="font-semibold text-emerald-600">{{ cs.uygunCount }} uygun</span>
+                            <span class="font-semibold text-[#d71920]">{{ cs.uygunsuzCount }} uygunsuz</span>
+                          </span>
+                        </div>
+                      </div>
+                    </template>
+                    <div v-if="controlItemsForm.length" class="space-y-2">
+                      <div v-for="group in controlItemsByEquipment" :key="group.equipmentCode" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
+                        <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleEquipmentExpanded(group.equipmentCode)">
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.equipmentCode }}</span>
+                            <span v-if="group.category" class="text-[11px] text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] }}</span>
+                            <Info
+                              v-if="findingsCountForEquipment(group.equipmentCode)"
+                              :size="13"
+                              class="shrink-0 text-blue-500"
+                              :title="`Bu ekipmanla ilgili ${findingsCountForEquipment(group.equipmentCode)} bulgu var`"
+                            />
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <span v-if="group.udItems.length" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10">Uygun Değil · {{ group.udItems.length }}</span>
+                            <span v-else class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10">Uygun</span>
+                            <ChevronRight :size="14" class="shrink-0 text-gray-400 transition-transform" :class="expandedEquipmentCodes.has(group.equipmentCode) ? 'rotate-90' : ''" />
+                          </div>
+                        </button>
+                        <div v-if="expandedEquipmentCodes.has(group.equipmentCode)" class="space-y-2 border-t border-[#f1f2f4] p-3 dark:border-gray-800">
+                          <div v-for="(ci, ciIndex) in group.items" :key="`${group.equipmentCode}-${ci.code}-${ciIndex}`" class="rounded-lg border border-[#f1f2f4] p-2.5 dark:border-gray-800">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
+                                <span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>
+                                {{ ci.title }}
+                              </p>
+                              <div class="flex shrink-0 gap-1">
+                                <button
+                                  v-for="status in controlItemStatusOptions"
+                                  :key="status"
+                                  type="button"
+                                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                                  :class="ci.status === status
+                                    ? (status === 'uygun' ? 'bg-emerald-500 text-white' : status === 'uygun_degil' ? 'bg-[#d71920] text-white' : 'bg-gray-500 text-white')
+                                    : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'"
+                                  @click="ci.status = status"
+                                >
+                                  {{ FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[status] }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="confirmTab === 'systemControls'">
+                    <p class="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Sistem Maddeleri</p>
+                    <p class="mb-3 text-[11px] text-gray-400">Belirli bir ekipmana değil, tüm sisteme ait kontrol maddeleri (örn. proje/belge kontrolleri).</p>
+                    <div v-if="!controlItemsBySystem.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Sistem seviyeli kontrol maddesi tespit edilemedi.</div>
+                    <div v-else class="space-y-2">
+                      <div v-for="group in controlItemsBySystem" :key="group.category ?? '—'" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
+                        <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleSystemCategoryExpanded(group.category ?? '—')">
+                          <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] : 'Diğer' }}</span>
+                          <div class="flex items-center gap-2">
+                            <span v-if="group.udItems.length" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10">Uygun Değil · {{ group.udItems.length }}</span>
+                            <span v-else class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10">Uygun</span>
+                            <ChevronRight :size="14" class="shrink-0 text-gray-400 transition-transform" :class="expandedSystemCategories.has(group.category ?? '—') ? 'rotate-90' : ''" />
+                          </div>
+                        </button>
+                        <div v-if="expandedSystemCategories.has(group.category ?? '—')" class="space-y-2 border-t border-[#f1f2f4] p-3 dark:border-gray-800">
+                          <div v-for="(ci, ciIndex) in group.items" :key="`${group.category}-${ci.code}-${ciIndex}`" class="rounded-lg border border-[#f1f2f4] p-2.5 dark:border-gray-800">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
+                                <span v-if="ci.code" class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/5">{{ ci.code }}</span>
+                                {{ ci.title }}
+                              </p>
+                              <div class="flex shrink-0 gap-1">
+                                <button
+                                  v-for="status in controlItemStatusOptions"
+                                  :key="status"
+                                  type="button"
+                                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                                  :class="ci.status === status
+                                    ? (status === 'uygun' ? 'bg-emerald-500 text-white' : status === 'uygun_degil' ? 'bg-[#d71920] text-white' : 'bg-gray-500 text-white')
+                                    : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'"
+                                  @click="ci.status = status"
+                                >
+                                  {{ FIRE_SUPPRESSION_CONTROL_ITEM_STATUS_LABELS[status] }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="confirmTab === 'findings'">
+                    <div class="mb-3 flex items-center justify-between">
+                      <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Uygunsuzluklar (Opsiyonel)</p>
+                      <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="addFinding"><Plus :size="13" />Ekle</button>
+                    </div>
+                    <div v-if="!form.findings.length" class="rounded-lg border border-dashed border-[#dfe3e8] p-4 text-center text-xs text-gray-400 dark:border-gray-700">Uygunsuzluk yoksa boş bırakabilirsiniz.</div>
+                    <div v-for="(finding, index) in form.findings" :key="index" class="mb-3 rounded-lg border border-[#e7e9ed] p-3.5 dark:border-gray-800">
+                      <div class="mb-2 flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500">Uygunsuzluk {{ index + 1 }}</span>
+                        <button type="button" class="text-gray-400 hover:text-[#d71920]" @click="removeFinding(index)"><X :size="14" /></button>
+                      </div>
+                      <textarea v-model="finding.description" rows="2" placeholder="Açıklama" class="mb-2 w-full rounded-lg border border-[#dfe3e8] p-2.5 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800" />
+                      <div class="mb-2 grid grid-cols-2 gap-2">
+                        <select v-model="finding.category" class="h-9 rounded-lg border border-[#dfe3e8] bg-white px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                          <option :value="null">Kategori seç</option>
+                          <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
+                        </select>
+                        <input v-model="finding.control_item" type="text" placeholder="Kontrol maddesi (örn. D.9)" class="h-9 rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none dark:border-gray-700 dark:bg-gray-800">
+                      </div>
+                      <div class="mb-2">
+                        <p class="mb-1.5 text-[11px] font-semibold text-gray-500">Kapsam</p>
+                        <div class="flex flex-wrap gap-1.5">
+                          <label v-for="opt in scopeOptions" :key="opt.value" class="flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium" :class="finding.scope === opt.value ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
+                            <input v-model="finding.scope" type="radio" :value="opt.value" class="hidden">
+                            {{ opt.label }}
+                          </label>
+                        </div>
+                      </div>
+                      <div v-if="finding.scope === 'area'">
+                        <input v-model="finding.area_note" type="text" placeholder="Alan (örn. 1. Kat)" class="h-9 w-full rounded-lg border border-[#dfe3e8] px-2 text-xs outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+                      </div>
+                      <div v-if="finding.scope === 'specific'" class="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#f1f2f4] p-2 dark:border-gray-800">
+                        <label v-for="item in reportEquipmentForCategory(finding.category)" :key="item.code" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                          <input type="checkbox" :checked="finding.equipment_codes?.includes(item.code)" @change="toggleFindingEquipmentCode(finding, item.code)">
+                          {{ item.code }}
+                          <span v-if="!item.matched" class="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-500/10">Yeni</span>
+                        </label>
+                        <p v-if="!reportEquipmentForCategory(finding.category).length" class="text-[11px] text-gray-400">Bu raporda bu kategoride ekipman tespit edilmedi.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="confirmTab === 'equipment'">
+                    <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400">Bu Raporda Kontrol Edilen Ekipmanlar</p>
+                    <div class="max-h-56 space-y-1.5 overflow-y-auto rounded-lg border border-[#e7e9ed] p-3 dark:border-gray-800">
+                      <label v-for="item in reportEquipmentChecklist" :key="item.equipmentIndex" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          :checked="item.inventoryItemId ? form.covered_inventory_item_ids.includes(item.inventoryItemId) : true"
+                          :disabled="!item.inventoryItemId"
+                          @change="item.inventoryItemId && toggleCoveredItem(item.inventoryItemId)"
+                        >
+                        {{ item.code || item.categoryLabel }} <span class="text-gray-400">({{ item.categoryLabel }})</span>
+                        <span v-if="!item.inventoryItemId" class="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-500/10">Yeni — otomatik eklenecek</span>
+                      </label>
+                      <p v-if="!reportEquipmentChecklist.length" class="text-[11px] text-gray-400">Bu raporda ekipman bazlı bir kalem tespit edilemedi.</p>
+                    </div>
+                    <p class="mt-1.5 text-[11px] text-gray-400">AI eşleştirmesi + belirsiz eşleşme kararlarınız burada otomatik işaretlenmiştir; "Yeni" işaretli olanlar kaydedince otomatik envantere eklenip bu rapora bağlanır, elle işaretlemenize gerek yoktur.</p>
+                  </div>
               </template>
 
               <!-- Adım 5: Tamamlandı -->
@@ -1012,12 +1395,33 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                 </button>
               </template>
               <template v-else-if="wizardStage === 'matching' && matchingView === 'results'">
-                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="wizardStage = selectedFixtureId ? 'fixture' : 'upload'; selectedFile = null">Geri</button>
-                <button type="button" class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white" @click="goToConfirm">Onaya Geç<ChevronRight :size="15" /></button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300"
+                  @click="matchingBack"
+                >Geri</button>
+                <button
+                  v-if="matchingStepIndex < matchingStepOrder.length - 1"
+                  type="button"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white"
+                  @click="matchingNext"
+                >İleri<ChevronRight :size="15" /></button>
+                <button
+                  v-else
+                  type="button"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white"
+                  @click="goToConfirm"
+                >Onaya Geç<ChevronRight :size="15" /></button>
               </template>
               <template v-else-if="wizardStage === 'confirm'">
-                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="saving" @click="backToMatching">Geri</button>
-                <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="saving || !form.report_date" @click="submit">
+                <button type="button" class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" :disabled="saving" @click="confirmBack">Geri</button>
+                <button
+                  v-if="confirmStepIndex < confirmStepOrder.length - 1"
+                  type="button"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white"
+                  @click="confirmNext"
+                >İleri<ChevronRight :size="15" /></button>
+                <button v-else type="button" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#d71920] py-2.5 text-sm font-semibold text-white disabled:opacity-60" :disabled="saving || !form.report_date" @click="submit">
                   <LoaderCircle v-if="saving" :size="15" class="animate-spin" />
                   Raporu Kaydet
                 </button>
@@ -1030,6 +1434,34 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Modal: "diger" (Diğer) genel kovasına düşmüş sistemler için kategori
+         seçtirme - "Yeni Sistemler" adımından İleri'ye basınca, çözülmemiş
+         böyle bir sistem varsa açılır (bkz. matchingNext). -->
+    <div v-if="showCategoryOverrideModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+        <h3 class="text-base font-bold text-[#172033] dark:text-white">Olmayan Sistemler İçin Kategori Giriniz</h3>
+        <p class="mt-1 text-xs text-gray-400">Bu sistemler bilinen bir kategoriyle otomatik eşleştirilemedi. Devam etmeden önce her biri için gerçek kategoriyi seç.</p>
+        <div class="mt-4 space-y-3">
+          <div v-for="name in unresolvedCategorySystemNames" :key="name">
+            <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{{ name }}</label>
+            <select v-model="categoryOverrideDrafts[name]" class="h-10 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
+              <option value="">Kategori seç</option>
+              <option v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" :value="c">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[c] }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button type="button" class="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="showCategoryOverrideModal = false">Vazgeç</button>
+          <button
+            type="button"
+            class="rounded-lg bg-[#d71920] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+            :disabled="unresolvedCategorySystemNames.some(n => !categoryOverrideDrafts[n])"
+            @click="applyCategoryOverridesAndContinue"
+          >Kaydet ve Devam Et</button>
+        </div>
+      </div>
     </div>
   </div>
 

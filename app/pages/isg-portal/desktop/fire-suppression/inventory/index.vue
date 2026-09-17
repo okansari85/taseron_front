@@ -99,6 +99,7 @@ const CATEGORY_ICONS: Partial<Record<string, typeof Droplets>> = {
   yangin_pompasi: Gauge,
   su_deposu: Cylinder,
   sabit_boru: Waves,
+  su_alma_verme: Waves,
   gazli_sondurme: ShieldCheck,
   diger: FileText,
 }
@@ -110,6 +111,7 @@ const CATEGORY_DISPLAY_LABELS: Partial<Record<string, string>> = {
   sprinkler: 'Sprinkler Sistemi',
   su_deposu: 'Yangın Su Deposu',
   sabit_boru: 'Sabit Boru Tesisatı',
+  su_alma_verme: 'İtfaiye Su Alma ve Verme Ağızları',
   gazli_sondurme: 'Gazlı Söndürme',
 }
 
@@ -309,14 +311,14 @@ const addSystem = async () => {
 </script>
 
 <template>
-  <div v-if="context.ready" class="min-h-screen bg-[#f7f9fc] font-outfit dark:bg-gray-950">
+  <div v-if="context.ready" class="min-h-screen w-full bg-[#f7f8fa] font-outfit text-gray-900 dark:bg-gray-950 dark:text-white">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen w-auto transition-[margin] duration-300', isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[72px]']">
+    <div :class="['min-h-screen w-full transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
-      <main class="w-full px-4 py-5 sm:px-5 lg:px-6">
-        <div class="w-full">
+     <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
+        <div class="mx-auto max-w-[1400px]">
           <section class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-[11px] font-extrabold uppercase tracking-[0.18em]" :style="{ color: primaryColor }">YANGIN SÖNDÜRME SİSTEMLERİ</p>

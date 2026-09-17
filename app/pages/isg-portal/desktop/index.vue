@@ -47,7 +47,7 @@ const modules = [
   <div v-if="context.ready" class="min-h-screen bg-gray-50 font-outfit dark:bg-gray-950">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
+    <div :class="['min-h-screen w-full transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
       <main class="px-5 py-7 sm:px-8 lg:px-10">

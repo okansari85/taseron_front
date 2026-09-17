@@ -8,7 +8,7 @@ const isGlobalApiPath = (path: string) =>
   path === '/api/tenants' ||
   path.startsWith('/api/tenants/')
 
-export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) => {
+export const apiClient = <T, R extends 'json' | 'blob' | 'text' | 'arrayBuffer' | 'stream' = 'json'>(path: string, options: FetchOptions<R> = {} as FetchOptions<R>) => {
   const config = useRuntimeConfig()
   const token = useCookie<string | null>('auth_token')
   const tenantContext = useTenantRequestContext()
@@ -58,7 +58,7 @@ export const apiClient = <T>(path: string, options: FetchOptions<'json'> = {}) =
     headers.delete('Content-Type')
   }
 
-  return $fetch<T>(path, {
+  return $fetch<T, R>(path, {
     baseURL: config.public.apiBaseUrl,
     credentials: 'omit',
     timeout: 10000,

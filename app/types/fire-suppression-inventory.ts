@@ -5,6 +5,7 @@ export type FireSuppressionCategory =
   | 'yangin_pompasi'
   | 'su_deposu'
   | 'sabit_boru'
+  | 'su_alma_verme'
   | 'gazli_sondurme'
   | 'diger'
 
@@ -18,6 +19,7 @@ export const FIRE_SUPPRESSION_CATEGORIES: FireSuppressionCategory[] = [
   'yangin_pompasi',
   'su_deposu',
   'sabit_boru',
+  'su_alma_verme',
   'gazli_sondurme',
   'diger',
 ]
@@ -29,6 +31,7 @@ export const FIRE_SUPPRESSION_CATEGORY_LABELS: Record<FireSuppressionCategory, s
   yangin_pompasi: 'Yangın Pompaları',
   su_deposu: 'Su Depoları',
   sabit_boru: 'Sabit Boru Tesisatları, Kolektörler ve Vanalar',
+  su_alma_verme: 'İtfaiye Su Alma ve Verme Ağızları',
   gazli_sondurme: 'Gazlı Söndürme',
   diger: 'Diğer',
 }

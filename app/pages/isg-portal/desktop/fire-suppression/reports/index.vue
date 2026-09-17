@@ -89,14 +89,14 @@ const removeReport = async (report: FireSuppressionReport) => {
 </script>
 
 <template>
-  <div v-if="context.ready" class="min-h-screen bg-[#f7f8fa] font-outfit text-gray-900 dark:bg-gray-950 dark:text-white">
+  <div v-if="context.ready" class="min-h-screen w-full bg-[#f7f8fa] font-outfit text-gray-900 dark:bg-gray-950 dark:text-white">
     <IsgSidebar :desktop="true" />
 
-    <div :class="['min-h-screen transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
+    <div :class="['min-h-screen w-full transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
       <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
-        <div class="mx-auto max-w-[1500px]">
+        <div class="mx-auto max-w-[1400px]">
           <section class="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d71920]">Yangın Söndürme Sistemleri</div>

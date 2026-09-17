@@ -129,6 +129,28 @@ export type FireSuppressionReportFindingInput = {
   scope: FireSuppressionFindingScope
   area_note?: string | null
   affected_item_ids?: number[]
+  // Raporun kendi ekipman kodları (henüz envanterde kayıtlı olmayabilir) -
+  // backend kategori+kod ile eşleştirir, yoksa control_items'teki AYNI
+  // mantıkla yeni bir Sistem Bileşeni açar (bkz. FireSuppressionReportService).
+  equipment_codes?: string[]
+}
+
+// Raporun TÜM ekipmanları (kontrol maddesi/matris olsun olmasın) - Pompa
+// Dairesi'ndeki tek tek pompalar gibi hiç equipment-seviyeli control_item
+// taşımayan kalemler de buradan geçip envantere kaydedilir/güncellenir.
+// properties: marka/model/seri no ile SINIRLI değil, raporun kendi
+// tablosundaki serbest formatlı özellikler de (örn. "Ölçülen Basınç")
+// buraya taşınır (bkz. FireSuppressionReportService::create()).
+export type FireSuppressionReportEquipmentInput = {
+  code?: string | null
+  category?: FireSuppressionCategory | null
+  inventory_item_id?: number | null
+  brand?: string | null
+  model?: string | null
+  serial_no?: string | null
+  location_note?: string | null
+  properties?: Record<string, string>
+  approved?: boolean
 }
 
 export type FireSuppressionReportPayload = {
@@ -139,10 +161,16 @@ export type FireSuppressionReportPayload = {
   overall_result?: FireSuppressionComplianceStatus | null
   inspection_company_name?: string | null
   notes?: string | null
-  file: File
+  // Normal akışta gerçek bir dosya; test modunda (bkz. upload.vue fixture
+  // akışı) dosya yerine fixture_id gönderilir - backend fixture'ın zaten
+  // kayıtlı PDF'ini indirip-tekrar-yükleme turu olmadan doğrudan kullanır
+  // (bkz. FireSuppressionReportController::uploadedFileFromFixture).
+  file?: File | null
+  fixtureId?: string | null
   findings?: FireSuppressionReportFindingInput[]
   covered_inventory_item_ids?: number[]
   control_items?: FireSuppressionReportControlItemInput[]
+  equipment?: FireSuppressionReportEquipmentInput[]
   additional_files?: FireSuppressionReportFileInput[]
   // Raporda tespit edilip envanterde henüz kayıtlı olmayan, kullanıcının
   // Eşleştirme adımında "envantere ekle" diye onayladığı whole_unit
@@ -163,7 +191,8 @@ export type FireSuppressionReportAnalysisSystem = {
   name: string | null
   category: FireSuppressionCategory
   control_count: number
-  nonconforming_count: number
+  equipment_count?: number
+  equipment_count_known?: boolean
   components: Array<{
     code: string | null
     name: string | null
@@ -172,15 +201,29 @@ export type FireSuppressionReportAnalysisSystem = {
     model: string | null
     serial_no: string | null
   }>
+  control_items?: Array<{
+    code: string | null
+    criterion?: string | null
+    scope?: 'system' | 'equipment' | null
+    result_normalized: FireSuppressionControlItemStatus | null
+  }>
 }
 
 // AI ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi,
 // kullanıcı gözden geçirip düzenledikten sonra normal create() akışına gider.
 export type FireSuppressionReportAnalysisDraft = {
-  control_date?: string | null
-  next_control_date?: string | null
-  overall_result?: FireSuppressionComplianceStatus | null
-  company_name?: string | null
+  // Backend'in GERÇEK şekli (bkz. FireSuppressionUnifiedNormalizer::normalizeFinal) -
+  // control_date/next_control_date/overall_result/company_name üst seviyede
+  // DEĞİL, 'report' altında geliyor. Eskiden upload.vue bunları üst
+  // seviyeden okumaya çalışıyordu, hep undefined kalıp Onayla adımındaki
+  // tarih alanları boş/varsayılan kalıyordu.
+  report?: {
+    report_no?: string | null
+    company_name?: string | null
+    control_date?: string | null
+    next_control_date?: string | null
+    overall_result?: FireSuppressionComplianceStatus | null
+  }
   covered_categories?: FireSuppressionCategory[]
   systems?: FireSuppressionReportAnalysisSystem[]
   equipment?: {
@@ -192,10 +235,20 @@ export type FireSuppressionReportAnalysisDraft = {
     serial_no?: string | null
     result?: FireSuppressionComplianceStatus | null
     note?: string | null
+    // Serbest formattaki ekipman özellikleri (rapordaki tablo başlıklarından
+    // geldiği haliyle, örn. "Ölçülen Basınç", "Hortum Uzunluğu") - marka/
+    // model/seri no gibi sabit alanlarla SINIRLI değil, raporun kendi
+    // tablosunda ne varsa onu taşır.
+    properties?: Record<string, string>
     control_items?: { code?: string | null; title: string; status: FireSuppressionControlItemStatus; description?: string | null }[]
     match?: FireSuppressionEquipmentMatch
   }[]
-  findings?: { category?: FireSuppressionCategory | null; control_item?: string | null; description: string; scope: FireSuppressionFindingScope; area_note?: string | null; equipment_codes?: string[] }[]
+  // Backend'in GERÇEK şekli (bkz. FireSuppressionUnifiedNormalizer::normalizeFindings) -
+  // category/control_item/scope/equipment_codes hiç gönderilmiyor, bunun yerine
+  // system_name (rapordaki ham sistem adı) + affected_equipment (metinden
+  // türetilmiş gerçek ekipman kodları) geliyor. category, upload.vue'da
+  // system_name'i draft.systems[].name ile eşleştirerek TÜRETİLİR.
+  findings?: { id?: string; system_name?: string | null; description: string; affected_equipment?: string[]; source_pages?: number[] }[]
   matched_inventory_items: FireSuppressionInventoryItem[]
   candidate_inventory_items?: FireSuppressionInventoryItem[]
   unmatched_codes: string[]
