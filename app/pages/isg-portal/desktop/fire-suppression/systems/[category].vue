@@ -2,6 +2,7 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  Bell,
   Container,
   Cylinder,
   Droplets,
@@ -46,6 +47,7 @@ const CATEGORY_ICONS: Record<FireSuppressionCategory, typeof Droplets> = {
   sabit_boru: Waves,
   su_alma_verme: Waves,
   gazli_sondurme: Container,
+  yangin_algilama: Bell,
   diger: FileText,
 }
 

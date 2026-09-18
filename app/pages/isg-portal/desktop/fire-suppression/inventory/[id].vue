@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Building2, Droplets, Flame, Gauge, LoaderCircle, Pencil, Trash2, Waves, X } from '@lucide/vue'
+import { ArrowLeft, Bell, Building2, Droplets, Flame, Gauge, LoaderCircle, Pencil, Trash2, Waves, X } from '@lucide/vue'
 import { fireSuppressionInventoryApi } from '~/api/fire-suppression-inventory'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
@@ -50,6 +50,7 @@ const categoryIcons: Record<FireSuppressionCategory, any> = {
   sabit_boru: Waves,
   su_alma_verme: Waves,
   gazli_sondurme: Flame,
+  yangin_algilama: Bell,
   diger: Building2,
 }
 

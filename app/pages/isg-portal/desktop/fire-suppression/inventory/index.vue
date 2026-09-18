@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowRight,
+  Bell,
   Calendar,
   CheckCircle2,
   ChevronRight,
@@ -101,6 +102,7 @@ const CATEGORY_ICONS: Partial<Record<string, typeof Droplets>> = {
   sabit_boru: Waves,
   su_alma_verme: Waves,
   gazli_sondurme: ShieldCheck,
+  yangin_algilama: Bell,
   diger: FileText,
 }
 
@@ -113,6 +115,7 @@ const CATEGORY_DISPLAY_LABELS: Partial<Record<string, string>> = {
   sabit_boru: 'Sabit Boru Tesisatı',
   su_alma_verme: 'İtfaiye Su Alma ve Verme Ağızları',
   gazli_sondurme: 'Gazlı Söndürme',
+  yangin_algilama: 'Yangın Algılama ve Uyarı Sistemleri',
 }
 
 const categoryLabel = (category: string) =>

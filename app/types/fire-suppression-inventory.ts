@@ -7,6 +7,7 @@ export type FireSuppressionCategory =
   | 'sabit_boru'
   | 'su_alma_verme'
   | 'gazli_sondurme'
+  | 'yangin_algilama'
   | 'diger'
 
 export type FireSuppressionComplianceStatus = 'uygun' | 'uygun_degil'
@@ -21,6 +22,7 @@ export const FIRE_SUPPRESSION_CATEGORIES: FireSuppressionCategory[] = [
   'sabit_boru',
   'su_alma_verme',
   'gazli_sondurme',
+  'yangin_algilama',
   'diger',
 ]
 
@@ -33,6 +35,7 @@ export const FIRE_SUPPRESSION_CATEGORY_LABELS: Record<FireSuppressionCategory, s
   sabit_boru: 'Sabit Boru Tesisatları, Kolektörler ve Vanalar',
   su_alma_verme: 'İtfaiye Su Alma ve Verme Ağızları',
   gazli_sondurme: 'Gazlı Söndürme',
+  yangin_algilama: 'Yangın Algılama ve Uyarı Sistemleri',
   diger: 'Diğer',
 }
 

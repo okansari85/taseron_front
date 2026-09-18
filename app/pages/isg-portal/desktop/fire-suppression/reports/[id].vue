@@ -2,6 +2,7 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  Bell,
   Calendar,
   CalendarCheck2,
   CalendarClock,
@@ -89,6 +90,7 @@ const CATEGORY_ICONS: Record<FireSuppressionCategory, typeof Droplets> = {
   sabit_boru: Waves,
   su_alma_verme: Waves,
   gazli_sondurme: Container,
+  yangin_algilama: Bell,
   diger: FileText,
 }
 
@@ -101,6 +103,7 @@ const CATEGORY_UNIT_NOUN: Record<FireSuppressionCategory, string> = {
   sabit_boru: 'hat',
   su_alma_verme: 'ağız',
   gazli_sondurme: 'sistem',
+  yangin_algilama: 'sistem',
   diger: 'ekipman',
 }
 
