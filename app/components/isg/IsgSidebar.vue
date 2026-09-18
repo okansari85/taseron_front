@@ -1,8 +1,8 @@
 <template>
   <div>
     <div v-if="isMobileOpen" class="fixed inset-0 z-[9998] bg-black/30 lg:hidden" @click="closeMobile"></div>
-    <aside :class="['fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r transition-all duration-300', desktop ? 'border-black bg-black text-white' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900', desktop ? (isExpanded ? 'w-[240px]' : 'w-[72px]') : (isExpanded ? 'w-[290px]' : 'w-[90px]'), isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0']">
-      <div :class="['relative flex', desktop ? 'px-5 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
+    <aside :class="['fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r transition-all duration-300', desktop ? 'border-black bg-black text-white' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900', desktop ? (isExpanded ? 'w-[270px]' : 'w-[72px]') : (isExpanded ? 'w-[290px]' : 'w-[90px]'), isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0']">
+      <div :class="['relative flex', desktop ? 'px-6 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
         <NuxtLink :to="desktop ? '/isg-portal/desktop' : '/isg-portal/documents'" class="flex items-center gap-3">
           <template v-if="desktop && context.branchLogo"><img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl bg-white p-1 object-contain" /></template>
           <span v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
@@ -13,9 +13,9 @@
           <ChevronRight v-else :size="14" />
         </button>
       </div>
-      <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto pb-6">
+      <nav class="no-scrollbar flex flex-1 flex-col overflow-y-auto px-3 pb-6">
         <template v-for="(section, sectionIndex) in menuSections" :key="sectionIndex">
-          <p v-if="isExpanded && section.title" :class="['text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
+          <p v-if="isExpanded && section.title" :class="['px-2 text-xs font-medium uppercase tracking-wide', desktop ? 'text-white/35' : 'text-gray-400', sectionIndex ? 'mb-3 mt-7' : 'mb-4']">{{ section.title }}</p>
           <div class="flex flex-col gap-1.5">
             <template v-for="item in section.items" :key="item.title">
               <button v-if="'children' in item && item.children" type="button" :class="['menu-item group w-full rounded-lg transition-all', desktop ? (hasActiveChild(item) ? 'bg-[#3a1012] text-white' : 'text-white/75 hover:bg-white/[0.06] hover:text-white') : 'menu-item-inactive', isExpanded ? 'justify-start' : 'justify-center']" @click="isExpanded ? toggleGroup(item.title) : navigateTo(item.children[0]?.path || item.path)">
@@ -44,7 +44,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, Home, SearchCheck, Settings } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
