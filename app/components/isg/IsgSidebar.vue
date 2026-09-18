@@ -44,7 +44,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, HelpCircle, Home, Radio, SearchCheck, Settings } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
@@ -69,14 +69,12 @@ const desktopSections = [
       path: '/isg-portal/desktop/fire-extinguishers',
       icon: Flame,
       children: [
-        { title: 'Yangın Söndürücüler (YSC)', path: '/isg-portal/desktop/fire-extinguishers' },
+        { title: 'YSC', path: '/isg-portal/desktop/fire-extinguishers' },
         { title: 'Yangın Dolapları', path: '/isg-portal/desktop/fire-cabinets' },
         { title: 'Yangın Pompaları', path: '/isg-portal/desktop/fire-pumps' },
         { title: 'Hidrantlar', path: '/isg-portal/desktop/hydrants' },
       ],
     },
-    { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
-    { title: 'Yangın Denetimi (Mobil)', path: '/isg-portal/fire-inspection', icon: Flame },
   ] },
   { title: 'Yangın Tesisatı', items: [
     {
@@ -85,18 +83,16 @@ const desktopSections = [
       icon: FlameKindling,
       children: [
         { title: 'Tesisat Envanteri', path: '/isg-portal/desktop/fire-suppression/inventory' },
-        { title: 'Tesisat Raporları', path: '/isg-portal/desktop/fire-suppression/reports' },
+        { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection' },
       ],
     },
   ] },
-  { title: 'Raporlar', items: [
-    { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection', icon: Radio },
-    { title: 'Yangın Raporları', path: '/isg-portal/desktop/fire-suppression/reports', icon: FileCheck2 },
+  { title: 'Periyodik Kontroller', items: [
+    { title: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports', icon: FileCheck2 },
     { title: 'Analiz ve İstatistikler', path: '/isg-portal/desktop/fire-suppression/reports/gemini-test', icon: SearchCheck },
   ] },
   { title: 'Yönetim', items: [
     { title: 'Ayarlar', path: '/isg-portal/desktop/settings', icon: Settings },
-    { title: 'Destek', path: '/isg-portal/desktop/support', icon: HelpCircle },
   ] },
 ]
 
