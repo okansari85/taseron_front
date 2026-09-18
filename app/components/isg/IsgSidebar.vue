@@ -26,7 +26,7 @@
               <div v-if="'children' in item && item.children && isExpanded && expandedGroups.has(item.title)" class="ml-3 flex flex-col gap-1 border-l border-white/10 pl-3">
                 <NuxtLink v-for="child in item.children" :key="child.path" :to="child.path" :class="['rounded-lg px-3 py-2 text-sm font-medium transition-all', isActive(child.path) ? 'bg-[#ef1015] text-white shadow-[0_6px_18px_rgba(239,16,21,0.22)]' : (desktop ? 'text-white/65 hover:bg-white/[0.06] hover:text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5')]" @click="closeMobile">{{ child.title }}</NuxtLink>
               </div>
-              <NuxtLink v-else-if="!('children' in item)" :to="item.path" :class="['menu-item group rounded-lg', isActive(item.path) ? (desktop ? 'text-white shadow-[0_8px_24px_rgba(15,23,42,0.22)]' : 'menu-item-active') : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'), isExpanded ? 'justify-start' : 'justify-center']" :style="isActive(item.path) && desktop ? { backgroundColor: primaryColor } : undefined" @click="closeMobile">
+              <NuxtLink v-else-if="!('children' in item)" :to="item.path" :class="['menu-item group rounded-lg', isActive(item.path) ? (desktop ? 'bg-[#ef1015] text-white shadow-[0_8px_24px_rgba(239,16,21,0.22)]' : 'menu-item-active') : (desktop ? 'text-white/75 hover:bg-white/[0.06] hover:text-white' : 'menu-item-inactive'), isExpanded ? 'justify-start' : 'justify-center']" @click="closeMobile">
                 <component :is="item.icon" :size="18" />
                 <span v-if="isExpanded" class="truncate">{{ item.title }}</span>
               </NuxtLink>
@@ -47,16 +47,12 @@
 import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, FlaskConical, HelpCircle, Home, Radio, SearchCheck, Settings } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
-import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
 
 const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: false })
 const route = useRoute()
 const auth = useAuth()
 const context = useIsgDesktopContextStore()
 const { isExpanded, isMobileOpen, closeMobile, toggle } = useIsgSidebar()
-const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
-const primaryColor = computed(() => workspaceColor.value || '#d71920')
-onMounted(() => loadWorkspaceTheme(Number(auth.user.value?.tenant_id ?? 0) || null))
 
 const defaultSections = [
   { title: 'Portal', items: [
