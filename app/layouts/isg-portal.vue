@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen xl:flex">
     <IsgSidebar :desktop="true" />
-    <div :class="['min-w-0 w-full flex-1 transition-all duration-300 ease-in-out', isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[72px]']">
+    <div :class="['min-w-0 w-full flex-1 transition-all duration-300 ease-in-out', isExpanded ? 'lg:ml-[270px]' : 'lg:ml-[72px]']">
       <IsgHeader />
       <ImpersonationBanner />
       <main class="w-full p-4 md:p-6"><slot /></main>
