@@ -82,12 +82,13 @@ const desktopSections = [
     { title: 'Saha Bulguları', path: '/isg-portal/desktop/field-findings', icon: SearchCheck },
     { title: 'Yangın Denetimi (Mobil)', path: '/isg-portal/fire-inspection', icon: Flame },
   ] },
-  { title: 'Sistem ve Tesisat', items: [
+  { title: 'Yangın Tesisatı', items: [
     {
-      title: 'Sistem ve Tesisat',
+      title: 'Yangın Tesisatı',
       path: '/isg-portal/desktop/fire-suppression/inventory',
       icon: FlameKindling,
       children: [
+        { title: 'Tesisat Envanteri', path: '/isg-portal/desktop/fire-suppression/inventory' },
         { title: 'Tesisat Raporları', path: '/isg-portal/desktop/fire-suppression/reports' },
       ],
     },
