@@ -220,6 +220,7 @@ export type FireSuppressionReportAnalysisDraft = {
   report?: {
     report_no?: string | null
     company_name?: string | null
+    report_date?: string | null
     control_date?: string | null
     next_control_date?: string | null
     overall_result?: FireSuppressionComplianceStatus | null

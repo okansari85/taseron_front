@@ -317,7 +317,7 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
   }
 
   try {
-    if (draft.report?.control_date) form.value.report_date = draft.report.control_date
+    if (draft.report?.report_date) form.value.report_date = draft.report.report_date
     if (draft.report?.next_control_date) form.value.next_control_date = draft.report.next_control_date
     if (draft.report?.overall_result) form.value.overall_result = draft.report.overall_result
     if (draft.report?.company_name) form.value.inspection_company_name = draft.report.company_name
