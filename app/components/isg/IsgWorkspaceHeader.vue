@@ -2,14 +2,16 @@
 import { Bell, Building2, Check, ChevronDown, Flame, MapPin, Store } from '@lucide/vue'
 import { locationApi, type LocationApiItem, type LocationBusinessEntity } from '~/api/location'
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
-import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
 
 const auth = useAuth()
 const router = useRouter()
 const route = useRoute()
 const context = useIsgDesktopContextStore()
-const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
-const primaryColor = computed(() => workspaceColor.value || '#d71920')
+// Sabit marka kırmızısı - tenant'ın grup rengi (ör. turuncu) artık burada
+// kullanılmıyor. --workspace-brand CSS değişkeni de bu sabit değere göre
+// set edilir, main.css'teki .fire-suppression-theme kuralları (buton/aktif
+// durum renkleri) da otomatik olarak kırmızıya döner.
+const primaryColor = computed(() => '#d71920')
 
 const profileOpen = ref(false)
 const locationMenuOpen = ref(false)
@@ -32,8 +34,7 @@ const syncBranding = () => {
   document.documentElement.classList.toggle('fire-suppression-theme', route.path.startsWith('/isg-portal/desktop/fire-suppression/'))
 }
 
-onMounted(async () => {
-  await loadWorkspaceTheme(Number(auth.user.value?.tenant_id ?? 0) || null)
+onMounted(() => {
   syncBranding()
 })
 watch([primaryColor, () => route.path], syncBranding)
@@ -91,7 +92,8 @@ const handleLogout = async () => { profileOpen.value = false; await auth.logout(
 <template>
   <header class="relative z-30 flex w-full items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3 dark:border-gray-800 dark:bg-gray-900">
     <div class="flex shrink-0 items-center gap-2.5">
-      <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-white dark:bg-white/10" :style="{ backgroundColor: primaryColor }"><Flame :size="18" /></span>
+      <img v-if="context.branchLogo" :src="context.branchLogo" alt="Marka logosu" class="h-9 w-9 shrink-0 rounded-xl border border-gray-200 bg-white object-contain p-1 dark:border-gray-700" />
+      <span v-else class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-white dark:bg-white/10" :style="{ backgroundColor: primaryColor }"><Flame :size="18" /></span>
       <div class="hidden sm:block"><p class="text-sm font-semibold text-gray-900 dark:text-white/90">İSG / Yangın Güvenlik</p><p class="text-[11px] text-gray-400">Denetim Uygulaması</p></div>
     </div>
 

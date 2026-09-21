@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { FileText, FlameKindling } from '@lucide/vue'
-import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
-import { useAuth } from '~/composables/useAuth'
 
 const route = useRoute()
-const auth = useAuth()
-const { color, load } = useWorkspaceTheme()
-
-const tenantId = computed(() => Number(auth.user.value?.tenant_id ?? 0) || null)
-onMounted(() => load(tenantId.value))
-watch(tenantId, value => load(value))
-
-const primary = computed(() => color.value || '#d71920')
+// Sabit marka kırmızısı - bkz. IsgWorkspaceHeader.vue, tenant'ın grup
+// rengi (dinamik) artık fire-suppression bölümünde kullanılmıyor.
+const primary = '#d71920'
 const tabs = [
   { label: 'Tesisat Durumu', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
   { label: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports', icon: FileText },

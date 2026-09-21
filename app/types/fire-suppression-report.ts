@@ -211,7 +211,13 @@ export type FireSuppressionReportAnalysisSystem = {
 
 // AI ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi,
 // kullanıcı gözden geçirip düzenledikten sonra normal create() akışına gider.
+// AI'ın bu PDF için belirlediği rapor tipi - tek upload akışının "Kaydet"
+// adımında hangi backend'e (fire-suppression vs YSC) gideceğini belirler
+// (bkz. AnalyzeFireSuppressionReportJob, GeminiTemplateDiscoveryClient).
+export type FireSuppressionReportCategory = 'tekli_ekipman' | 'ysc' | 'yangin_tesisati' | 'yangin_algilama'
+
 export type FireSuppressionReportAnalysisDraft = {
+  report_category?: FireSuppressionReportCategory | null
   // Backend'in GERÇEK şekli (bkz. FireSuppressionUnifiedNormalizer::normalizeFinal) -
   // control_date/next_control_date/overall_result/company_name üst seviyede
   // DEĞİL, 'report' altında geliyor. Eskiden upload.vue bunları üst
@@ -224,6 +230,12 @@ export type FireSuppressionReportAnalysisDraft = {
     control_date?: string | null
     next_control_date?: string | null
     overall_result?: FireSuppressionComplianceStatus | null
+    // Raporun kendi "SONUÇ VE KANAAT" paragrafı - AI zaten bunu okuyor
+    // (extracted_data.overall_result.text), ama normalizeResult() bunu
+    // sadece durum (uygun/uygun_degil) enumuna indirgerken metni tamamen
+    // atıyordu - bulgu (Uygunsuzluk) hiç olmasa bile rapor kendi resmi
+    // sonucunu içeriyor, bu yüzden findings listesinden BAĞIMSIZ gösterilir.
+    overall_result_text?: string | null
   }
   covered_categories?: FireSuppressionCategory[]
   systems?: FireSuppressionReportAnalysisSystem[]

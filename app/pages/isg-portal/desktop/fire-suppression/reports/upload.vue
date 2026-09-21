@@ -12,6 +12,7 @@ import {
   X,
 } from '@lucide/vue'
 import { fireSuppressionReportApi, type FireSuppressionAnalysisProgress, type GeminiFixtureSummary } from '~/api/fire-suppression-report'
+import { emergencyEquipmentAnnualControlApi } from '~/api/emergency-equipment-annual-control'
 import { fireSuppressionInventoryApi } from '~/api/fire-suppression-inventory'
 import {
   FIRE_SUPPRESSION_CATEGORIES,
@@ -162,6 +163,8 @@ const resetWizard = () => {
   newCategoryApprovals.value = {}
   equipmentDraftItems.value = []
   systemsDraftItems.value = []
+  reportCategory.value = null
+  aiOverallResultText.value = null
   expandedEquipmentCodes.value = new Set()
   expandedSystemCategories.value = new Set()
   matchingView.value = 'results'
@@ -279,6 +282,13 @@ const equipmentDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['
 // "Belge ve Kayıt Kontrolleri" gibi hiç ekipmanı olmayan sistemlerin kendi
 // maddeleri buradan gelir (bkz. buildControlItemsFromDraft).
 const systemsDraftItems = ref<NonNullable<FireSuppressionReportAnalysisDraft['systems']>>([])
+// AI'ın bu PDF için belirlediği rapor tipi - "Kaydet" adımında hangi
+// backend'e gideceğini belirler (bkz. submit()).
+const reportCategory = ref<FireSuppressionReportAnalysisDraft['report_category']>(null)
+// Raporun kendi "SONUÇ VE KANAAT" paragrafı (AI'ın gerçekten okuduğu metin) -
+// Uygunsuzluk (finding) olsun olmasın HER raporda vardır, bu yüzden
+// Bulgular sekmesinde findings listesinden BAĞIMSIZ, her zaman gösterilir.
+const aiOverallResultText = ref<string | null>(null)
 
 // Geçici debug: analiz tamamlandığında frontend'e gelen JSON'u görmek için.
 const aiRawResult = ref<unknown | null>(null)
@@ -316,12 +326,20 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
     return
   }
 
+  reportCategory.value = draft.report_category ?? null
+  aiOverallResultText.value = draft.report?.overall_result_text ?? null
+
   try {
     if (draft.report?.report_date) form.value.report_date = draft.report.report_date
     if (draft.report?.next_control_date) form.value.next_control_date = draft.report.next_control_date
     if (draft.report?.overall_result) form.value.overall_result = draft.report.overall_result
     if (draft.report?.company_name) form.value.inspection_company_name = draft.report.company_name
     if (draft.report?.report_no) form.value.report_no = draft.report.report_no
+    // Raporun resmi sonuç metnini Notlar alanına ön-doldur - AI zaten
+    // okuyor, kullanıcı isterse düzenler/silebilir, ama boş bir "Notlar"
+    // kutusuyla bu bilgi hiç saklanmadan kaybolmasın (bkz. aiOverallResultText,
+    // Bulgular sekmesinde de ayrıca salt-okunur gösterilir).
+    if (draft.report?.overall_result_text && !form.value.notes) form.value.notes = draft.report.overall_result_text
     if (draft.covered_categories?.length) form.value.covered_categories = draft.covered_categories
 
     // Rapor genelinin kapsadığı sistemler ile bu şubede ZATEN KAYITLI
@@ -378,6 +396,7 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
         code: item.code ?? null,
         categoryLabel: item.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[item.category] : null,
         locationNote: item.location_note ?? null,
+        properties: item.properties ?? null,
         bucket,
       })
     })
@@ -430,7 +449,7 @@ const onAnalysisCompleted = (progressState: FireSuppressionAnalysisProgress) => 
       })
     }
 
-    matchingTab.value = detectedNewCategories.value.length ? 'new_systems' : 'systems'
+    matchingTab.value = reportCategory.value === 'ysc' ? 'components' : (detectedNewCategories.value.length ? 'new_systems' : 'systems')
     wizardStage.value = 'matching'
   } catch (e: any) {
     $toast.error(e?.message || 'Analiz sonucu işlenemedi.')
@@ -449,9 +468,14 @@ const cancelAnalyzing = () => {
 // sıralıydı; kullanıcı bunları 3 ayrı sekme olarak istedi.
 type MatchingTab = 'new_systems' | 'systems' | 'components'
 const matchingTab = ref<MatchingTab>('systems')
-const matchingStepOrder: MatchingTab[] = ['new_systems', 'systems', 'components']
+// YSC (tüp) raporlarında "sistem" kavramı yok - AI'ın bu raporlar için hep
+// tek bir YSC sistemi çıkarması, ona hiçbir zaman gerçek bir kategori
+// oturmaması ("Diğer") ve tesisatın kendi kategori kavramının (dolap/pompa/
+// hidrant) tüp için hiç geçerli olmaması nedeniyle "Yeni Sistemler"/
+// "Sistemler" adımları anlamsız - doğrudan Bileşenler'e (tüp listesi) geçilir.
+const matchingStepOrder = computed<MatchingTab[]>(() => reportCategory.value === 'ysc' ? ['components'] : ['new_systems', 'systems', 'components'])
 const matchingStepLabels: Record<MatchingTab, string> = { new_systems: 'Yeni Sistemler', systems: 'Sistemler', components: 'Bileşenler' }
-const matchingStepIndex = computed(() => matchingStepOrder.indexOf(matchingTab.value))
+const matchingStepIndex = computed(() => matchingStepOrder.value.indexOf(matchingTab.value))
 const matchingNext = () => {
   // "Yeni Sistemler" adımından çıkmadan önce, "diger" (Diğer) genel kovasına
   // düşmüş çözümlenmemiş sistem varsa kullanıcıyı zorla kategori seçtiren
@@ -462,7 +486,7 @@ const matchingNext = () => {
     showCategoryOverrideModal.value = true
     return
   }
-  const next = matchingStepOrder[matchingStepIndex.value + 1]
+  const next = matchingStepOrder.value[matchingStepIndex.value + 1]
   if (next) matchingTab.value = next
 }
 const applyCategoryOverridesAndContinue = () => {
@@ -508,11 +532,11 @@ const applyCategoryOverridesAndContinue = () => {
   newCategoryApprovals.value = Object.fromEntries(detectedNewCategories.value.map(c => [c, newCategoryApprovals.value[c] ?? true]))
 
   showCategoryOverrideModal.value = false
-  const next = matchingStepOrder[matchingStepIndex.value + 1]
+  const next = matchingStepOrder.value[matchingStepIndex.value + 1]
   if (next) matchingTab.value = next
 }
 const matchingBack = () => {
-  const prev = matchingStepOrder[matchingStepIndex.value - 1]
+  const prev = matchingStepOrder.value[matchingStepIndex.value - 1]
   if (prev) { matchingTab.value = prev; return }
   wizardStage.value = selectedFixtureId.value ? 'fixture' : 'upload'
   selectedFile.value = null
@@ -682,16 +706,27 @@ const buildEquipmentPayloadFromDraft = (): FireSuppressionReportEquipmentInput[]
 type ControlItemEquipmentGroup = {
   equipmentCode: string
   category: FireSuppressionCategory | null
+  // Raporun kendi serbest özellikleri (Cihaz Tipi, Bulunduğu Yer gibi) -
+  // YSC (tüp) raporlarında kategori kavramı anlamsız olduğu için ("Diğer"),
+  // kart başlığında kategori yerine bunlar gösterilir (bkz. template).
+  properties: Record<string, string>
   items: FireSuppressionReportControlItemInput[]
   udItems: FireSuppressionReportControlItemInput[]
   okCount: number
 }
+// equipment_code tek başına bu raporda benzersiz olmayabilir (bkz. Tüp No
+// çakışması) - equipmentDraftItems zaten AYNI equipment_code'u paylaşan
+// birden fazla öğe içerebilir, bu durumda İLK eşleşenin özelliklerini
+// kullanmak (kart başlığı için) yeterli, tam kimlik çözümü zaten backend'de
+// (kayıt sırasında) yapılıyor.
+const propertiesForEquipmentCode = (code: string): Record<string, string> =>
+  equipmentDraftItems.value.find(e => e.code === code)?.properties ?? {}
 const controlItemsByEquipment = computed<ControlItemEquipmentGroup[]>(() => {
   const groups = new Map<string, ControlItemEquipmentGroup>()
   for (const item of controlItemsForm.value) {
     if (!item.equipment_code) continue // sistem seviyeli maddeler - bkz. controlItemsBySystem
     const code = item.equipment_code
-    if (!groups.has(code)) groups.set(code, { equipmentCode: code, category: item.category ?? null, items: [], udItems: [], okCount: 0 })
+    if (!groups.has(code)) groups.set(code, { equipmentCode: code, category: item.category ?? null, properties: propertiesForEquipmentCode(code), items: [], udItems: [], okCount: 0 })
     const group = groups.get(code)!
     group.items.push(item)
     if (item.status === 'uygun_degil') group.udItems.push(item)
@@ -837,6 +872,36 @@ const scopeOptions: { value: FireSuppressionFindingScope; label: string }[] = [
 ]
 
 // --- Adım 4: Onayla → kaydet ---
+// AI'ın belirlediği rapor tipi "ysc" ise (taşınabilir yangın söndürücü/tüp
+// raporu), aynı ekran/akıştan devam edilir ama kayıt FireSuppressionReport
+// yerine YSC alan modeline (LocationEmergencyEquipment + EmergencyEquipment
+// AnnualControlReport) gider - bkz. YscAnnualControlSaveService.
+const submitYsc = async () => {
+  // THROW (not toast+return) - submit()'in try/catch'i bunu gerçek bir
+  // hata olarak görmeli. Önceden sessizce dönüyordu, submit() bunu
+  // exception saymayıp "YSC raporu kaydedildi" diye SAHTE başarı
+  // gösteriyordu - hiçbir şey kaydedilmediği halde.
+  if (!context.branchId) throw new Error('Şube seçili değil.')
+  // Test modu: gerçek dosya yoksa (fixture akışı), fixtureId gönderilir -
+  // aynı StoreFireSuppressionReportRequest'teki konvansiyon.
+  if (!selectedFile.value && !selectedFixtureId.value) {
+    throw new Error('YSC raporu için gerçek PDF dosyası veya fixture gereklidir.')
+  }
+  const controlItems = systemsDraftItems.value.flatMap(s => s.control_items ?? [])
+  const { data: report } = await emergencyEquipmentAnnualControlApi.createFromAnalysis(context.branchId, {
+    control_date: form.value.report_date,
+    next_control_date: form.value.next_control_date || null,
+    result: (form.value.overall_result as 'uygun' | 'uygun_degil' | null) || null,
+    company_name: form.value.inspection_company_name || null,
+    notes: form.value.notes || null,
+    file: selectedFile.value,
+    fixtureId: selectedFile.value ? null : selectedFixtureId.value,
+    equipment: equipmentDraftItems.value,
+    control_items: controlItems,
+  })
+  savedReport.value = report
+}
+
 const submit = async () => {
   // Normal akışta gerçek dosya (selectedFile) şart; fixture akışında hiç
   // dosya seçilmediği için onun yerine fixtureId gönderilir (bkz.
@@ -844,6 +909,13 @@ const submit = async () => {
   if (!context.branchId || saving.value || (!selectedFile.value && !selectedFixtureId.value)) return
   saving.value = true
   try {
+    if (reportCategory.value === 'ysc') {
+      await submitYsc()
+      $toast.success('YSC yıllık kontrol raporu kaydedildi.')
+      wizardStage.value = 'done'
+      return
+    }
+
     const { data: report } = await fireSuppressionReportApi.create(context.branchId, {
       report_date: form.value.report_date,
       report_no: form.value.report_no || null,
@@ -1065,6 +1137,7 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                   v-if="matchingView === 'results' && (matchingTab === 'systems' || matchingTab === 'components')"
                   :section="matchingTab"
                   :rows="matchRows"
+                  :report-category="reportCategory"
                   :resolution-label="resolutionLabel"
                   :new-item-approved="isNewItemApproved"
                   @inspect="openDetail"
@@ -1116,7 +1189,10 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                         <input v-model="form.next_control_date" type="date" class="h-11 w-full rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#d71920] dark:border-gray-700 dark:bg-gray-800">
                       </div>
                     </div>
-                    <div class="mt-3">
+                    <!-- YSC (tüp) raporlarında dolap/hidrant/pompa gibi
+                         tesisat kategorileri kavramı yok - bu seçim listesi
+                         anlamsız, gösterilmez. -->
+                    <div v-if="reportCategory !== 'ysc'" class="mt-3">
                       <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kontrol Edilen Sistemler</label>
                       <div class="flex flex-wrap gap-2">
                         <label v-for="c in FIRE_SUPPRESSION_CATEGORIES" :key="c" class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium" :class="form.covered_categories.includes(c) ? 'border-[#d71920] bg-red-50 text-[#d71920] dark:bg-red-500/10' : 'border-[#dfe3e8] text-gray-600 dark:border-gray-700 dark:text-gray-300'">
@@ -1202,8 +1278,14 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                       <div v-for="group in controlItemsByEquipment" :key="group.equipmentCode" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
                         <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleEquipmentExpanded(group.equipmentCode)">
                           <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.equipmentCode }}</span>
-                            <span v-if="group.category" class="text-[11px] text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] }}</span>
+                            <template v-if="reportCategory === 'ysc'">
+                              <span class="text-xs font-bold text-[#172033] dark:text-white">Tüp No: {{ group.equipmentCode }}</span>
+                              <span v-if="Object.keys(group.properties).length" class="text-[11px] text-gray-400">{{ Object.entries(group.properties).map(([k, v]) => `${k}: ${v}`).join(' · ') }}</span>
+                            </template>
+                            <template v-else>
+                              <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.equipmentCode }}</span>
+                              <span v-if="group.category" class="text-[11px] text-gray-400">{{ FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] }}</span>
+                            </template>
                             <Info
                               v-if="findingsCountForEquipment(group.equipmentCode)"
                               :size="13"
@@ -1252,7 +1334,10 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                     <div v-else class="space-y-2">
                       <div v-for="group in controlItemsBySystem" :key="group.category ?? '—'" class="overflow-hidden rounded-lg border border-[#e7e9ed] dark:border-gray-800">
                         <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-white/5" @click="toggleSystemCategoryExpanded(group.category ?? '—')">
-                          <span class="text-xs font-bold text-[#172033] dark:text-white">{{ group.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] : 'Diğer' }}</span>
+                          <!-- YSC (tüp) raporlarında kategori kavramı yok -
+                               sistem maddeleri hep 'diger'e düşer, bu da
+                               anlamsız bir "Diğer" rozetine yol açardı. -->
+                          <span class="text-xs font-bold text-[#172033] dark:text-white">{{ reportCategory === 'ysc' ? 'Genel Kriterler' : (group.category ? FIRE_SUPPRESSION_CATEGORY_LABELS[group.category] : 'Diğer') }}</span>
                           <div class="flex items-center gap-2">
                             <span v-if="group.udItems.length" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-[#d71920] dark:bg-red-500/10">Uygun Değil · {{ group.udItems.length }}</span>
                             <span v-else class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/10">Uygun</span>
@@ -1288,6 +1373,13 @@ const newCategoriesExcluded = computed(() => detectedNewCategories.value.filter(
                   </div>
 
                   <div v-else-if="confirmTab === 'findings'">
+                    <!-- Raporun kendi resmi "SONUÇ VE KANAAT" metni - bulgu
+                         (Uygunsuzluk) olsun olmasın HER raporda vardır, bu
+                         yüzden aşağıdaki listeden bağımsız her zaman gösterilir. -->
+                    <div v-if="aiOverallResultText" class="mb-4 rounded-lg border border-[#e7e9ed] bg-gray-50 p-3.5 dark:border-gray-800 dark:bg-white/[0.03]">
+                      <p class="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Raporun Sonuç ve Kanaati</p>
+                      <p class="text-xs leading-relaxed text-gray-600 dark:text-gray-300">{{ aiOverallResultText }}</p>
+                    </div>
                     <div class="mb-3 flex items-center justify-between">
                       <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Uygunsuzluklar (Opsiyonel)</p>
                       <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#d71920]" @click="addFinding"><Plus :size="13" />Ekle</button>

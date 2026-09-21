@@ -34,15 +34,12 @@ import type { FireSuppressionReport, FireSuppressionReportControlItem } from '~/
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useFireSuppressionCategorySettings } from '~/composables/useFireSuppressionCategorySettings'
-import { useWorkspaceTheme } from '~/composables/useWorkspaceTheme'
 
 definePageMeta({ layout: false })
 
 const context = useIsgDesktopContextStore()
 const { isExpanded } = useIsgSidebar()
 const categorySettings = useFireSuppressionCategorySettings()
-const { color: workspaceColor, load: loadWorkspaceTheme } = useWorkspaceTheme()
-const { user } = useAuth()
 
 const report = ref<FireSuppressionReport | null>(null)
 const components = ref<FireSuppressionInventoryItem[]>([])
@@ -54,7 +51,7 @@ const newCategory = ref<FireSuppressionCategory>('yangin_dolabi')
 const newName = ref('')
 const newCode = ref('')
 
-const primaryColor = computed(() => workspaceColor.value || '#d71920')
+const primaryColor = '#d71920'
 
 const load = async () => {
   if (!context.branchId) return
@@ -88,7 +85,6 @@ onMounted(() => {
   }
   load()
   categorySettings.load()
-  loadWorkspaceTheme(Number(user.value?.tenant_id ?? 0) || null)
 })
 
 watch(() => context.branchId, load)

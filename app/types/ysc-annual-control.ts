@@ -48,6 +48,26 @@ export type YscEquipmentMatch = {
   candidate_ids: number[]
 }
 
+// Tek upload akışının (fire-suppression analyze) rapor tipini "ysc" olarak
+// sınıflandırdığı durumda "Kaydet" adımının gönderdiği yük - equipment/
+// control_items burada HENÜZ location_emergency_equipment.id'ye
+// eşleştirilmemiş HAM table_shape/Camelot çıktısıdır (id eşleştirme/
+// oluşturma backend'de, YscAnnualControlSaveService içinde olur).
+export type YscAnnualControlFromAnalysisPayload = {
+  control_date: string
+  next_control_date?: string | null
+  result?: YscAnnualControlResult | null
+  company_name?: string | null
+  notes?: string | null
+  // Test modu: StoreFireSuppressionReportRequest ile AYNI desen - gerçek
+  // dosya yoksa fixtureId gönderilir, backend zaten sunucuda duran fixture
+  // PDF'ini indirip-tekrar-yükleme turu olmadan doğrudan kullanır.
+  file?: File | null
+  fixtureId?: string | null
+  equipment: Record<string, unknown>[]
+  control_items: Record<string, unknown>[]
+}
+
 // AI (NVIDIA NIM) ön-analizinin döndürdüğü TASLAK — hiçbir şey kaydedilmedi.
 export type YscAnnualControlAnalysisDraft = {
   control_date?: string | null

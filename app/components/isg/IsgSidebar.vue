@@ -4,8 +4,7 @@
     <aside :class="['fixed left-0 top-0 z-[9999] flex h-screen flex-col border-r transition-all duration-300', desktop ? 'border-black bg-black text-white' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900', desktop ? (isExpanded ? 'w-[270px]' : 'w-[72px]') : (isExpanded ? 'w-[290px]' : 'w-[90px]'), isMobileOpen ? 'w-[290px] translate-x-0' : '-translate-x-full lg:translate-x-0']">
       <div :class="['relative flex', desktop ? 'px-6 py-5' : 'py-8', isExpanded ? 'justify-start' : 'justify-center']">
         <NuxtLink :to="desktop ? '/isg-portal/desktop' : '/isg-portal/documents'" class="flex items-center gap-3">
-          <template v-if="desktop && context.branchLogo"><img :src="context.branchLogo" alt="Marka logosu" class="h-11 w-11 shrink-0 rounded-xl bg-white p-1 object-contain" /></template>
-          <span v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
+          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">İ</span>
           <span v-if="isExpanded" :class="['text-lg font-semibold', desktop ? 'text-white' : 'text-gray-800 dark:text-white/90']">İSG Portalı</span>
         </NuxtLink>
         <button v-if="desktop" type="button" class="absolute -right-3 top-7 z-[10000] flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:scale-105 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" :title="isExpanded ? 'Menüyü daralt' : 'Menüyü genişlet'" @click="toggle">
@@ -44,14 +43,12 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, Home, SearchCheck, Settings } from '@lucide/vue'
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, FileCheck2, Flame, FlameKindling, Home, SearchCheck, Settings } from '@lucide/vue'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
-import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 
 const props = withDefaults(defineProps<{ desktop?: boolean }>(), { desktop: false })
 const route = useRoute()
 const auth = useAuth()
-const context = useIsgDesktopContextStore()
 const { isExpanded, isMobileOpen, closeMobile, toggle } = useIsgSidebar()
 
 const defaultSections = [
@@ -70,22 +67,17 @@ const desktopSections = [
       icon: Flame,
       children: [
         { title: 'YSC', path: '/isg-portal/desktop/fire-extinguishers' },
-        { title: 'Yangın Dolapları', path: '/isg-portal/desktop/fire-cabinets' },
-        { title: 'Yangın Pompaları', path: '/isg-portal/desktop/fire-pumps' },
-        { title: 'Hidrantlar', path: '/isg-portal/desktop/hydrants' },
+        { title: 'Yangın Dolapları', path: '/isg-portal/desktop/fire-suppression/systems/yangin_dolabi' },
+        { title: 'Yangın Pompaları', path: '/isg-portal/desktop/fire-suppression/systems/yangin_pompasi' },
+        { title: 'Hidrantlar', path: '/isg-portal/desktop/fire-suppression/systems/hidrant' },
       ],
     },
   ] },
   { title: 'Yangın Tesisatı', items: [
-    {
-      title: 'Yangın Tesisatı',
-      path: '/isg-portal/desktop/fire-suppression/inventory',
-      icon: FlameKindling,
-      children: [
-        { title: 'Tesisat Envanteri', path: '/isg-portal/desktop/fire-suppression/inventory' },
-        { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection' },
-      ],
-    },
+    { title: 'Tesisat Envanteri', path: '/isg-portal/desktop/fire-suppression/inventory', icon: FlameKindling },
+  ] },
+  { title: 'Yangın Algılama', items: [
+    { title: 'Yangın Algılama Sistemleri', path: '/isg-portal/desktop/fire-detection', icon: Bell },
   ] },
   { title: 'Periyodik Kontroller', items: [
     { title: 'Raporlar', path: '/isg-portal/desktop/fire-suppression/reports', icon: FileCheck2 },

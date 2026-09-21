@@ -140,6 +140,47 @@ const nonconformCount = computed(() => {
 // aksi halde bu kategoriler "Bileşenler" sekmesinde hiç görünmez, dolayısıyla
 // silinemezdi (yaşanan asıl sorun buydu).
 const visibleComponents = computed(() => detail.value?.components ?? [])
+
+// --- Toplu sil ---
+const selectedIds = ref<Set<number>>(new Set())
+const allSelected = computed(() => visibleComponents.value.length > 0 && visibleComponents.value.every(c => selectedIds.value.has(c.id)))
+const toggleSelectAll = () => {
+  selectedIds.value = allSelected.value ? new Set() : new Set(visibleComponents.value.map(c => c.id))
+}
+const toggleSelected = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+watch(visibleComponents, () => { selectedIds.value = new Set() })
+
+const bulkDeleting = ref(false)
+const bulkDeleteComponents = async () => {
+  if (bulkDeleting.value || !selectedIds.value.size) return
+  const count = selectedIds.value.size
+  if (!window.confirm(`Seçilen ${count} bileşeni tesisat envanterinden kalıcı olarak silmek istediğinize emin misiniz?`)) return
+  bulkDeleting.value = true
+  const ids = [...selectedIds.value]
+  // Backend'de tek tek silme endpoint'i var, toplu silme endpoint'i yok -
+  // sırayla çağrılır; rapor geçmişi olan bir bileşen backend tarafından
+  // reddedilebilir (bkz. deleteComponent'teki not) - bu durumda o kaydı
+  // atlayıp diğerlerine devam edilir, başarısız olanlar toplu bildirilir.
+  let failed = 0
+  for (const id of ids) {
+    try {
+      await fireSuppressionInventoryApi.remove(id)
+    } catch {
+      failed++
+    }
+  }
+  bulkDeleting.value = false
+  selectedIds.value = new Set()
+  await load()
+  if (failed === 0) $toast.success(`${count} bileşen silindi.`)
+  else if (failed === count) $toast.error('Seçilen bileşenler silinemedi (rapor geçmişi olabilir).')
+  else $toast.error(`${count - failed} bileşen silindi, ${failed} tanesi silinemedi (rapor geçmişi olabilir).`)
+}
 </script>
 
 <template>
@@ -178,37 +219,52 @@ const visibleComponents = computed(() => detail.value?.components ?? [])
             <!-- Bileşenler -->
             <section v-if="tab === 'components'" class="overflow-hidden rounded-xl border border-[#e7e9ed] bg-white dark:border-gray-800 dark:bg-gray-900">
               <div v-if="!visibleComponents.length" class="py-12 text-center text-sm text-gray-400">Bu sistem için henüz kayıtlı bileşen yok.</div>
-              <table v-else class="w-full text-left text-sm">
-                <thead>
-                  <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
-                    <th class="px-4 py-2.5">Kod / Ad</th>
-                    <th class="px-4 py-2.5">Konum</th>
-                    <th class="px-4 py-2.5">Son Kontrol</th>
-                    <th class="px-4 py-2.5">Durum</th>
-                    <th class="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in visibleComponents" :key="item.id" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
-                    <td class="px-4 py-2.5 font-semibold text-[#172033] dark:text-white">{{ componentDisplayName(item) }}</td>
-                    <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ item.location_note || '—' }}</td>
-                    <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ formatDate(item.last_control_date) }}</td>
-                    <td class="px-4 py-2.5">
-                      <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="item.is_active ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-gray-100 text-gray-500 dark:bg-white/5'">{{ item.is_active ? 'Aktif' : 'Pasif' }}</span>
-                    </td>
-                    <td class="px-4 py-2.5 text-right">
-                      <button
-                        type="button"
-                        class="rounded-lg border border-[#dfe3e8] px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:border-[#d71920]/40 hover:text-[#d71920] disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
-                        :disabled="deletingId === item.id"
-                        @click="deleteComponent(item)"
-                      >
-                        {{ deletingId === item.id ? 'Siliniyor...' : 'Sil' }}
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <template v-else>
+                <div v-if="selectedIds.size" class="flex items-center justify-between gap-3 border-b border-[#f1f2f4] bg-red-50/60 px-4 py-2.5 dark:border-gray-800 dark:bg-red-500/5">
+                  <span class="text-xs font-semibold text-[#d71920]">{{ selectedIds.size }} bileşen seçildi</span>
+                  <button
+                    type="button"
+                    class="rounded-lg bg-[#d71920] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#b9151b] disabled:opacity-50"
+                    :disabled="bulkDeleting"
+                    @click="bulkDeleteComponents"
+                  >
+                    {{ bulkDeleting ? 'Siliniyor...' : `Seçilenleri Sil (${selectedIds.size})` }}
+                  </button>
+                </div>
+                <table class="w-full text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-[#f1f2f4] text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                      <th class="w-10 px-4 py-2.5"><input type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" :checked="allSelected" @change="toggleSelectAll"></th>
+                      <th class="px-4 py-2.5">Kod / Ad</th>
+                      <th class="px-4 py-2.5">Konum</th>
+                      <th class="px-4 py-2.5">Son Kontrol</th>
+                      <th class="px-4 py-2.5">Durum</th>
+                      <th class="px-4 py-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in visibleComponents" :key="item.id" class="border-b border-[#f1f2f4] last:border-0 dark:border-gray-800">
+                      <td class="px-4 py-2.5"><input type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" :checked="selectedIds.has(item.id)" @change="toggleSelected(item.id)"></td>
+                      <td class="px-4 py-2.5 font-semibold text-[#172033] dark:text-white">{{ componentDisplayName(item) }}</td>
+                      <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ item.location_note || '—' }}</td>
+                      <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ formatDate(item.last_control_date) }}</td>
+                      <td class="px-4 py-2.5">
+                        <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="item.is_active ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-gray-100 text-gray-500 dark:bg-white/5'">{{ item.is_active ? 'Aktif' : 'Pasif' }}</span>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <button
+                          type="button"
+                          class="rounded-lg border border-[#dfe3e8] px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:border-[#d71920]/40 hover:text-[#d71920] disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                          :disabled="deletingId === item.id"
+                          @click="deleteComponent(item)"
+                        >
+                          {{ deletingId === item.id ? 'Siliniyor...' : 'Sil' }}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </template>
             </section>
 
             <!-- Kontroller -->
