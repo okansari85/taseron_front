@@ -1,0 +1,7 @@
+<script setup lang="ts">
+import type { FireSuppressionReport } from '~/types/fire-suppression-report'
+defineProps<{ report: FireSuppressionReport | null; controls: number }>()
+</script>
+<template>
+  <section id="controls" class="scroll-mt-24 mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"><div class="flex items-center justify-between gap-4"><div><h3 class="text-sm font-bold text-[#14284f] dark:text-white">Kontrol Maddeleri</h3><p class="mt-1 text-xs text-slate-400">Son rapordaki benzersiz kontrol maddeleri.</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{controls}} madde</span></div><div class="mt-4 grid gap-2 md:grid-cols-2"><div v-for="item in [...(report?.control_items??[])].filter((value,index,list)=>value.code?list.findIndex(x=>x.code===value.code)===index:true).slice(0,12)" :key="item.id" class="flex items-start gap-3 rounded-lg border border-slate-100 p-3 dark:border-gray-800"><span :class="['mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',item.status==='uygun'?'bg-emerald-50 text-emerald-600':item.status==='uygun_degil'?'bg-red-50 text-red-500':'bg-slate-100 text-slate-500']">{{item.status==='uygun'?'✓':item.status==='uygun_degil'?'!':'—'}}</span><div class="min-w-0"><p class="text-xs font-semibold text-[#14284f] dark:text-white">{{item.title}}</p><p class="mt-0.5 text-[10px] text-slate-400">{{item.code||item.section||'Kontrol maddesi'}}</p></div></div></div></section>
+</template>
