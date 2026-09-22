@@ -233,9 +233,8 @@ const facilityInfo = computed(() => {
   ]
 })
 
-const goToTab = (tab: string, anchor: string) => {
+const goToTab = (tab: string, _anchor: string) => {
   activeTab.value = tab
-  nextTick(() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }
 
 const addSystem = async () => {
@@ -271,16 +270,6 @@ const addSystem = async () => {
             @open-add="showAddModal = true"
           />
 
-          <InventoryOverview
-            :report="report"
-            :overall-status="overallStatus"
-            :overall-status-class="overallStatusClass"
-            :latest-control-label="latestControlLabel"
-            :primary-color="primaryColor"
-            :format-date="formatDate"
-            :days-remaining="daysRemaining"
-          />
-
           <InventoryTabs
             :active-tab="activeTab"
             :primary-color="primaryColor"
@@ -288,6 +277,7 @@ const addSystem = async () => {
           />
 
           <InventorySystems
+            v-if="activeTab === 'systems'"
             :loading="loading"
             :system-summaries="systemSummaries"
             :category-icon="categoryIcon"
@@ -298,7 +288,7 @@ const addSystem = async () => {
             :primary-color="primaryColor"
           />
 
-          <section id="general" class="scroll-mt-24">
+          <template v-else-if="activeTab === 'general'">
             <InventorySummaryCards :overall-summary="overallSummary" />
 
             <InventoryAnalytics
@@ -312,20 +302,34 @@ const addSystem = async () => {
               :category-label="categoryLabel"
               :facility-info="facilityInfo"
             />
-          </section>
+          </template>
 
           <InventoryControls
+            v-else-if="activeTab === 'controls'"
             :report="report"
             :controls="overallSummary.controls"
             :primary-color="primaryColor"
           />
 
           <InventoryFindings
+            v-else-if="activeTab === 'findings'"
             :report="report"
             :primary-color="primaryColor"
           />
 
+          <InventoryOverview
+            v-else-if="activeTab === 'summary'"
+            :report="report"
+            :overall-status="overallStatus"
+            :overall-status-class="overallStatusClass"
+            :latest-control-label="latestControlLabel"
+            :primary-color="primaryColor"
+            :format-date="formatDate"
+            :days-remaining="daysRemaining"
+          />
+
           <InventoryFiles
+            v-else-if="activeTab === 'files'"
             :report="report"
             :primary-color="primaryColor"
           />
