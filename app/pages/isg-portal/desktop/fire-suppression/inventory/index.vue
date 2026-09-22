@@ -1,28 +1,4 @@
 <script setup lang="ts">
-import {
-  ArrowRight,
-  Bell,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
-  ClipboardList,
-  Cylinder,
-  Droplets,
-  FileText,
-  FireExtinguisher,
-  Gauge,
-  History,
-  LoaderCircle,
-  Info,
-  Layers,
-  List,
-  Plus,
-  ShieldCheck,
-  Trash2,
-  Waves,
-  X,
-  XCircle,
-} from '@lucide/vue'
 import { fireSuppressionReportApi } from '~/api/fire-suppression-report'
 import { fireSuppressionInventoryApi } from '~/api/fire-suppression-inventory'
 import {
@@ -34,6 +10,14 @@ import type { FireSuppressionReport, FireSuppressionReportControlItem } from '~/
 import { useIsgDesktopContextStore } from '~/stores/isgDesktopContext'
 import { useIsgSidebar } from '~/composables/useIsgSidebar'
 import { useFireSuppressionCategorySettings } from '~/composables/useFireSuppressionCategorySettings'
+import {
+  amountLabel,
+  categoryIcon,
+  daysRemaining,
+  formatDate,
+  statusClass,
+  statusLabel,
+} from '~/utils/fire-suppression/inventory'
 
 import InventoryHeader from '~/components/fire-suppression/inventory/InventoryHeader.vue'
 import InventoryOverview from '~/components/fire-suppression/inventory/InventoryOverview.vue'
@@ -100,19 +84,6 @@ onMounted(() => {
 
 watch(() => context.branchId, load)
 
-const CATEGORY_ICONS: Partial<Record<string, typeof Droplets>> = {
-  sprinkler: Droplets,
-  yangin_dolabi: FireExtinguisher,
-  hidrant: Waves,
-  yangin_pompasi: Gauge,
-  su_deposu: Cylinder,
-  sabit_boru: Waves,
-  su_alma_verme: Waves,
-  gazli_sondurme: ShieldCheck,
-  yangin_algilama: Bell,
-  diger: FileText,
-}
-
 const CATEGORY_DISPLAY_LABELS: Partial<Record<string, string>> = {
   yangin_pompasi: 'Yangın Pompa Dairesi',
   yangin_dolabi: 'Yangın Dolapları',
@@ -127,22 +98,6 @@ const CATEGORY_DISPLAY_LABELS: Partial<Record<string, string>> = {
 
 const categoryLabel = (category: string) =>
   CATEGORY_DISPLAY_LABELS[category] || categorySettings.label(category) || FIRE_SUPPRESSION_CATEGORY_LABELS[category as FireSuppressionCategory] || category
-
-const categoryIcon = (category: string) => CATEGORY_ICONS[category] ?? FileText
-
-const formatDate = (value?: string | null) => {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
-}
-
-const daysRemaining = (value?: string | null) => {
-  if (!value) return null
-  const target = new Date(value)
-  target.setHours(0, 0, 0, 0)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return Math.round((target.getTime() - today.getTime()) / 86400000)
-}
 
 type SystemSummary = {
   category: string
@@ -278,24 +233,6 @@ const facilityInfo = computed(() => {
   ]
 })
 
-const statusLabel = (status: SystemSummary['status']) => {
-  if (status === 'uygun') return 'Uygun'
-  if (status === 'uygun_degil') return 'Uygunsuzluk Var'
-  return 'Kontrol Edilmedi'
-}
-
-const statusClass = (status: SystemSummary['status']) => {
-  if (status === 'uygun') return 'status-success'
-  if (status === 'uygun_degil') return 'status-danger'
-  return 'status-neutral'
-}
-
-const amountLabel = (item: SystemSummary) => {
-  if (item.pumpBreakdown) return `${item.pumpBreakdown.main} ana + ${item.pumpBreakdown.jokey} jokey pompa`
-  if (item.unitCount > 0) return `${item.unitCount} adet ${item.category === 'yangin_dolabi' ? 'dolap' : item.category === 'sprinkler' ? 'başlık' : 'birim'}`
-  return 'Tesisat geneli'
-}
-
 const goToTab = (tab: string, anchor: string) => {
   activeTab.value = tab
   nextTick(() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
@@ -378,11 +315,12 @@ const addSystem = async () => {
           <InventoryControls
             :report="report"
             :controls="overallSummary.controls"
+            :primary-color="primaryColor"
           />
 
           <InventoryFindings
             :report="report"
-            :category-label="categoryLabel"
+            :primary-color="primaryColor"
           />
 
           <InventoryFiles
@@ -392,34 +330,15 @@ const addSystem = async () => {
         </div>
       </main>
     </div>
+
+    <InventoryAddModal
+      v-model:open="showAddModal"
+      v-model:category="newCategory"
+      v-model:name="newName"
+      v-model:code="newCode"
+      :adding="adding"
+      :primary-color="primaryColor"
+      @submit="addSystem"
+    />
   </div>
-  <div v-else class="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-400 dark:bg-gray-950">Yönlendiriliyor...</div>
-
-  <InventoryAddModal
-    :show="showAddModal"
-    :adding="adding"
-    :new-category="newCategory"
-    :new-name="newName"
-    :new-code="newCode"
-    :enabled-categories="categorySettings.enabledCategories"
-    :category-label="categoryLabel"
-    :primary-color="primaryColor"
-    @close="showAddModal = false"
-    @submit="addSystem"
-    @update:new-category="newCategory = $event"
-    @update:new-name="newName = $event"
-    @update:new-code="newCode = $event"
-  />
 </template>
-
-<style scoped>
-.status-success { background: #e9fbf2; color: #10a66a; }
-.status-danger { background: #fff0f0; color: #ef4444; }
-.status-neutral { background: #eef2f7; color: #51627d; }
-.tone-violet { background: #f2edff; color: #7c3aed; }
-.tone-blue { background: #edf5ff; color: #2563eb; }
-.tone-sky { background: #edf8ff; color: #0ea5e9; }
-.tone-green { background: #eafaf2; color: #10a66a; }
-.tone-red { background: #fff0f0; color: #ef4444; }
-.tone-gray { background: #f1f4f8; color: #64748b; }
-</style>
