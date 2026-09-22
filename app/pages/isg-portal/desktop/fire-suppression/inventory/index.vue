@@ -270,6 +270,16 @@ const addSystem = async () => {
             @open-add="showAddModal = true"
           />
 
+          <InventoryOverview
+            :report="report"
+            :overall-status="overallStatus"
+            :overall-status-class="overallStatusClass"
+            :latest-control-label="latestControlLabel"
+            :primary-color="primaryColor"
+            :format-date="formatDate"
+            :days-remaining="daysRemaining"
+          />
+
           <InventoryTabs
             :active-tab="activeTab"
             :primary-color="primaryColor"
@@ -315,17 +325,6 @@ const addSystem = async () => {
             v-else-if="activeTab === 'findings'"
             :report="report"
             :category-label="categoryLabel"
-          />
-
-          <InventoryOverview
-            v-else-if="activeTab === 'summary'"
-            :report="report"
-            :overall-status="overallStatus"
-            :overall-status-class="overallStatusClass"
-            :latest-control-label="latestControlLabel"
-            :primary-color="primaryColor"
-            :format-date="formatDate"
-            :days-remaining="daysRemaining"
           />
 
           <InventoryFiles
