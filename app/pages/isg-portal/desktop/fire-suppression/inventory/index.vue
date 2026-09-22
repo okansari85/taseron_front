@@ -314,7 +314,7 @@ const addSystem = async () => {
           <InventoryFindings
             v-else-if="activeTab === 'findings'"
             :report="report"
-            :primary-color="primaryColor"
+            :category-label="categoryLabel"
           />
 
           <InventoryOverview
