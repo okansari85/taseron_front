@@ -264,7 +264,7 @@ const addSystem = async () => {
     <div :class="['min-h-screen w-full transition-[padding] duration-300', isExpanded ? 'lg:pl-[240px]' : 'lg:pl-[72px]']">
       <IsgWorkspaceHeader />
 
-     <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
+      <main class="px-5 pb-8 pt-7 sm:px-7 lg:px-8">
         <div class="mx-auto max-w-[1400px]">
           <InventoryHeader
             :primary-color="primaryColor"
@@ -298,19 +298,21 @@ const addSystem = async () => {
             :primary-color="primaryColor"
           />
 
-          <InventorySummaryCards :overall-summary="overallSummary" />
+          <section id="general" class="scroll-mt-24">
+            <InventorySummaryCards :overall-summary="overallSummary" />
 
-          <InventoryAnalytics
-            :overall-summary="overallSummary"
-            :suitable-percent="suitablePercent"
-            :unsuitable-percent="unsuitablePercent"
-            :no-result-percent="noResultPercent"
-            :ring-style="ringStyle"
-            :system-summaries="systemSummaries"
-            :max-nonconform="maxNonconform"
-            :category-label="categoryLabel"
-            :facility-info="facilityInfo"
-          />
+            <InventoryAnalytics
+              :overall-summary="overallSummary"
+              :suitable-percent="suitablePercent"
+              :unsuitable-percent="unsuitablePercent"
+              :no-result-percent="noResultPercent"
+              :ring-style="ringStyle"
+              :system-summaries="systemSummaries"
+              :max-nonconform="maxNonconform"
+              :category-label="categoryLabel"
+              :facility-info="facilityInfo"
+            />
+          </section>
 
           <InventoryControls
             :report="report"
